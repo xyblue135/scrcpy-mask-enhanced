@@ -6230,6 +6230,7 @@ dependencies = [
  "opener",
  "paste",
  "pkg-config",
+ "png 0.18.1",
  "pollster",
  "rand 0.9.1",
  "reqwest",

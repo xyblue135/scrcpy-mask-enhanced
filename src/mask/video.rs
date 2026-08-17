@@ -14,7 +14,10 @@ use crate::mask::{
 use crate::scrcpy::media::{
     VideoFrameTrace, VideoMsg, YuvColorInfo, YuvMatrix, YuvPlaneLayout, YuvRange,
 };
-use crate::utils::ChannelReceiverV;
+use crate::{
+    tokio_tasks::TokioTasksRuntime,
+    utils::{ChannelReceiverV, ChannelReceiverVideoSnapshot},
+};
 
 
 #[derive(Resource, Clone, Copy, Debug)]
@@ -124,7 +127,7 @@ enum YuvTextureMode {
     Nv12,
 }
 
-#[derive(Default)]
+#[derive(Resource, Default)]
 pub struct VideoAttributes {
     width: u32,
     height: u32,
@@ -134,6 +137,7 @@ pub struct VideoAttributes {
     u_handle: Option<Handle<Image>>,
     v_handle: Option<Handle<Image>>,
     material_handle: Option<Handle<YuvVideoMaterial>>,
+    color: Option<YuvColorInfo>,
 }
 
 impl VideoAttributes {
@@ -145,6 +149,7 @@ impl VideoAttributes {
         video_node: &mut MaterialNode<YuvVideoMaterial>,
         v_rx: &ChannelReceiverV,
     ) -> (bool, bool) {
+        self.color = Some(frame.color);
         let rebuilt = self.ensure_assets(
             frame.width,
             frame.height,
@@ -169,6 +174,7 @@ impl VideoAttributes {
         video_node: &mut MaterialNode<YuvVideoMaterial>,
         v_rx: &ChannelReceiverV,
     ) -> (bool, bool) {
+        self.color = Some(frame.color);
         let rebuilt = self.ensure_assets(
             frame.width,
             frame.height,
@@ -344,7 +350,7 @@ pub fn handle_video_msg(
     mut viewport: ResMut<VideoViewport>,
     mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<YuvVideoMaterial>>,
-    mut video_attr: Local<VideoAttributes>,
+    mut video_attr: ResMut<VideoAttributes>,
     mut video_node: Single<(
         &mut MaterialNode<YuvVideoMaterial>,
         &mut Node,
@@ -423,6 +429,224 @@ pub fn handle_video_msg(
     }
 }
 
+
+
+#[derive(Clone)]
+struct VideoSnapshotFrame {
+    width: u32,
+    height: u32,
+    planes: YuvPlaneLayout,
+    mode: YuvTextureMode,
+    color: YuvColorInfo,
+    y: Vec<u8>,
+    u_or_uv: Vec<u8>,
+    v: Option<Vec<u8>>,
+}
+
+/// Respond to mapping-background screenshot requests using the exact YUV frame currently
+/// stored in the LowCast renderer. The expensive YUV->RGB + PNG encoding work runs on the
+/// background Tokio runtime, so refreshing a mapping background does not turn every video
+/// frame into a screenshot and does not add steady-state latency to the hot path.
+pub fn handle_video_snapshot_requests(
+    requests: Res<ChannelReceiverVideoSnapshot>,
+    video_attr: Res<VideoAttributes>,
+    images: Res<Assets<Image>>,
+    runtime: Res<TokioTasksRuntime>,
+) {
+    for response_tx in requests.0.try_iter() {
+        let snapshot = clone_current_video_snapshot(&video_attr, &images);
+        match snapshot {
+            Ok(snapshot) => {
+                runtime.spawn_background_task(move |_ctx| async move {
+                    let result = snapshot.encode_png();
+                    let _ = response_tx.send(result);
+                });
+            }
+            Err(error) => {
+                let _ = response_tx.send(Err(error));
+            }
+        }
+    }
+}
+
+fn clone_current_video_snapshot(
+    video_attr: &VideoAttributes,
+    images: &Assets<Image>,
+) -> Result<VideoSnapshotFrame, String> {
+    let mode = video_attr
+        .mode
+        .ok_or_else(|| "no LowCast video frame is currently available".to_string())?;
+    let planes = video_attr
+        .planes
+        .ok_or_else(|| "current video plane layout is unavailable".to_string())?;
+    let color = video_attr
+        .color
+        .ok_or_else(|| "current video color metadata is unavailable".to_string())?;
+
+    if video_attr.width == 0 || video_attr.height == 0 {
+        return Err("current LowCast video frame has an invalid size".to_string());
+    }
+
+    let clone_image_data = |handle: &Option<Handle<Image>>, name: &str| -> Result<Vec<u8>, String> {
+        let handle = handle
+            .as_ref()
+            .ok_or_else(|| format!("current video {name} texture is unavailable"))?;
+        let image = images
+            .get(handle)
+            .ok_or_else(|| format!("current video {name} texture asset is unavailable"))?;
+        image
+            .data
+            .as_ref()
+            .cloned()
+            .ok_or_else(|| format!("current video {name} plane has no CPU-side data"))
+    };
+
+    let y = clone_image_data(&video_attr.y_handle, "Y")?;
+    let u_or_uv = clone_image_data(&video_attr.u_handle, "U/UV")?;
+    let v = if mode == YuvTextureMode::Yuv420p {
+        Some(clone_image_data(&video_attr.v_handle, "V")?)
+    } else {
+        None
+    };
+
+    let expected_y = (planes.y_width as usize)
+        .checked_mul(planes.y_height as usize)
+        .ok_or_else(|| "Y plane size overflow".to_string())?;
+    if y.len() < expected_y {
+        return Err(format!(
+            "current Y plane is truncated: {} < {}",
+            y.len(), expected_y
+        ));
+    }
+
+    let uv_pixels = (planes.uv_width as usize)
+        .checked_mul(planes.uv_height as usize)
+        .ok_or_else(|| "UV plane size overflow".to_string())?;
+    let expected_uv = if mode == YuvTextureMode::Nv12 {
+        uv_pixels
+            .checked_mul(2)
+            .ok_or_else(|| "NV12 UV plane size overflow".to_string())?
+    } else {
+        uv_pixels
+    };
+    if u_or_uv.len() < expected_uv {
+        return Err(format!(
+            "current U/UV plane is truncated: {} < {}",
+            u_or_uv.len(), expected_uv
+        ));
+    }
+    if let Some(v) = &v
+        && v.len() < uv_pixels
+    {
+        return Err(format!(
+            "current V plane is truncated: {} < {}",
+            v.len(), uv_pixels
+        ));
+    }
+
+    Ok(VideoSnapshotFrame {
+        width: video_attr.width,
+        height: video_attr.height,
+        planes,
+        mode,
+        color,
+        y,
+        u_or_uv,
+        v,
+    })
+}
+
+impl VideoSnapshotFrame {
+    fn encode_png(self) -> Result<Vec<u8>, String> {
+        let pixel_count = (self.width as usize)
+            .checked_mul(self.height as usize)
+            .ok_or_else(|| "video snapshot pixel count overflow".to_string())?;
+        let mut rgb = Vec::with_capacity(
+            pixel_count
+                .checked_mul(3)
+                .ok_or_else(|| "video snapshot RGB size overflow".to_string())?,
+        );
+
+        let y_stride = self.planes.y_width as usize;
+        let uv_stride = self.planes.uv_width as usize;
+        let v_plane = self.v.as_deref();
+
+        for py in 0..self.height as usize {
+            let uv_y = (py / 2).min(self.planes.uv_height.saturating_sub(1) as usize);
+            for px in 0..self.width as usize {
+                let y_value = self.y[py * y_stride + px];
+                let uv_x = (px / 2).min(self.planes.uv_width.saturating_sub(1) as usize);
+                let uv_index = uv_y * uv_stride + uv_x;
+
+                let (u_value, v_value) = match self.mode {
+                    YuvTextureMode::Yuv420p => {
+                        let v_plane = v_plane.ok_or_else(|| {
+                            "YUV420P snapshot is missing the V plane".to_string()
+                        })?;
+                        (self.u_or_uv[uv_index], v_plane[uv_index])
+                    }
+                    YuvTextureMode::Nv12 => {
+                        let base = uv_index * 2;
+                        (self.u_or_uv[base], self.u_or_uv[base + 1])
+                    }
+                };
+
+                let (r, g, b) = yuv_pixel_to_rgb(y_value, u_value, v_value, self.color);
+                rgb.extend_from_slice(&[r, g, b]);
+            }
+        }
+
+        let mut output = Vec::new();
+        {
+            let mut encoder = png::Encoder::new(&mut output, self.width, self.height);
+            encoder.set_color(png::ColorType::Rgb);
+            encoder.set_depth(png::BitDepth::Eight);
+            let mut writer = encoder
+                .write_header()
+                .map_err(|e| format!("failed to create PNG header: {e}"))?;
+            writer
+                .write_image_data(&rgb)
+                .map_err(|e| format!("failed to encode current LowCast frame as PNG: {e}"))?;
+        }
+        Ok(output)
+    }
+}
+
+fn yuv_pixel_to_rgb(y: u8, u: u8, v: u8, color: YuvColorInfo) -> (u8, u8, u8) {
+    let y_raw = y as f32 / 255.0;
+    let u_raw = u as f32 / 255.0;
+    let v_raw = v as f32 / 255.0;
+
+    let (y, u, v) = match color.range {
+        YuvRange::Limited => (
+            (y_raw - 16.0 / 255.0) * (255.0 / 219.0),
+            (u_raw - 128.0 / 255.0) * (255.0 / 224.0),
+            (v_raw - 128.0 / 255.0) * (255.0 / 224.0),
+        ),
+        YuvRange::Full => (y_raw, u_raw - 0.5, v_raw - 0.5),
+    };
+
+    let (r, g, b) = match color.matrix {
+        YuvMatrix::Bt601 => (
+            y + 1.4020 * v,
+            y - 0.3441 * u - 0.7141 * v,
+            y + 1.7720 * u,
+        ),
+        YuvMatrix::Bt709 => (
+            y + 1.5748 * v,
+            y - 0.1873 * u - 0.4681 * v,
+            y + 1.8556 * u,
+        ),
+        YuvMatrix::Bt2020 => (
+            y + 1.4746 * v,
+            y - 0.1646 * u - 0.5714 * v,
+            y + 1.8814 * u,
+        ),
+    };
+
+    let to_u8 = |value: f32| -> u8 { (value.clamp(0.0, 1.0) * 255.0 + 0.5) as u8 };
+    (to_u8(r), to_u8(g), to_u8(b))
+}
 
 fn finish_lowcast_trace(trace: &mut Option<VideoFrameTrace>, v_rx: &ChannelReceiverV) {
     let Some(trace) = trace.as_mut() else {

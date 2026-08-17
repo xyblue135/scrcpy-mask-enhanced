@@ -26,7 +26,7 @@ use crate::{
         device_action,
         media::AudioCodec,
     },
-    utils::{relate_to_root_path, share::ControlledDevice},
+    utils::{VideoSnapshotResult, relate_to_root_path, share::ControlledDevice},
     web::{JsonResponse, WebServerError, ws::WebSocketNotification},
 };
 
@@ -37,11 +37,13 @@ pub struct AppStateDevice {
     cs_tx: broadcast::Sender<ScrcpyControlMsg>,
     d_tx: UnboundedSender<ControllerCommand>,
     ws_tx: broadcast::Sender<WebSocketNotification>,
+    snapshot_tx: crossbeam_channel::Sender<tokio::sync::oneshot::Sender<VideoSnapshotResult>>,
 }
 
 pub fn routers(
     cs_tx: broadcast::Sender<ScrcpyControlMsg>,
     d_tx: UnboundedSender<ControllerCommand>,
+    snapshot_tx: crossbeam_channel::Sender<tokio::sync::oneshot::Sender<VideoSnapshotResult>>,
     ws_tx: broadcast::Sender<WebSocketNotification>,
 ) -> Router {
     Router::new()
@@ -59,7 +61,12 @@ pub fn routers(
         .route("/control/set_display_power", post(set_display_power))
         .route("/control/set_pointer_location", post(set_pointer_location))
         .route("/control/send_key", post(send_key))
-        .with_state(AppStateDevice { cs_tx, d_tx, ws_tx })
+        .with_state(AppStateDevice {
+            cs_tx,
+            d_tx,
+            ws_tx,
+            snapshot_tx,
+        })
 }
 
 async fn device_list() -> Result<JsonResponse, WebServerError> {
@@ -165,6 +172,16 @@ async fn _control_device(
                 local_config.new_display_dpi
             ));
         }
+
+        // LowCast virtual-display persistence:
+        // 1) keep_active prevents the virtual display from becoming inactive while LowCast is
+        //    minimized, unfocused or temporarily hidden;
+        // 2) vd_destroy_content=false preserves the Android task if the scrcpy virtual display
+        //    is actually destroyed (for example, a reconnect or unexpected disconnect). Android
+        //    moves the task to the main display instead of destroying it, so START_APP can bring
+        //    the existing task back to the next virtual display without a forced cold reload.
+        args.push("keep_active=true".to_string());
+        args.push("vd_destroy_content=false".to_string());
     } else {
         args.push(format!("display_id={}", local_config.display_id));
     }
@@ -817,88 +834,51 @@ struct PostDataId {
     display_id: Option<String>,
 }
 
+/// Mapping-background screenshot source.
+///
+/// LowCast no longer calls Android `adb shell screencap`. Instead it asks the Bevy/video
+/// pipeline for the YUV planes that are currently being displayed, converts that exact frame
+/// to PNG off the render thread, and returns it to the existing frontend endpoint.
+///
+/// Keeping the `/adb_screenshot` route name preserves frontend/API compatibility. `id` and
+/// `display_id` are accepted for backward compatibility but intentionally do not select the
+/// source anymore: the source is always the current LowCast video frame (main or virtual).
 async fn adb_screenshot(
+    State(state): State<AppStateDevice>,
     Json(payload): Json<PostDataId>,
 ) -> Result<impl IntoResponse, WebServerError> {
-    let src = "/data/local/tmp/_screenshot_scrcpy_mask.png";
+    let _ = (&payload.id, &payload.display_id);
+    let (tx, rx) = tokio::sync::oneshot::channel::<VideoSnapshotResult>();
 
-    let display_id = if let Some(display_id) = payload.display_id.as_deref() {
-        let display_id = display_id.trim();
-        if display_id.is_empty() || !display_id.chars().all(|c| c.is_ascii_digit()) {
-            return Err(WebServerError::bad_request("invalid display_id"));
-        }
-        display_id.to_string()
-    } else {
-        let mut display_id_info = Vec::new();
-        Device::shell(
-            &payload.id,
-            ["dumpsys", "SurfaceFlinger", "--display-id"],
-            &mut display_id_info,
-        )
-        .map_err(|e| WebServerError::bad_request(format!("failed get display id: {}", e)))?;
-        let text = String::from_utf8_lossy(&display_id_info);
-        let ids = text
-            .lines()
-            .filter_map(|line| line.split_whitespace().nth(1))
-            .map(|value| value.trim_matches(|c: char| matches!(c, ':' | ',' | '(' | ')')).to_string())
-            .filter(|value| !value.is_empty())
-            .collect::<Vec<_>>();
+    state
+        .snapshot_tx
+        .send(tx)
+        .map_err(|e| WebServerError::internal_error(format!(
+            "failed to request current video frame: {e}"
+        )))?;
 
-        if ids.is_empty() {
-            return Err(WebServerError::bad_request("no display found"));
-        }
-
-        let config = LocalConfig::get();
-        // SurfaceFlinger usually lists the physical/main display first and newly-created
-        // virtual displays afterwards. The old implementation always picked index 0,
-        // which is why mapping-background refresh captured the phone main screen.
-        if config.new_display_enabled && ids.len() > 1 {
-            ids.last().cloned().unwrap()
-        } else {
-            ids.first().cloned().unwrap()
-        }
-    };
+    let image_bytes = tokio::time::timeout(Duration::from_secs(3), rx)
+        .await
+        .map_err(|_| WebServerError::internal_error(
+            "timed out while capturing current LowCast video frame",
+        ))?
+        .map_err(|e| WebServerError::internal_error(format!(
+            "video snapshot request was cancelled: {e}"
+        )))?
+        .map_err(WebServerError::bad_request)?;
 
     log::info!(
-        "[WebServe] screenshot source display={} virtual_display={}",
-        display_id,
-        LocalConfig::get().new_display_enabled
+        "[WebServe] mapping screenshot captured from current LowCast decoded frame ({} bytes)",
+        image_bytes.len()
     );
-
-    Device::shell_logged(
-        &payload.id,
-        ["screencap", "-p", "-d", display_id.as_str(), src],
-    )
-    .map_err(|e| {
-        WebServerError::bad_request(format!(
-            "{} {}: {}",
-            t!("web.device.screenshotError"),
-            payload.id,
-            e
-        ))
-    })?;
-
-    let mut image_bytes = Vec::<u8>::new();
-    Device::pull(&payload.id, src.to_string(), &mut image_bytes).map_err(|e| {
-        WebServerError::bad_request(format!(
-            "{}: {}",
-            t!("web.device.failedGetScreenshotFile"),
-            e
-        ))
-    })?;
-
-    Device::shell_logged(&payload.id, ["rm", src]).map_err(|e| {
-        WebServerError::bad_request(format!(
-            "{} {}: {}",
-            t!("web.device.failedRemoveScreenshot"),
-            payload.id,
-            e
-        ))
-    })?;
 
     let mut headers = HeaderMap::new();
     headers.insert("Content-Type", HeaderValue::from_static("image/png"));
     headers.insert("Cache-Control", HeaderValue::from_static("no-cache"));
+    headers.insert(
+        "X-LowCast-Screenshot-Source",
+        HeaderValue::from_static("current-video-frame"),
+    );
 
     Ok((StatusCode::OK, headers, image_bytes))
 }

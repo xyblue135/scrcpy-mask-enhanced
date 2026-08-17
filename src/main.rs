@@ -20,8 +20,9 @@ use scrcpy_mask::{
     },
     tokio_tasks::{TokioTasksPlugin, TokioTasksRuntime},
     utils::{
-        ChannelReceiverM, ChannelReceiverV, ChannelSenderCS, ChannelSenderD, ChannelSenderWS,
-        LatestVideoFrame, check_for_update, relate_to_data_path,
+        ChannelReceiverM, ChannelReceiverV, ChannelReceiverVideoSnapshot, ChannelSenderCS,
+        ChannelSenderD, ChannelSenderWS, LatestVideoFrame, VideoSnapshotResult, check_for_update,
+        relate_to_data_path,
     },
     web::{self, ws::WebSocketNotification},
 };
@@ -144,13 +145,23 @@ fn start_servers(mut commands: Commands) {
     let (m_tx, m_rx) =
         crossbeam_channel::unbounded::<(MaskCommand, oneshot::Sender<Result<String, String>>)>();
     let (d_tx, d_rx) = mpsc::unbounded_channel::<ControllerCommand>();
+    let (snapshot_tx, snapshot_rx) =
+        crossbeam_channel::unbounded::<oneshot::Sender<VideoSnapshotResult>>();
 
     commands.insert_resource(ChannelSenderCS(cs_tx.clone()));
     commands.insert_resource(ChannelReceiverV(v_channel.clone()));
     commands.insert_resource(ChannelReceiverM(m_rx));
+    commands.insert_resource(ChannelReceiverVideoSnapshot(snapshot_rx));
     commands.insert_resource(ChannelSenderD(d_tx.clone()));
     commands.insert_resource(ChannelSenderWS(ws_tx.clone()));
-    web::Server::start(web_addr, cs_tx.clone(), d_tx, m_tx.clone(), ws_tx.clone());
+    web::Server::start(
+        web_addr,
+        cs_tx.clone(),
+        d_tx,
+        m_tx.clone(),
+        snapshot_tx,
+        ws_tx.clone(),
+    );
     controller::Controller::start(controller_addr, cs_tx, v_channel, d_rx, m_tx, ws_tx);
 }
 
