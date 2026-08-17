@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use ffmpeg_next::{
     ChannelLayout, Error as FfmpegError, error, ffi, frame,
@@ -35,8 +35,8 @@ use crate::{
         media::{
             AudioCodec, AudioDecoder, SC_CODEC_ID_AAC, SC_CODEC_ID_AV1, SC_CODEC_ID_FLAC,
             SC_CODEC_ID_H264, SC_CODEC_ID_H265, SC_CODEC_ID_OPUS, SC_CODEC_ID_RAW, VideoCodec,
-            VideoDecoder, VideoMsg, YuvColorInfo, YuvMatrix, YuvPlaneLayout, YuvRange,
-            read_media_packet,
+            VideoDecoder, VideoFrameTrace, VideoMsg, YuvColorInfo, YuvMatrix, YuvPlaneLayout,
+            YuvRange, read_media_packet,
         },
     },
     utils::{LatestVideoFrame, share::ControlledDevice},
@@ -320,9 +320,11 @@ impl ScrcpyConnection {
         };
 
         // read video packets
+        let mut frame_sequence = 0u64;
         loop {
             match read_media_packet(&mut self.socket).await {
                 Ok(media_packet) => {
+                    let socket_received_at = media_packet.received_at();
                     if let Some(session) = media_packet.session() {
                         log::info!(
                             "[Controller] Video session: {}x{}, client_resize={}",
@@ -345,22 +347,41 @@ impl ScrcpyConnection {
                         continue;
                     };
 
-                    match video_decoder.decoder.send_packet(&packet) {
-                        Ok(()) => {}
+                    frame_sequence = frame_sequence.wrapping_add(1);
+                    let packet_pts = packet.pts();
+                    let mut decode_submitted_at = Instant::now();
+
+                    let submitted = match video_decoder.decoder.send_packet(&packet) {
+                        Ok(()) => true,
                         Err(e) if is_ffmpeg_again(e) => {
                             if !drain_video_decoder(&mut video_decoder, &v_tx) {
                                 break;
                             }
-                            if let Err(e) = video_decoder.decoder.send_packet(&packet) {
-                                log::warn!("[Controller] Failed to send video packet: {}", e);
-                                continue;
+                            decode_submitted_at = Instant::now();
+                            match video_decoder.decoder.send_packet(&packet) {
+                                Ok(()) => true,
+                                Err(e) => {
+                                    log::warn!("[Controller] Failed to send video packet: {}", e);
+                                    false
+                                }
                             }
                         }
                         Err(e) => {
                             log::warn!("[Controller] Failed to send video packet: {}", e);
-                            continue;
+                            false
                         }
+                    };
+
+                    if !submitted {
+                        continue;
                     }
+
+                    video_decoder.track_packet(VideoFrameTrace::new(
+                        frame_sequence,
+                        packet_pts,
+                        socket_received_at,
+                        decode_submitted_at,
+                    ));
 
                     if !drain_video_decoder(&mut video_decoder, &v_tx) {
                         break;
@@ -558,6 +579,11 @@ fn drain_video_decoder(video_decoder: &mut VideoDecoder, v_tx: &LatestVideoFrame
         let mut decoded = frame::Video::empty();
         match video_decoder.decoder.receive_frame(&mut decoded) {
             Ok(()) => {
+                let mut trace = video_decoder.take_trace(decoded.pts());
+                if let Some(trace) = trace.as_mut() {
+                    trace.decode_output_at = Some(Instant::now());
+                }
+
                 let format_changed = match video_decoder.update(&decoded) {
                     Ok(changed) => changed,
                     Err(e) => {
@@ -603,6 +629,9 @@ fn drain_video_decoder(video_decoder: &mut VideoDecoder, v_tx: &LatestVideoFrame
                             &mut v,
                         );
 
+                        if let Some(trace) = trace.as_mut() {
+                            trace.copy_finished_at = Some(Instant::now());
+                        }
                         v_tx.send(VideoMsg::Yuv420p {
                             y,
                             u,
@@ -611,6 +640,7 @@ fn drain_video_decoder(video_decoder: &mut VideoDecoder, v_tx: &LatestVideoFrame
                             height: video_decoder.height,
                             planes,
                             color,
+                            trace,
                         });
                     }
                     Pixel::NV12 => {
@@ -634,6 +664,9 @@ fn drain_video_decoder(video_decoder: &mut VideoDecoder, v_tx: &LatestVideoFrame
                             &mut uv,
                         );
 
+                        if let Some(trace) = trace.as_mut() {
+                            trace.copy_finished_at = Some(Instant::now());
+                        }
                         v_tx.send(VideoMsg::Nv12 {
                             y,
                             uv,
@@ -641,6 +674,7 @@ fn drain_video_decoder(video_decoder: &mut VideoDecoder, v_tx: &LatestVideoFrame
                             height: video_decoder.height,
                             planes,
                             color,
+                            trace,
                         });
                     }
                     format => {

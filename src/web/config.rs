@@ -444,6 +444,40 @@ async fn update_config(
                 "web.config.videoCodecTypeError"
             )));
         }
+        "video_encoder" => {
+            if let Some(value) = payload.value.as_str() {
+                LocalConfig::set_video_encoder(value.to_string());
+                return Ok(JsonResponse::success(
+                    format!("video_encoder: {}", value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request("video_encoder must be a string"));
+        }
+        "video_codec_options" => {
+            if let Some(value) = payload.value.as_str() {
+                LocalConfig::set_video_codec_options(value.to_string());
+                return Ok(JsonResponse::success(
+                    format!("video_codec_options: {}", value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(
+                "video_codec_options must be a string",
+            ));
+        }
+        "qualcomm_low_latency" => {
+            if let Some(value) = payload.value.as_bool() {
+                LocalConfig::set_qualcomm_low_latency(value);
+                return Ok(JsonResponse::success(
+                    format!("qualcomm_low_latency: {}", value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(
+                "qualcomm_low_latency must be a boolean",
+            ));
+        }
         "video_bit_rate" => {
             if let Some(value) = payload.value.as_u64() {
                 LocalConfig::set_video_bit_rate(value as u32);

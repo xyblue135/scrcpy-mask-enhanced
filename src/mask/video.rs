@@ -7,7 +7,9 @@ use bevy::render::render_resource::{
 use bevy::shader::ShaderRef;
 use bevy_ui_render::prelude::{MaterialNode, UiMaterial};
 
-use crate::scrcpy::media::{VideoMsg, YuvColorInfo, YuvMatrix, YuvPlaneLayout, YuvRange};
+use crate::scrcpy::media::{
+    VideoFrameTrace, VideoMsg, YuvColorInfo, YuvMatrix, YuvPlaneLayout, YuvRange,
+};
 use crate::utils::ChannelReceiverV;
 
 #[derive(AsBindGroup, Asset, TypePath, Debug, Clone)]
@@ -271,7 +273,10 @@ pub fn handle_video_msg(
         &mut VideoPlayer,
     )>,
 ) {
-    if let Some(msg) = v_rx.0.take() {
+    if let Some(mut msg) = v_rx.0.take() {
+        if let Some(trace) = msg.trace_mut() {
+            trace.ui_taken_at = Some(std::time::Instant::now());
+        }
         match msg {
             VideoMsg::Yuv420p {
                 y,
@@ -281,6 +286,7 @@ pub fn handle_video_msg(
                 height,
                 planes,
                 color,
+                mut trace,
             } => {
                 video_attr.update_yuv420p(
                     Yuv420pFrame {
@@ -298,6 +304,7 @@ pub fn handle_video_msg(
                     &v_rx,
                 );
                 video_node.1.display = Display::Flex;
+                finish_lowcast_trace(&mut trace, &v_rx);
             }
             VideoMsg::Nv12 {
                 y,
@@ -306,6 +313,7 @@ pub fn handle_video_msg(
                 height,
                 planes,
                 color,
+                mut trace,
             } => {
                 video_attr.update_nv12(
                     Nv12Frame {
@@ -322,6 +330,7 @@ pub fn handle_video_msg(
                     &v_rx,
                 );
                 video_node.1.display = Display::Flex;
+                finish_lowcast_trace(&mut trace, &v_rx);
             }
             VideoMsg::Close => {
                 video_attr.clear(&mut images, &v_rx);
@@ -329,6 +338,40 @@ pub fn handle_video_msg(
             }
         }
     }
+}
+
+
+fn finish_lowcast_trace(trace: &mut Option<VideoFrameTrace>, v_rx: &ChannelReceiverV) {
+    let Some(trace) = trace.as_mut() else {
+        return;
+    };
+    let now = std::time::Instant::now();
+    trace.ui_ready_at = Some(now);
+
+    // One line per ~60 frames keeps telemetry useful without perturbing the hot path too much.
+    if trace.sequence == 0 || trace.sequence % 60 != 0 {
+        return;
+    }
+
+    let decode_output = trace.decode_output_at.unwrap_or(trace.decode_submitted_at);
+    let copy_finished = trace.copy_finished_at.unwrap_or(decode_output);
+    let queued = trace.queued_at.unwrap_or(copy_finished);
+    let ui_taken = trace.ui_taken_at.unwrap_or(queued);
+
+    log::info!(
+        "[LowCast][Latency] frame={} pts={:?} socket->submit={:.2}ms decode={:.2}ms copy={:.2}ms slot={:.2}ms ui_wait={:.2}ms ui_update={:.2}ms client_total={:.2}ms dropped={} delivered={}",
+        trace.sequence,
+        trace.pts,
+        VideoFrameTrace::elapsed_ms(trace.socket_received_at, trace.decode_submitted_at),
+        VideoFrameTrace::elapsed_ms(trace.decode_submitted_at, decode_output),
+        VideoFrameTrace::elapsed_ms(decode_output, copy_finished),
+        VideoFrameTrace::elapsed_ms(copy_finished, queued),
+        VideoFrameTrace::elapsed_ms(queued, ui_taken),
+        VideoFrameTrace::elapsed_ms(ui_taken, now),
+        VideoFrameTrace::elapsed_ms(trace.socket_received_at, now),
+        v_rx.0.dropped_frames(),
+        v_rx.0.delivered_frames(),
+    );
 }
 
 fn create_plane_image(width: u32, height: u32, format: TextureFormat, fill: &[u8]) -> Image {

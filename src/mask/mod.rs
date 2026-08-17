@@ -2,6 +2,7 @@ pub mod mapping;
 pub mod mask_command;
 pub mod ui;
 pub mod video;
+pub mod window_state;
 
 use std::time::Duration;
 
@@ -28,6 +29,10 @@ use crate::{
         },
         ui::basic::TITLEBAR_HEIGHT,
         video::{YuvVideoMaterial, handle_video_msg},
+        window_state::{
+            MaskFullscreenState, apply_pending_window_restore, handle_fullscreen_hotkey,
+            is_persistable_window_position,
+        },
     },
     utils::{ChannelSenderWS, DeviceOrientation, share::ControlledDevice},
     web::ws::WebSocketNotification,
@@ -46,6 +51,7 @@ impl Plugin for MaskPlugins {
             .add_plugins((ui::UiPlugins, mapping::MappingPlugins))
             .init_resource::<PendingWindowFocus>()
             .init_resource::<MaskResizeState>()
+            .init_resource::<MaskFullscreenState>()
             .configure_sets(
                 Update,
                 (MaskFrameSet::Resize, CursorFrameSet::UpdatePosition).chain(),
@@ -54,6 +60,8 @@ impl Plugin for MaskPlugins {
             .add_systems(
                 Update,
                 (
+                    handle_fullscreen_hotkey,
+                    apply_pending_window_restore,
                     sync_mask_size.in_set(MaskFrameSet::Resize),
                     sync_mask_position,
                     handle_mask_command,
@@ -157,12 +165,37 @@ fn sync_mask_size(
     time: Res<Time>,
     mouse_input: Res<ButtonInput<MouseButton>>,
     mut resize_state: ResMut<MaskResizeState>,
+    fullscreen_state: Res<MaskFullscreenState>,
     ws_tx: Res<ChannelSenderWS>,
 ) {
     for e in resize_reader.read() {
-        let h = (e.height - titlebar_state.offset()).max(0.0);
+        // Windows 最小化期间可能短暂上报 0×0 或极小尺寸。
+        // 这种临时尺寸不能覆盖正常投屏窗口配置。
+        if e.width < 32.0 || e.height < 32.0 {
+            continue;
+        }
+
+        // 退出全屏的 Windowed 过渡阶段会产生中间 resize 事件，直接忽略。
+        if fullscreen_state.suppress_window_persistence() && !fullscreen_state.active {
+            continue;
+        }
+
+        let h = if fullscreen_state.active {
+            e.height
+        } else {
+            (e.height - titlebar_state.offset()).max(0.0)
+        };
         mask_size.0 = Vec2::new(e.width, h);
-        resize_state.mark_resized();
+
+        if !fullscreen_state.active {
+            resize_state.mark_resized();
+        }
+    }
+
+    // 无边框全屏使用当前显示器分辨率，不执行普通窗口宽高比修正，
+    // 也不把全屏尺寸写回 horizontal_mask_width / vertical_mask_height。
+    if fullscreen_state.suppress_window_persistence() {
+        return;
     }
 
     if resize_state.tick(time.delta(), &mouse_input) {
@@ -201,6 +234,9 @@ fn sync_mask_size(
             let WindowPosition::At(pos) = window.position else {
                 return;
             };
+            if !is_persistable_window_position(pos) {
+                return;
+            }
             let scale_factor = window.resolution.scale_factor() as f32;
             let content_top = if titlebar_state.visible {
                 physical_to_logical_i32(pos.y, scale_factor) + TITLEBAR_HEIGHT.round() as i32
@@ -235,6 +271,7 @@ fn sync_mask_position(
     titlebar_state: Res<TitlebarState>,
     time: Res<Time>,
     mut debounce: Local<MoveDebounce>,
+    fullscreen_state: Res<MaskFullscreenState>,
     ws_tx: Res<ChannelSenderWS>,
 ) {
     debounce.ensure_init();
@@ -242,6 +279,13 @@ fn sync_mask_position(
     for _ in move_reader.read() {
         debounce.timer.reset();
         debounce.pending = true;
+    }
+
+    // 全屏和退出全屏的恢复阶段都会产生系统级 WindowMoved，
+    // 这些位置不能覆盖普通窗口的保存位置。
+    if fullscreen_state.suppress_window_persistence() {
+        debounce.pending = false;
+        return;
     }
 
     if debounce.pending {
@@ -256,6 +300,9 @@ fn sync_mask_position(
                 let WindowPosition::At(pos) = window.position else {
                     return;
                 };
+                if !is_persistable_window_position(pos) {
+                    return;
+                }
                 let scale_factor = window.resolution.scale_factor() as f32;
                 let content_top = if titlebar_state.visible {
                     physical_to_logical_i32(pos.y, scale_factor) + TITLEBAR_HEIGHT.round() as i32

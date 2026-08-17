@@ -15,6 +15,7 @@ use crate::{
         MaskFrameSet, MaskResizeState,
         mask_command::TitlebarState,
         video::{VideoPlayer, YuvVideoMaterial, create_initial_yuv_material},
+        window_state::MaskFullscreenState,
     },
     scrcpy::{constant::Keycode, controller::ControllerCommand, device_action},
     utils::{ChannelSenderCS, ChannelSenderD, share::ControlledDevice},
@@ -701,8 +702,12 @@ fn resize_handle_priority(handle: CompassOctant) -> u8 {
 fn handle_resize(
     mut window: Single<&mut Window>,
     mut resize_state: ResMut<MaskResizeState>,
+    fullscreen_state: Res<MaskFullscreenState>,
     query: Query<(&ResizeHandle, &Interaction), Changed<Interaction>>,
 ) {
+    if fullscreen_state.suppress_window_persistence() {
+        return;
+    }
     let Some(handle) = query
         .iter()
         .filter_map(|(handle, interaction)| {
@@ -730,11 +735,16 @@ fn active_resize_handle(
 
 fn sync_resize_cursor(
     resize_query: Query<(&ResizeHandle, &Interaction)>,
+    fullscreen_state: Res<MaskFullscreenState>,
     mut cursor_query: Single<&mut CursorIcon, With<Window>>,
 ) {
-    let resize_cursor = active_resize_handle(resize_query)
-        .map(cursor_for_resize_direction)
-        .unwrap_or(SystemCursorIcon::Default);
+    let resize_cursor = if fullscreen_state.suppress_window_persistence() {
+        SystemCursorIcon::Default
+    } else {
+        active_resize_handle(resize_query)
+            .map(cursor_for_resize_direction)
+            .unwrap_or(SystemCursorIcon::Default)
+    };
 
     let next_cursor = CursorIcon::from(resize_cursor);
     if **cursor_query != next_cursor {

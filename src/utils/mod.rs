@@ -3,7 +3,10 @@ pub mod share;
 use std::{
     env,
     path::{Path, PathBuf},
-    sync::{Arc, Mutex},
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicU64, Ordering},
+    },
 };
 
 use axum::http::{HeaderMap, HeaderValue};
@@ -85,16 +88,36 @@ pub struct LatestVideoFrame {
 struct LatestVideoFrameInner {
     slot: Mutex<Option<VideoMsg>>,
     buffers: Mutex<Vec<Vec<u8>>>,
+    dropped_frames: AtomicU64,
+    delivered_frames: AtomicU64,
 }
 
 impl LatestVideoFrame {
-    pub fn send(&self, msg: VideoMsg) {
+    pub fn send(&self, mut msg: VideoMsg) {
+        if let Some(trace) = msg.trace_mut() {
+            trace.queued_at = Some(std::time::Instant::now());
+        }
         let old_msg = self.inner.slot.lock().unwrap().replace(msg);
+        if old_msg.as_ref().is_some_and(VideoMsg::is_video_frame) {
+            self.inner.dropped_frames.fetch_add(1, Ordering::Relaxed);
+        }
         self.recycle_msg(old_msg);
     }
 
     pub fn take(&self) -> Option<VideoMsg> {
-        self.inner.slot.lock().unwrap().take()
+        let msg = self.inner.slot.lock().unwrap().take();
+        if msg.as_ref().is_some_and(VideoMsg::is_video_frame) {
+            self.inner.delivered_frames.fetch_add(1, Ordering::Relaxed);
+        }
+        msg
+    }
+
+    pub fn dropped_frames(&self) -> u64 {
+        self.inner.dropped_frames.load(Ordering::Relaxed)
+    }
+
+    pub fn delivered_frames(&self) -> u64 {
+        self.inner.delivered_frames.load(Ordering::Relaxed)
     }
 
     pub fn take_buffer(&self, size: usize) -> Vec<u8> {
