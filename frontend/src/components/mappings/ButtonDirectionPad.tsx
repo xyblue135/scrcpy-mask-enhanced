@@ -276,7 +276,11 @@ function Setting({
   return (
     <div>
       <h1 className="title-with-line">
-        {t("mappings.directionPad.setting.title")}
+        {t(
+          config.toggle_run_mode
+            ? "mappings.directionPadToggleRun.setting.title"
+            : "mappings.directionPad.setting.title"
+        )}
       </h1>
       <ItemBoxContainer className="max-h-70vh overflow-y-auto pr-2 scrollbar">
         <SettingMappingId id={config.id} />
@@ -515,6 +519,20 @@ function Setting({
               step={0.1}
               onChange={(v) =>
                 v !== null && onConfigChange({ ...config, up_boost_scale: v })
+              }
+            />
+          </ItemBox>
+        )}
+        {config.toggle_run_mode && (
+          <ItemBox
+            label={t("mappings.directionPadToggleRun.setting.enabled")}
+            tooltip={t("mappings.directionPadToggleRun.setting.enabledHint")}
+          >
+            <Switch
+              checked={config.up_boost_key !== null && (config.toggle_run_enabled ?? true)}
+              disabled={config.up_boost_key === null}
+              onChange={(toggle_run_enabled) =>
+                onConfigChange({ ...config, toggle_run_enabled })
               }
             />
           </ItemBox>

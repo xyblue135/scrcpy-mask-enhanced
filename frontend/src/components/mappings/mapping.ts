@@ -69,6 +69,10 @@ export interface SingleTapConfig {
   random_offset_y: number;
   script_hooks: MappingScriptHooks;
   sync: boolean;
+  /** LowCast: this SingleTap is used as a toggle-style stealth button. */
+  stealth_mode?: boolean;
+  /** Any ONE of these buttons cancels stealth by tapping the stealth coordinate again. */
+  cancel_bind?: ButtonBinding;
   type: "SingleTap";
 }
 
@@ -84,7 +88,22 @@ export function newSingleTap(position: Position): SingleTapConfig {
     random_offset_y: default_random_offset,
     script_hooks: defaultScriptHooks(),
     sync: false,
+    stealth_mode: false,
+    cancel_bind: [],
     type: "SingleTap",
+  };
+}
+
+/**
+ * LowCast stealth mapping. It intentionally reuses SingleTap on the wire so
+ * old mapping files and the Rust MappingAction enum remain compatible.
+ */
+export function newStealthTap(position: Position): SingleTapConfig {
+  return {
+    ...newSingleTap(position),
+    stealth_mode: true,
+    cancel_bind: ["KeyW", "KeyA", "KeyS", "KeyD", "ShiftLeft", "ShiftRight"],
+    sync: false,
   };
 }
 
@@ -220,6 +239,10 @@ export interface DirectionPadConfig {
   type: "DirectionPad";
   up_boost_key: ButtonBinding | null;
   up_boost_scale: number;
+  /** LowCast special DirectionPad mode: boost key works as a toggle instead of hold. */
+  toggle_run_mode?: boolean;
+  /** User-facing switch. Only active when up_boost_key is configured. */
+  toggle_run_enabled?: boolean;
 }
 
 export function newDirectionPad(position: Position): DirectionPadConfig {
@@ -249,6 +272,20 @@ export function newDirectionPad(position: Position): DirectionPadConfig {
     type: "DirectionPad",
     up_boost_key: null,
     up_boost_scale: 2.0,
+    toggle_run_mode: false,
+    toggle_run_enabled: true,
+  };
+}
+
+/**
+ * Direction pad variant for games where sprint is a toggle. Configure the
+ * existing up-boost key (usually Shift), then press it once to latch sprint.
+ */
+export function newDirectionPadToggleRun(position: Position): DirectionPadConfig {
+  return {
+    ...newDirectionPad(position),
+    toggle_run_mode: true,
+    toggle_run_enabled: true,
   };
 }
 
@@ -573,6 +610,12 @@ export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
             id,
             random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
             random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
+            stealth_mode: mapping.stealth_mode ?? false,
+            cancel_bind:
+              mapping.cancel_bind ??
+              (mapping.stealth_mode
+                ? ["KeyW", "KeyA", "KeyS", "KeyD", "ShiftLeft", "ShiftRight"]
+                : []),
             script_hooks: withDefaultScriptHooks(mapping.script_hooks),
           };
         case "RepeatTap":
@@ -642,6 +685,8 @@ export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
             jitter_offset_y: withDefaultJitterOffset(mapping.jitter_offset_y),
             up_boost_key: mapping.up_boost_key ?? null,
             up_boost_scale: mapping.up_boost_scale ?? 1.0,
+            toggle_run_mode: mapping.toggle_run_mode ?? false,
+            toggle_run_enabled: mapping.toggle_run_enabled ?? true,
             script_hooks: withDefaultScriptHooks(mapping.script_hooks),
           };
         case "PadCastSpell":

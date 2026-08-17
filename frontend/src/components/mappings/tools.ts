@@ -67,21 +67,21 @@ export function mappingButtonDragFactory(
   maskArea: { width: number; height: number; left: number; top: number },
   originalSize: { width: number; height: number },
   onMouseUp: ({ x, y }: { x: number; y: number }) => void,
-  delay?: number,
+  _delay?: number,
 ) {
-  delay = delay ?? 500;
   const handleDrag = (downEvent: React.MouseEvent) => {
     if (downEvent.button !== 0) return;
-
     const mappingContainer = document.getElementById("mappings-container") as HTMLElement;
-    const scrollX = mappingContainer.scrollLeft;
-    const scrollY = mappingContainer.scrollTop;
-    
+    const mappingDragEnabled = mappingContainer?.dataset.mappingDragEnabled === "true";
+    if (!mappingDragEnabled) return;
+
+    const scrollX = mappingContainer?.scrollLeft ?? 0;
+    const scrollY = mappingContainer?.scrollTop ?? 0;
     const { width, height, left, top } = maskArea;
     const element = downEvent.currentTarget as HTMLElement;
-
+    const startClientX = downEvent.clientX;
+    const startClientY = downEvent.clientY;
     let dragStarted = false;
-    let longPressTimer = 0;
     let curMaskX = 0;
     let curMaskY = 0;
 
@@ -89,22 +89,22 @@ export function mappingButtonDragFactory(
       curMaskX = Math.max(0, Math.min(e.clientX + scrollX - left, width));
       curMaskY = Math.max(0, Math.min(e.clientY + scrollY - top, height));
     };
-
     const handleMouseMove = (moveEvent: MouseEvent) => {
       updateCurMaskPos(moveEvent);
-      if (!dragStarted) return;
+      if (!dragStarted) {
+        const dx = moveEvent.clientX - startClientX;
+        const dy = moveEvent.clientY - startClientY;
+        if (Math.hypot(dx, dy) < 3) return;
+        dragStarted = true;
+      }
       element.style.transform = `translate(${curMaskX}px, ${curMaskY}px)`;
     };
-
     const handleMouseUp = (upEvent: MouseEvent) => {
-      clearTimeout(longPressTimer);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
       if (!dragStarted) return;
-
       updateCurMaskPos(upEvent);
       element.style.transform = `translate(${curMaskX}px, ${curMaskY}px)`;
-
       onMouseUp({
         x: Math.round((curMaskX / width) * originalSize.width),
         y: Math.round((curMaskY / height) * originalSize.height),
@@ -113,14 +113,8 @@ export function mappingButtonDragFactory(
 
     updateCurMaskPos(downEvent);
     window.addEventListener("mousemove", handleMouseMove);
-
-    longPressTimer = setTimeout(() => {
-      dragStarted = true;
-      element.style.transform = `translate(${curMaskX}px, ${curMaskY}px)`;
-    }, delay);
     window.addEventListener("mouseup", handleMouseUp);
   };
-
   return handleDrag;
 }
 
