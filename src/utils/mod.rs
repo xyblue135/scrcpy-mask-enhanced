@@ -163,6 +163,13 @@ pub struct ChannelReceiverM(
     pub crossbeam_channel::Receiver<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
 );
 
+pub type VideoSnapshotResult = Result<Vec<u8>, String>;
+
+#[derive(Resource)]
+pub struct ChannelReceiverVideoSnapshot(
+    pub crossbeam_channel::Receiver<oneshot::Sender<VideoSnapshotResult>>,
+);
+
 #[derive(Resource)]
 pub struct ChannelSenderD(pub tokio::sync::mpsc::UnboundedSender<ControllerCommand>);
 

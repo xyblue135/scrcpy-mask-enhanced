@@ -23,7 +23,7 @@ use tower_http::{
 use crate::{
     mask::mask_command::MaskCommand,
     scrcpy::{control_msg::ScrcpyControlMsg, controller::ControllerCommand},
-    utils::relate_to_root_path,
+    utils::{VideoSnapshotResult, relate_to_root_path},
     web::ws::WebSocketNotification,
 };
 
@@ -35,6 +35,7 @@ impl Server {
         cs_tx: broadcast::Sender<ScrcpyControlMsg>,
         d_tx: UnboundedSender<ControllerCommand>,
         m_tx: crossbeam_channel::Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+        snapshot_tx: crossbeam_channel::Sender<oneshot::Sender<VideoSnapshotResult>>,
         ws_tx: broadcast::Sender<WebSocketNotification>,
     ) {
         thread::spawn(move || {
@@ -43,7 +44,7 @@ impl Server {
                 .build()
                 .unwrap()
                 .block_on(async move {
-                    Server::run_server(addr, cs_tx, d_tx, m_tx, ws_tx).await;
+                    Server::run_server(addr, cs_tx, d_tx, m_tx, snapshot_tx, ws_tx).await;
                 });
         });
     }
@@ -53,6 +54,7 @@ impl Server {
         cs_tx: broadcast::Sender<ScrcpyControlMsg>,
         d_tx: UnboundedSender<ControllerCommand>,
         m_tx: crossbeam_channel::Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+        snapshot_tx: crossbeam_channel::Sender<oneshot::Sender<VideoSnapshotResult>>,
         ws_tx: broadcast::Sender<WebSocketNotification>,
     ) {
         log::info!("[WebServe] {}: {}", t!("web.server.startingOn"), addr);
@@ -75,7 +77,7 @@ impl Server {
             log::error!("[WebServe] {}: {}", t!("web.server.failedToOpenBrowser"), e)
         });
 
-        axum::serve(listener, Self::app(cs_tx, d_tx, m_tx, ws_tx))
+        axum::serve(listener, Self::app(cs_tx, d_tx, m_tx, snapshot_tx, ws_tx))
             .await
             .unwrap();
     }
@@ -84,6 +86,7 @@ impl Server {
         cs_tx: broadcast::Sender<ScrcpyControlMsg>,
         d_tx: UnboundedSender<ControllerCommand>,
         m_tx: crossbeam_channel::Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+        snapshot_tx: crossbeam_channel::Sender<oneshot::Sender<VideoSnapshotResult>>,
         ws_tx: broadcast::Sender<WebSocketNotification>,
     ) -> Router {
         let web_root = relate_to_root_path(["assets", "web"]);
@@ -112,7 +115,7 @@ impl Server {
             .fallback_service(html_shell)
             .nest(
                 "/api/device",
-                device::routers(cs_tx.clone(), d_tx, ws_tx.clone()),
+                device::routers(cs_tx.clone(), d_tx, snapshot_tx, ws_tx.clone()),
             )
             .nest("/api/script", script::routers(m_tx.clone()))
             .nest("/api/mapping", mapping::routers(m_tx.clone()))
