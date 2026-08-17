@@ -1,0 +1,706 @@
+use axum::{
+    Json, Router,
+    extract::State,
+    routing::{get, post},
+};
+use rust_i18n::t;
+use serde::Deserialize;
+use std::net::Ipv4Addr;
+use tokio::sync::oneshot;
+
+use crate::{
+    config::{AUDIO_BIT_RATE_MIN, LocalConfig},
+    is_available_language,
+    mask::mask_command::MaskCommand,
+    scrcpy::{
+        adb::Adb,
+        media::{AudioCodec, AudioSource, VideoCodec},
+    },
+    utils::{
+        IDENTIFIER, check_for_update, get_mask_scale_factor, mask_win_move_helper,
+        share::{ControlledDevice, UpdateInfo},
+    },
+    web::{JsonResponse, WebServerError},
+};
+
+#[derive(Debug, Clone)]
+pub struct AppStatConfig {
+    m_tx: crossbeam_channel::Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+}
+
+pub fn routers(
+    m_tx: crossbeam_channel::Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+) -> Router {
+    Router::new()
+        .route("/get_config", get(get_config))
+        .route("/update_config", post(update_config))
+        .route("/open_data_path", get(open_data_path))
+        .route("/get_update_info", get(get_update_info))
+        .route("/check_update", get(check_update))
+        .with_state(AppStatConfig { m_tx })
+}
+
+async fn get_config() -> Result<JsonResponse, WebServerError> {
+    let config = LocalConfig::get();
+    Ok(JsonResponse::success(
+        t!("web.config.getLocalConfigSuccess"),
+        Some(serde_json::to_value(&config).unwrap()),
+    ))
+}
+
+async fn open_data_path() -> Result<JsonResponse, WebServerError> {
+    let path = dirs::data_dir().unwrap().join(IDENTIFIER);
+    opener::open(path).map_err(|e| {
+        WebServerError::bad_request(format!("{}: {}", t!("web.config.openDataPathFailed"), e))
+    })?;
+
+    return Ok(JsonResponse::success(
+        t!("web.config.openDataPathSuccess"),
+        None,
+    ));
+}
+
+async fn get_update_info() -> Result<JsonResponse, WebServerError> {
+    let info = UpdateInfo::get().await;
+    return Ok(JsonResponse::success(
+        t!("web.config.getUpdateInfoSuccess"),
+        Some(serde_json::to_value(&info).unwrap()),
+    ));
+}
+
+async fn check_update() -> Result<JsonResponse, WebServerError> {
+    match check_for_update().await {
+        Err(e) => {
+            return Err(WebServerError::bad_request(e.to_string()));
+        }
+        Ok(()) => {
+            let info = UpdateInfo::get().await;
+            return Ok(JsonResponse::success(
+                t!("web.config.getUpdateInfoSuccess"),
+                Some(serde_json::to_value(&info).unwrap()),
+            ));
+        }
+    };
+}
+
+#[derive(Deserialize)]
+struct PostDataUpdateConfig {
+    key: String,
+    value: serde_json::Value,
+    #[serde(default)]
+    space: PixelSpace,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+enum PixelSpace {
+    Logical,
+    Physical,
+}
+
+impl Default for PixelSpace {
+    fn default() -> Self {
+        Self::Logical
+    }
+}
+
+async fn scale_factor_for_pixel_space(
+    pixel_space: PixelSpace,
+    state: &AppStatConfig,
+) -> Result<f32, WebServerError> {
+    match pixel_space {
+        PixelSpace::Logical => Ok(1.0),
+        PixelSpace::Physical => get_mask_scale_factor(&state.m_tx)
+            .await
+            .map_err(WebServerError::bad_request),
+    }
+}
+
+fn u32_to_logical(value: u64, scale_factor: f32) -> u32 {
+    (value as f32 / scale_factor).round() as u32
+}
+
+fn i32_to_logical(value: i64, scale_factor: f32) -> i32 {
+    (value as f32 / scale_factor).round() as i32
+}
+
+async fn update_config(
+    State(state): State<AppStatConfig>,
+    Json(payload): Json<PostDataUpdateConfig>,
+) -> Result<JsonResponse, WebServerError> {
+    // sync with src/config.rs
+    match payload.key.as_str() {
+        "language" => {
+            if let Some(value) = payload.value.as_str() {
+                if !is_available_language(value) {
+                    return Err(WebServerError::bad_request(format!(
+                        "{}: {}",
+                        t!("web.config.invalidLanguage"),
+                        value
+                    )));
+                }
+                rust_i18n::set_locale(value);
+                LocalConfig::set_language(value.to_string());
+                return Ok(JsonResponse::success(
+                    format!("{}: {}", t!("web.config.setLanguageSuccess"), value),
+                    None,
+                ));
+            } else {
+                return Err(WebServerError::bad_request(t!(
+                    "web.config.languageMustBeString"
+                )));
+            }
+        }
+        "web_port" => {
+            if let Some(value) = payload.value.as_u64() {
+                LocalConfig::set_web_port(value as u16);
+                return Ok(JsonResponse::success(
+                    format!("{}: {}", t!("web.config.restartToApplyWebPort"), value),
+                    None,
+                ));
+            } else {
+                return Err(WebServerError::bad_request(t!(
+                    "web.config.webPortMustBeU16"
+                )));
+            }
+        }
+        "web_bind_addr" => {
+            if let Some(value) = payload.value.as_str() {
+                let value = value.trim();
+                let addr = value.parse::<Ipv4Addr>().map_err(|_| {
+                    WebServerError::bad_request(format!(
+                        "{}: {}",
+                        t!("web.config.webBindAddrMustBeIpv4"),
+                        value
+                    ))
+                })?;
+                LocalConfig::set_web_bind_addr(addr);
+                return Ok(JsonResponse::success(
+                    format!("{}: {}", t!("web.config.restartToApplyWebBindAddr"), addr),
+                    None,
+                ));
+            } else {
+                return Err(WebServerError::bad_request(t!(
+                    "web.config.webBindAddrMustBeIpv4"
+                )));
+            }
+        }
+        "adb_path" => {
+            if let Some(value) = payload.value.as_str() {
+                match Adb::check_adb_path(value) {
+                    Ok(_) => {
+                        LocalConfig::set_adb_path(value.to_string());
+                        return Ok(JsonResponse::success(
+                            format!("{}: {}", t!("web.config.adbPathSetSuccess"), value),
+                            None,
+                        ));
+                    }
+                    Err(e) => {
+                        return Err(WebServerError::bad_request(format!(
+                            "{}: {}",
+                            t!("web.config.adbPathSetFailed"),
+                            e
+                        )));
+                    }
+                }
+            } else {
+                return Err(WebServerError::bad_request(t!(
+                    "web.config.adbPathMustBeString"
+                )));
+            }
+        }
+        "adb_connect_address" => {
+            if let Some(value) = payload.value.as_str() {
+                let address = value.trim();
+                LocalConfig::set_adb_connect_address(address.to_string());
+                return Ok(JsonResponse::success(
+                    format!(
+                        "{}: {}",
+                        t!("web.config.setAdbConnectAddressSuccess"),
+                        address
+                    ),
+                    None,
+                ));
+            } else {
+                return Err(WebServerError::bad_request(t!(
+                    "web.config.adbConnectAddressMustBeString"
+                )));
+            }
+        }
+        "controller_port" => {
+            if let Some(value) = payload.value.as_u64() {
+                LocalConfig::set_controller_port(value as u16);
+                return Ok(JsonResponse::success(
+                    format!(
+                        "{}: {}",
+                        t!("web.config.restartToApplyControllerPort"),
+                        value
+                    ),
+                    None,
+                ));
+            } else {
+                return Err(WebServerError::bad_request(t!(
+                    "web.config.controllerPortMustBeU16"
+                )));
+            }
+        }
+        "always_on_top" => {
+            if let Some(value) = payload.value.as_bool() {
+                LocalConfig::set_always_on_top(value);
+                let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
+                state
+                    .m_tx
+                    .send((MaskCommand::WinSwitchLevel { top: value }, oneshot_tx))
+                    .unwrap();
+                let msg = oneshot_rx.await.unwrap().unwrap();
+                return Ok(JsonResponse::success(msg, None));
+            } else {
+                return Err(WebServerError::bad_request(t!(
+                    "web.config.alwaysOnTopMustBeBool"
+                )));
+            }
+        }
+        "titlebar_visible" => {
+            if let Some(value) = payload.value.as_bool() {
+                LocalConfig::set_titlebar_visible(value);
+                let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
+                state
+                    .m_tx
+                    .send((MaskCommand::ToggleTitlebar, oneshot_tx))
+                    .unwrap();
+                let msg = oneshot_rx.await.unwrap().unwrap();
+                return Ok(JsonResponse::success(msg, None));
+            } else {
+                return Err(WebServerError::bad_request(t!(
+                    "web.config.titlebarVisibleMustBeBool"
+                )));
+            }
+        }
+        "vertical_mask_height" => {
+            if let Some(value) = payload.value.as_u64() {
+                let scale_factor = scale_factor_for_pixel_space(payload.space, &state).await?;
+                LocalConfig::set_vertical_mask_height(u32_to_logical(value, scale_factor));
+                if let Some(main_device) = ControlledDevice::get_main_device().await {
+                    let (device_w, device_h) = main_device.device_size;
+                    let msg = mask_win_move_helper(device_w, device_h, &state.m_tx).await;
+                    return Ok(JsonResponse::success(
+                        format!("{}. {}", t!("web.config.setVerticalMaskHeightSuccess"), msg),
+                        None,
+                    ));
+                }
+                return Ok(JsonResponse::success(
+                    format!("{}", t!("web.config.setVerticalMaskHeightSuccess")),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(t!(
+                "web.config.verticalMaskHeightMustBeu32"
+            )));
+        }
+        "horizontal_mask_width" => {
+            if let Some(value) = payload.value.as_u64() {
+                let scale_factor = scale_factor_for_pixel_space(payload.space, &state).await?;
+                LocalConfig::set_horizontal_mask_width(u32_to_logical(value, scale_factor));
+                if let Some(main_device) = ControlledDevice::get_main_device().await {
+                    let (device_w, device_h) = main_device.device_size;
+                    let msg = mask_win_move_helper(device_w, device_h, &state.m_tx).await;
+                    return Ok(JsonResponse::success(
+                        format!(
+                            "{}. {}",
+                            t!("web.config.setHorizontalMaskWidthSuccess"),
+                            msg
+                        ),
+                        None,
+                    ));
+                }
+                return Ok(JsonResponse::success(
+                    t!("web.config.setHorizontalMaskWidthSuccess"),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(t!(
+                "web.config.horizontalMaskWidthMustBeu32"
+            )));
+        }
+        "vertical_position" => {
+            if let Some(value) = payload.value.as_array() {
+                if value.len() == 2 {
+                    if let (Some(x), Some(y)) = (value[0].as_i64(), value[1].as_i64()) {
+                        let scale_factor =
+                            scale_factor_for_pixel_space(payload.space, &state).await?;
+                        LocalConfig::set_vertical_position((
+                            i32_to_logical(x, scale_factor),
+                            i32_to_logical(y, scale_factor),
+                        ));
+                        if let Some(main_device) = ControlledDevice::get_main_device().await {
+                            let (device_w, device_h) = main_device.device_size;
+                            let msg = mask_win_move_helper(device_w, device_h, &state.m_tx).await;
+                            return Ok(JsonResponse::success(
+                                format!("{}. {}", t!("web.config.setVerticalPositionSuccess"), msg),
+                                None,
+                            ));
+                        }
+                        return Ok(JsonResponse::success(
+                            format!("{}", t!("web.config.setVerticalPositionSuccess")),
+                            None,
+                        ));
+                    }
+                }
+            }
+            return Err(WebServerError::bad_request(t!(
+                "web.config.verticalPositionTypeError"
+            )));
+        }
+        "horizontal_position" => {
+            if let Some(value) = payload.value.as_array() {
+                if value.len() == 2 {
+                    if let (Some(x), Some(y)) = (value[0].as_i64(), value[1].as_i64()) {
+                        let scale_factor =
+                            scale_factor_for_pixel_space(payload.space, &state).await?;
+                        LocalConfig::set_horizontal_position((
+                            i32_to_logical(x, scale_factor),
+                            i32_to_logical(y, scale_factor),
+                        ));
+                        if let Some(main_device) = ControlledDevice::get_main_device().await {
+                            let (device_w, device_h) = main_device.device_size;
+                            let msg = mask_win_move_helper(device_w, device_h, &state.m_tx).await;
+                            return Ok(JsonResponse::success(
+                                format!(
+                                    "{}. {}",
+                                    t!("web.config.setHorizontalPositionSuccess"),
+                                    msg
+                                ),
+                                None,
+                            ));
+                        }
+                        return Ok(JsonResponse::success(
+                            format!("{}", t!("web.config.setHorizontalPositionSuccess")),
+                            None,
+                        ));
+                    }
+                }
+            }
+            return Err(WebServerError::bad_request(t!(
+                "web.config.horizontalPositionTypeError"
+            )));
+        }
+        "active_mapping_file" => {
+            return Err(WebServerError::bad_request(format!(
+                "{}",
+                t!("web.config.pleaseRequestForOperation", api => "/api/mapping/change_active_mapping")
+            )));
+        }
+        "mapping_label_opacity" => {
+            if let Some(value) = payload.value.as_f64() {
+                if value <= 1.0 && value >= 0.0 {
+                    LocalConfig::set_mapping_label_opacity(value as f32);
+                    return Ok(JsonResponse::success(
+                        format!(
+                            "{}: {}",
+                            t!("web.config.setMappingLabelOpacitySuccess"),
+                            value
+                        ),
+                        None,
+                    ));
+                }
+            }
+            return Err(WebServerError::bad_request(t!(
+                "web.config.mappingLabelOpacityRange"
+            )));
+        }
+        "clipboard_sync" => {
+            if let Some(value) = payload.value.as_bool() {
+                LocalConfig::set_clipboard_sync(value);
+                return Ok(JsonResponse::success(
+                    format!("{}: {}", t!("web.config.setClipboardSyncSuccess"), value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(t!(
+                "web.config.clipboardSyncTypeError"
+            )));
+        }
+        "video_codec" => {
+            if let Some(value) = payload.value.as_str() {
+                let codec = match value {
+                    "H264" => VideoCodec::H264,
+                    "H265" => VideoCodec::H265,
+                    "AV1" => VideoCodec::AV1,
+                    _ => {
+                        return Err(WebServerError::bad_request(format!(
+                            "{}: {}",
+                            t!("web.config.invalidVideoCodec"),
+                            value
+                        )));
+                    }
+                };
+                LocalConfig::set_video_codec(codec);
+                return Ok(JsonResponse::success(
+                    format!("{}: {}", t!("web.config.setVideoCodecSuccess"), value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(t!(
+                "web.config.videoCodecTypeError"
+            )));
+        }
+        "video_bit_rate" => {
+            if let Some(value) = payload.value.as_u64() {
+                LocalConfig::set_video_bit_rate(value as u32);
+                return Ok(JsonResponse::success(
+                    format!("{}: {}", t!("web.config.setVideoBitRateSuccess"), value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(t!(
+                "web.config.videoBitRateTypeError"
+            )));
+        }
+        "video_max_size" => {
+            if let Some(value) = payload.value.as_u64() {
+                LocalConfig::set_video_max_size(value as u32);
+                return Ok(JsonResponse::success(
+                    format!("{}: {}", t!("web.config.setVideoMaxSizeSuccess"), value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(t!(
+                "web.config.videoMaxSizeTypeError"
+            )));
+        }
+        "video_max_fps" => {
+            if let Some(value) = payload.value.as_u64() {
+                LocalConfig::set_video_max_fps(value as u32);
+                return Ok(JsonResponse::success(
+                    format!("{}: {}", t!("web.config.setVideoMaxFpsSuccess"), value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(t!(
+                "web.config.videoMaxFpsTypeError"
+            )));
+        }
+        "display_id" => {
+            if let Some(value) = payload.value.as_i64() {
+                let value = i32::try_from(value).map_err(|_| {
+                    WebServerError::bad_request(t!("web.config.displayIdTypeError"))
+                })?;
+                LocalConfig::set_display_id(value);
+                return Ok(JsonResponse::success(
+                    format!("{}: {}", t!("web.config.setDisplayIdSuccess"), value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(t!(
+                "web.config.displayIdTypeError"
+            )));
+        }
+        "new_display_enabled" => {
+            if let Some(value) = payload.value.as_bool() {
+                LocalConfig::set_new_display_enabled(value);
+                return Ok(JsonResponse::success(
+                    format!(
+                        "{}: {}",
+                        t!("web.config.setNewDisplayEnabledSuccess"),
+                        value
+                    ),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(t!(
+                "web.config.newDisplayEnabledTypeError"
+            )));
+        }
+        "new_display_use_main_size" => {
+            if let Some(value) = payload.value.as_bool() {
+                LocalConfig::set_new_display_use_main_size(value);
+                return Ok(JsonResponse::success(
+                    format!(
+                        "{}: {}",
+                        t!("web.config.setNewDisplayUseMainSizeSuccess"),
+                        value
+                    ),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(t!(
+                "web.config.newDisplayUseMainSizeTypeError"
+            )));
+        }
+        "new_display_width" => {
+            if let Some(value) = payload.value.as_u64() {
+                if let Ok(value) = u32::try_from(value) {
+                    if value > 0 {
+                        LocalConfig::set_new_display_width(value);
+                        return Ok(JsonResponse::success(
+                            format!("{}: {}", t!("web.config.setNewDisplayWidthSuccess"), value),
+                            None,
+                        ));
+                    }
+                }
+            }
+            return Err(WebServerError::bad_request(t!(
+                "web.config.newDisplayWidthTypeError"
+            )));
+        }
+        "new_display_height" => {
+            if let Some(value) = payload.value.as_u64() {
+                if let Ok(value) = u32::try_from(value) {
+                    if value > 0 {
+                        LocalConfig::set_new_display_height(value);
+                        return Ok(JsonResponse::success(
+                            format!("{}: {}", t!("web.config.setNewDisplayHeightSuccess"), value),
+                            None,
+                        ));
+                    }
+                }
+            }
+            return Err(WebServerError::bad_request(t!(
+                "web.config.newDisplayHeightTypeError"
+            )));
+        }
+        "new_display_dpi" => {
+            if let Some(value) = payload.value.as_u64() {
+                if let Ok(value) = u32::try_from(value) {
+                    if value > 0 {
+                        LocalConfig::set_new_display_dpi(value);
+                        return Ok(JsonResponse::success(
+                            format!("{}: {}", t!("web.config.setNewDisplayDpiSuccess"), value),
+                            None,
+                        ));
+                    }
+                }
+            }
+            return Err(WebServerError::bad_request(t!(
+                "web.config.newDisplayDpiTypeError"
+            )));
+        }
+        "audio_codec" => {
+            if let Some(value) = payload.value.as_str() {
+                let codec = match value {
+                    "OPUS" => AudioCodec::Opus,
+                    "AAC" => AudioCodec::Aac,
+                    "FLAC" => AudioCodec::Flac,
+                    "RAW" => AudioCodec::Raw,
+                    _ => {
+                        return Err(WebServerError::bad_request(format!(
+                            "Invalid audio codec: {}",
+                            value
+                        )));
+                    }
+                };
+                LocalConfig::set_audio_codec(codec);
+                return Ok(JsonResponse::success(
+                    format!("Audio codec set: {}", value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request("Audio codec must be string"));
+        }
+        "audio_bit_rate" => {
+            if let Some(value) = payload.value.as_u64() {
+                let value = u32::try_from(value)
+                    .map_err(|_| WebServerError::bad_request("Audio bit rate must be u32"))?;
+                if value < AUDIO_BIT_RATE_MIN {
+                    return Err(WebServerError::bad_request(format!(
+                        "Audio bit rate must be at least {}",
+                        AUDIO_BIT_RATE_MIN
+                    )));
+                }
+                LocalConfig::set_audio_bit_rate(value);
+                return Ok(JsonResponse::success(
+                    format!("Audio bit rate set: {}", value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request("Audio bit rate must be u32"));
+        }
+        "audio_source" => {
+            if let Some(value) = payload.value.as_str() {
+                let source = match value {
+                    "OUTPUT" => AudioSource::Output,
+                    "PLAYBACK" => AudioSource::Playback,
+                    "MIC" => AudioSource::Mic,
+                    _ => {
+                        return Err(WebServerError::bad_request(format!(
+                            "Invalid audio source: {}",
+                            value
+                        )));
+                    }
+                };
+                LocalConfig::set_audio_source(source);
+                if !source.is_playback() {
+                    LocalConfig::set_audio_dup(false);
+                }
+                return Ok(JsonResponse::success(
+                    format!("Audio source set: {}", value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request("Audio source must be string"));
+        }
+        "audio_dup" => {
+            if let Some(value) = payload.value.as_bool() {
+                if value && !LocalConfig::get().audio_source.is_playback() {
+                    return Err(WebServerError::bad_request(
+                        "Audio duplication requires playback source",
+                    ));
+                }
+                LocalConfig::set_audio_dup(value);
+                return Ok(JsonResponse::success(
+                    format!("Audio duplication set: {}", value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(
+                "Audio duplication must be bool",
+            ));
+        }
+        "stay_awake" => {
+            if let Some(value) = payload.value.as_bool() {
+                LocalConfig::set_stay_awake(value);
+                return Ok(JsonResponse::success(
+                    format!("Stay awake set: {}", value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request("Stay awake must be bool"));
+        }
+        "screen_off_timeout" => {
+            if let Some(value) = payload.value.as_i64() {
+                let value = i32::try_from(value)
+                    .map_err(|_| WebServerError::bad_request("Screen off timeout must be i32"))?;
+                if value < -1 {
+                    return Err(WebServerError::bad_request(
+                        "Screen off timeout must be -1 or greater",
+                    ));
+                }
+                LocalConfig::set_screen_off_timeout(value);
+                return Ok(JsonResponse::success(
+                    format!("Screen off timeout set: {}", value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(
+                "Screen off timeout must be i32",
+            ));
+        }
+        "power_off_on_close" => {
+            if let Some(value) = payload.value.as_bool() {
+                LocalConfig::set_power_off_on_close(value);
+                return Ok(JsonResponse::success(
+                    format!("Power off on close set: {}", value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(
+                "Power off on close must be bool",
+            ));
+        }
+        _ => Err(WebServerError::bad_request(format!(
+            "{}: {}",
+            t!("web.config.invalidMappingKey"),
+            payload.key
+        ))),
+    }
+}

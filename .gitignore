@@ -1,0 +1,14 @@
+/target
+scrcpy-mask.code-workspace
+.DS_Store
+.vscode
+/local
+assets/web
+assets/platform-tools
+android-platform-tools
+ffmpeg-7.1.2
+assets/lib
+.claude
+.codex
+AGENTS.md
+CLAUDE.md

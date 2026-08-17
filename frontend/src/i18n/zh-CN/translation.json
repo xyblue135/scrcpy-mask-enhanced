@@ -1,0 +1,441 @@
+{
+  "_meta": {
+    "languageName": "简体中文"
+  },
+  "404": {
+    "title": "看来这个页面已经消失得无影无踪了",
+    "back": "返回主页"
+  },
+  "sider": {
+    "devices": "设备",
+    "mappings": "映射",
+    "settings": "设置"
+  },
+  "welcome": {
+    "main": "欢迎来到 Scrcpy Mask 👏🏻"
+  },
+  "devices": {
+    "adbTools": {
+      "title": "ADB工具",
+      "pair": {
+        "label": "无线配对",
+        "btn": "配对"
+      },
+      "connect": {
+        "label": "无线连接",
+        "btn": "连接"
+      },
+      "server": {
+        "label": "ADB 服务",
+        "restart": "重启"
+      }
+    },
+    "controlledDevices": {
+      "name": "名称",
+      "size": "尺寸",
+      "action": "操作",
+      "title": "受控设备",
+      "mainDevice": "主设备",
+      "actionInfo": "更多信息",
+      "actionClose": "终止控制",
+      "actionReconnect": "重新连接设备",
+      "actionStartApp": "启动应用",
+      "rotation": "方向",
+      "landscape": "横屏",
+      "portrait": "竖屏"
+    },
+    "otherDevices": {
+      "title": "其他设备",
+      "status": "状态",
+      "actionControl": "控制设备",
+      "video": "视频",
+      "audio": "音频"
+    },
+    "common": {
+      "refresh": "刷新设备"
+    },
+    "actions": {
+      "setDisplayPowerOn": "亮屏",
+      "setDisplayPowerOff": "息屏",
+      "volumeUp": "增大音量",
+      "volumeDown": "减小音量",
+      "back": "返回",
+      "home": "主页",
+      "appSwitch": "切换应用",
+      "enablePointerDebug": "开启指针调试",
+      "disablePointerDebug": "关闭指针调试",
+      "executing": "正在执行：{{action}}",
+      "executed": "已执行：{{action}}"
+    },
+    "startApp": {
+      "title": "启动应用",
+      "start": "启动",
+      "cancel": "取消",
+      "appPlaceholder": "选择应用",
+      "displayPlaceholder": "选择显示",
+      "forceStop": "启动前强制停止应用",
+      "rotation": "旋转",
+      "unknownSize": "尺寸未知",
+      "unknownDensity": "DPI未知",
+      "unknownRotation": "旋转未知",
+      "noSelectedApp": "未找到选择的应用"
+    }
+  },
+  "mappings": {
+    "common": {
+      "bind": {
+        "autoInputPlaceholder": "双击开启按键记录",
+        "settingManual": "手动",
+        "settingAuto": "自动",
+        "settingLabel": "绑定",
+        "manualSelectPlaceholder": "选择绑定按键",
+        "hint": "多个映射可共享同一快捷键并同时触发。额外按键不会阻止触发，但更长的组合优先匹配。"
+      },
+      "pointerId": {
+        "label": "触点ID",
+        "hint": "每个触点ID对应唯一一根虚拟手指，同一时刻只能触摸一个坐标。共用相同触点ID的按键若同时按下会产生冲突，可能同时按下的按键必须分配不同的触点ID。"
+      },
+      "note": {
+        "label": "备注"
+      },
+      "id": {
+        "label": "配置 ID",
+        "hint": "用于脚本或外部 API 精确引用这个映射配置。点击复制图标可复制。"
+      },
+      "delete": {
+        "label": "删除"
+      },
+      "refreshBackground": "刷新背景",
+      "refreshBgFail": "刷新背景图片失败: {0}",
+      "refreshSuccess": "刷新背景图片成功",
+      "noMainDevice": "未找到受控的主设备，请在设备页面控制设备",
+      "copy": {
+        "label": "复制"
+      },
+      "randomOffsetX": "随机偏移 X",
+      "randomOffsetY": "随机偏移 Y",
+      "randomOffsetXHint": "每次激活时对触摸坐标施加的水平随机偏移，在 [-偏移, +偏移] 内随机取值。设为 0 禁用。",
+      "randomOffsetYHint": "每次激活时对触摸坐标施加的垂直随机偏移，在 [-偏移, +偏移] 内随机取值。设为 0 禁用。",
+      "scriptHooks": {
+        "before": "前置脚本",
+        "beforeHint": "在该映射动作执行前运行。留空则跳过。脚本会阻塞当前映射流程，耗时脚本可能导致输入延迟或映射卡住。",
+        "beforePlaceholder": "动作执行前运行的脚本",
+        "after": "后置脚本",
+        "afterHint": "在该映射动作执行后运行。留空则跳过。脚本会阻塞当前映射流程，耗时脚本可能导致输入延迟或映射卡住。",
+        "afterPlaceholder": "动作执行后运行的脚本"
+      },
+      "scriptEditor": {
+        "empty": "空脚本",
+        "checking": "正在检查脚本...",
+        "valid": "语法正确",
+        "errorCount": "{{count}} 个错误",
+        "checkFailed": "检查失败",
+        "expand": "放大编辑",
+        "editTitle": "编辑脚本",
+        "run": "运行脚本",
+        "runResult": "运行结果"
+      }
+    },
+    "singleTap": {
+      "setting": {
+        "title": "映射配置 - 点击",
+        "sync": "同步模式",
+        "syncHint": "开启后触摸持续到快捷键抬起，无视持续时长设置。",
+        "duration": "持续时长",
+        "durationHint": "触摸后自动抬起的持续时长（毫秒）。进行中的点击不会因再次按下快捷键而中断。"
+      },
+      "name": "点击"
+    },
+    "repeatTap": {
+      "setting": {
+        "title": "映射配置 - 连点",
+        "duration": "持续时长",
+        "durationHint": "每次触摸持续时间（毫秒）。应当小于重复间隔。",
+        "interval": "重复间隔",
+        "intervalHint": "两次触摸操作之间的间隔时间（毫秒）。持续时长应当小于重复间隔。",
+        "randomOffsetXHint": "每次重复触摸时重新随机取值，使得每次连点的水平坐标略有不同。",
+        "randomOffsetYHint": "每次重复触摸时重新随机取值，使得每次连点的垂直坐标略有不同。"
+      },
+      "name": "连点"
+    },
+    "multipleTap": {
+      "setting": {
+        "title": "映射配置 - 多点点击",
+        "keepLastOne": "至少保留一个操作！",
+        "wait": "等待时长",
+        "waitHint": "当前触摸操作前的等待时长（毫秒）。",
+        "duration": "持续时长",
+        "durationHint": "当前触摸的持续时间（毫秒）。",
+        "delete": "删除",
+        "operations": "操作序列",
+        "operationsHint": "依次执行的操作序列：等待 → 触摸 → 持续 → 抬起。在可视化编辑器中编辑坐标位置。",
+        "operationsHelp": "使用鼠标左键拖动，鼠标右键进行添加或编辑",
+        "edit": "编辑",
+        "back": "返回"
+      },
+      "name": "多点点击"
+    },
+    "swipe": {
+      "setting": {
+        "duration": "滑动耗时",
+        "durationHint": "完成整个滑动动作的总耗时（毫秒）。",
+        "delete": "删除",
+        "keepLastOne": "至少保留一个操作！",
+        "title": "映射配置 - 滑动",
+        "positions": "坐标序列",
+        "enableRandomization": "启用轨迹随机化",
+        "enableRandomizationHint": "将直线路径替换为带随机弧线的平滑曲线，使每次滑动轨迹略有不同。",
+        "positonsHelp": "使用鼠标左键拖动，鼠标右键进行添加或编辑",
+        "edit": "编辑",
+        "back": "返回"
+      },
+      "name": "滑动"
+    },
+    "directionPad": {
+      "setting": {
+        "title": "映射配置 - 方向轮盘",
+        "joyStick": "操纵杆",
+        "button": "按键",
+        "xAxis": "X轴",
+        "yAxis": "Y轴",
+        "up": "上",
+        "upBoostKey": "向上延长",
+        "upBoostKeyHint": "按住此修饰键时，按下向上快捷键可突破最大偏移量限制，获得额外的移动范围。",
+        "upBoostScale": "向上延长倍率",
+        "upBoostScaleHint": "按住延长键时向上偏移量的放大倍率，例如 2.0 表示向上移动距离翻倍。",
+        "down": "下",
+        "left": "左",
+        "right": "右",
+        "maxOffset": "最大偏移量",
+        "maxOffsetHint": "虚拟手指从轮盘中心沿水平和垂直方向的最大拖动距离。",
+        "initDuration": "首次滑动延迟",
+        "initDurationHint": "轮盘响应前的初始滑动时长（毫秒）。用于规避部分游戏无法识别初始触摸的问题。",
+        "enableRandomizationHint": "添加随机锚点偏移、弧形滑动路径和持续漂移，模拟手指自然移动。",
+        "randomOffset": "随机中心偏移",
+        "randomOffsetHint": "每次按下时对轮盘中心施加的随机偏移范围。",
+        "randomDistanceScale": "随机距离倍率",
+        "randomDistanceScaleHint": "每次方向变化时，对中心到目标点的距离乘以随机倍率。",
+        "jitterOffset": "漂移范围",
+        "jitterOffsetHint": "按住方向不变时，触点在当前目标点附近漂移的范围。"
+      },
+      "name": "方向轮盘"
+    },
+    "mouseCastSpell": {
+      "setting": {
+        "title": "映射配置 - 鼠标施法",
+        "center": "施法中心",
+        "centerHint": "施法指向的参考中心点，一般为角色在屏幕中的位置。如果角色因透视投影而不在屏幕中心，可调整此参数校准。",
+        "scaleFactor": "缩放因子",
+        "scaleFactorHint": "控制施法指向水平和垂直的缩放比例。用于校准因游戏透视投影导致的鼠标指向偏差（如王者荣耀推荐 X=7, Y=10）。",
+        "castRadius": "施法范围",
+        "castRadiusHint": "鼠标超出此范围时拖至最大半径，范围内时按比例缩放拖动距离。",
+        "dragRadius": "拖动范围",
+        "dragRadiusHint": "游戏中施法按键的拖动范围半径。",
+        "releaseMode": {
+          "label": "释放时机",
+          "hint": "抬起：按下激活、抬起释放。按下：按下立即释放。二次按下：首次激活、再次释放。",
+          "onPress": "按下",
+          "onRelease": "抬起",
+          "onSecondPress": "二次按下"
+        },
+        "castNoDirection": "无方向施法",
+        "castNoDirectionHint": "无视方向设置，仅点击施法坐标。类似点击但支持取消施法。",
+        "enableInitialSwipeRandomization": "首次滑动随机化",
+        "enableInitialSwipeRandomizationHint": "开启后首次拖动使用随机弧形轨迹；关闭后使用直线轨迹。",
+        "editLabel": "高级编辑",
+        "edit": "编辑",
+        "editHelp": "使用鼠标左键拖动，鼠标右键进行编辑",
+        "setCenter": "中心",
+        "back": "返回"
+      },
+      "name": "鼠标施法"
+    },
+    "padCastSpell": {
+      "setting": {
+        "padBindLabel": "轮盘绑定",
+        "joyStick": "操纵杆",
+        "button": "按键",
+        "title": "映射配置 - 方向轮盘施法",
+        "xAxis": "X轴",
+        "yAxis": "Y轴",
+        "up": "上",
+        "down": "下",
+        "left": "左",
+        "right": "右",
+        "dragRadius": "拖动范围",
+        "dragRadiusHint": "游戏中施法按键的拖动范围半径。",
+        "block": "屏蔽方向轮盘",
+        "blockHint": "施法激活时屏蔽方向轮盘快捷键，避免输入冲突。",
+        "enableRandomizationHint": "添加随机锚点偏移、弧形滑动路径和持续微抖，模拟手指自然移动。",
+        "releaseMode": {
+          "label": "释放时机",
+          "hint": "抬起：按下激活、抬起释放。二次按下：首次激活、再次释放。",
+          "onRelease": "抬起",
+          "onSecondPress": "二次按下"
+        }
+      },
+      "name": "方向轮盘施法"
+    },
+    "cancelCast": {
+      "setting": {
+        "title": "映射配置 - 取消施法"
+      },
+      "name": "取消施法"
+    },
+    "observation": {
+      "setting": {
+        "title": "映射配置 - 观察视角",
+        "sensitivity": "灵敏度",
+        "sensitivityHint": "视角拖动相对鼠标移动的倍率。数值越大越快。",
+        "maxRadius": "最大范围",
+        "maxRadiusHint": "从起始位置的最大拖动距离。设为 0 不限制。"
+      },
+      "name": "观察视角"
+    },
+    "fps": {
+      "setting": {
+        "title": "映射配置 - FPS 模式",
+        "sensitivity": "灵敏度",
+        "sensitivityHint": "视角旋转相对鼠标移动的倍率。触及屏幕边缘时手指自动回中继续追踪。",
+        "maxOffset": "最大偏移",
+        "maxOffsetHint": "从 FPS 起始位置到局部边界的最大距离。设为 0 表示该轴不限制。",
+        "touchMode": "触点模式",
+        "touchModeHint": "触点到达局部边界时会回到起点继续拖动。单触点使用同一个指针重新按回起点；双触点使用备用指针完成交接。",
+        "touchModeSingle": "单触点",
+        "touchModeDual": "双触点",
+        "anotherPointerId": "备用指针 ID",
+        "anotherPointerIdHint": "与主指针轮换使用的另一个指针 ID，不能和主指针相同。",
+        "dualTouchStrategy": "交接策略",
+        "dualTouchStrategyHint": "延迟交接会在按下备用指针后等待再抬起旧指针；重叠交接会让新旧指针在下一次移动时短暂同时参与。",
+        "dualTouchStrategyDelay": "延迟交接",
+        "dualTouchStrategyOverlap": "重叠交接",
+        "touchModeInterval": "间隔时间",
+        "singleTouchIntervalHint": "抬起当前指针后，等待多久再在起点按下同一指针，单位毫秒。设为 0 表示立即按下。",
+        "dualTouchIntervalHint": "按下备用指针后，等待多久再抬起旧指针，单位毫秒。设为 0 表示立即抬起。"
+      },
+      "name": "FPS模式"
+    },
+    "fire": {
+      "setting": {
+        "title": "映射配置 - 开火",
+        "sensitivity": "灵敏度",
+        "sensitivityHint": "仅在 FPS 模式下生效。开火按钮相对鼠标移动的拖动倍率，独立于 FPS 灵敏度。",
+        "preserveFpsControl": "保持 FPS 视角控制",
+        "preserveFpsControlHint": "开启后开火触点保持固定，FPS 视角控制继续响应鼠标移动。"
+      },
+      "name": "开火"
+    },
+    "rawInput": {
+      "setting": {
+        "title": "映射配置 - 直控模式"
+      },
+      "name": "直控模式"
+    },
+    "home": {
+      "emptyBind": "存在未设置快捷键的按键！",
+      "save": "保存",
+      "restore": "还原",
+      "activate": "启用",
+      "refresh": "刷新",
+      "manage": "管理",
+      "file": "文件",
+      "create": "新建",
+      "edit": "编辑",
+      "action": "操作",
+      "delete": "删除",
+      "duplicate": "复制",
+      "manager": "配置管理",
+      "active": "启用",
+      "migration": "迁移到当前主设备尺寸",
+      "editing": "编辑",
+      "rename": "重命名",
+      "createTitle": "创建新配置",
+      "confirmYes": "是",
+      "confirmNo": "否",
+      "renameTitle": "重命名配置",
+      "fileInputPlaceholder": "请输入新配置名称",
+      "deleteTitle": "删除配置",
+      "deletePrompt": "确定要删除吗？",
+      "migrationTitle": "迁移配置",
+      "size": "尺寸",
+      "differentName": "新配置名不能与当前文件名相同！",
+      "duplicateTitle": "复制配置",
+      "showGuides": "辅助范围"
+    },
+    "script": {
+      "setting": {
+        "title": "映射配置 - 脚本",
+        "interval": "按住触发重复间隔",
+        "intervalHint": "按住时脚本重复执行的间隔（毫秒）。脚本执行时间应小于此间隔。",
+        "pressed_script": "按下触发脚本",
+        "pressed_script_placeholder": "按下快捷键时执行一次的脚本",
+        "pressedScriptHint": "按下时执行一次。支持完整脚本 DSL。",
+        "run_script": "测试脚本运行",
+        "held_script": "按住触发脚本",
+        "held_script_placeholder": "按住快捷键时重复执行的脚本",
+        "heldScriptHint": "按住时按指定间隔重复执行。执行时间应小于间隔。",
+        "released_script": "抬起触发脚本",
+        "released_script_placeholder": "抬起快捷键时执行一次的脚本",
+        "releasedScriptHint": "抬起时执行一次。支持完整脚本 DSL。",
+        "result": "运行结果"
+      },
+      "name": "脚本"
+    }
+  },
+  "settings": {
+    "title": {
+      "header": "设置",
+      "basic": "基本",
+      "mask": "蒙版",
+      "video": "视频",
+      "audio": "音频",
+      "advance": "高级"
+    },
+    "language": "语言",
+    "webPort": "Web 端口",
+    "webBindAddr": "Web 监听地址",
+    "controllerPort": "控制服务端口",
+    "adbPath": "Adb 路径",
+    "horizontalMaskWidth": "横屏蒙版宽度",
+    "horizontalMaskPosition": "横屏蒙版位置",
+    "verticalMaskHeight": "竖屏蒙版高度",
+    "verticalMaskPosition": "竖屏蒙版位置",
+    "mappingLabelOpacity": "映射标签不透明度",
+    "clipboardSync": "剪切板同步",
+    "videoCodec": "视频编码",
+    "videoBitRate": "视频码率",
+    "videoMaxSize": "视频最大尺寸",
+    "zeroUnlimitedTip": "设为 0 表示无限制",
+    "videoMaxFps": "视频最大FPS",
+    "displayId": "显示 ID",
+    "displayIdTip": "启用虚拟显示时此项不会用于视频连接",
+    "newDisplayEnabled": "启用虚拟显示",
+    "newDisplayEnabledTip": "仅在连接时启用视频通道时生效；关闭视频通道时仍使用显示 ID",
+    "newDisplayUseMainSize": "使用主屏尺寸/DPI",
+    "newDisplaySize": "虚拟显示尺寸",
+    "newDisplayDpi": "虚拟显示 DPI",
+    "audioCodec": "音频编码",
+    "audioBitRate": "音频码率",
+    "audioSource": "音频来源",
+    "audioDup": "设备播放",
+    "audioDupTip": "仅音频来源为 PLAYBACK 时可用；开启后设备本身也继续播放声音",
+    "alwaysOnTop": "蒙版置顶",
+    "titlebarVisible": "显示标题栏",
+    "stayAwake": "保持唤醒",
+    "screenOffTimeout": "自动息屏等待时间",
+    "screenOffTimeoutTip": "控制设备时的自动息屏时间。-1 表示不修改设备设置，0 表示不自动息屏，正数表示多少毫秒后自动息屏。停止控制后会恢复原设置",
+    "powerOffOnClose": "停止控制后息屏",
+    "webBindAddrTip": "127.0.0.1 仅本机可访问；0.0.0.0 允许局域网访问，请只在可信网络使用",
+    "openDataPath": "打开数据目录",
+    "about": {
+      "title": "关于",
+      "intro": "基于 Rust、Bevy 与 React 构建的 Scrcpy 客户端，让你像使用游戏模拟器一样控制安卓设备",
+      "currentVersion": "当前版本",
+      "latestVersion": "最新版本",
+      "checkUpdate": "检查更新",
+      "showUpdateDialog": "更新详情",
+      "download": "下载",
+      "cancel": "取消"
+    }
+  }
+}
