@@ -386,7 +386,7 @@
       "setting": {
         "title": "Mapping - Direction Pad (Toggle Sprint)",
         "enabled": "Toggle sprint",
-        "enabledHint": "Enabled by default, but only works when Up Boost has a key. Press the boost key once to latch sprint; press it again or press left/right/back to cancel. Starting sprint also cancels stealth."
+        "enabledHint": "Enabled by default, but only works when Up Boost has a key. Press the boost key once to latch sprint and release it normally; A/D keep sprint active, while S/back cancels immediately. To cancel with the boost key, press it again and release it. Starting sprint also cancels stealth."
       }
     },
     "stealthTap": {

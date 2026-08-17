@@ -73,6 +73,7 @@ pub fn cleanup_direction_pad_on_stop(
     block_direction_pad.0 = false;
     lifecycle_state.0.clear_all();
     movement_assist.toggle_run_actions.clear();
+    movement_assist.toggle_run_stop_on_release_actions.clear();
 }
 
 #[derive(Debug, Clone)]
@@ -471,10 +472,22 @@ pub fn handle_direction_pad(
                     b.is_any_key_just_pressed(&key_input)
                         || b.is_any_mouse_just_pressed(&mouse_input)
                 });
+                let boost_just_released = mapping.up_boost_key.as_ref().is_some_and(|b| {
+                    b.is_any_key_just_released(&key_input)
+                        || b.is_any_mouse_just_released(&mouse_input)
+                });
 
                 if toggle_run_available && boost_just_pressed {
-                    if movement_assist.toggle_run_actions.remove(&key) {
-                        log::debug!("[MovementAssist] toggle-run off: {}", mapping.id);
+                    if movement_assist.toggle_run_actions.contains(&key) {
+                        // Sprint is already latched. A second press does not stop it
+                        // immediately; arm cancellation for this press's release.
+                        movement_assist
+                            .toggle_run_stop_on_release_actions
+                            .insert(key.clone());
+                        log::debug!(
+                            "[MovementAssist] toggle-run stop armed: {}",
+                            mapping.id
+                        );
                     } else {
                         // Sprint and stealth are mutually exclusive. Turning sprint on
                         // first toggles any active stealth button off.
@@ -484,17 +497,47 @@ pub fn handle_direction_pad(
                             &cs_tx_res,
                         );
                         movement_assist.toggle_run_actions.insert(key.clone());
+                        movement_assist
+                            .toggle_run_stop_on_release_actions
+                            .remove(&key);
                         log::debug!("[MovementAssist] toggle-run on: {}", mapping.id);
                     }
                 }
 
-                // Left/right/back immediately cancel the latched sprint state.
-                // Up is negative Y in the current DirectionBinding convention.
-                if toggle_run_available && (raw_state.x != 0.0 || raw_state.y > 0.0) {
-                    movement_assist.toggle_run_actions.remove(&key);
+                // In non-hold mode, A/D only steer and must not cancel sprint.
+                // S/back cancels sprint immediately. Up is negative Y in the current
+                // DirectionBinding convention, therefore back is positive Y.
+                if toggle_run_available && raw_state.y > 0.0 {
+                    let was_running = movement_assist.toggle_run_actions.remove(&key);
+                    movement_assist
+                        .toggle_run_stop_on_release_actions
+                        .remove(&key);
+                    if was_running {
+                        log::debug!("[MovementAssist] toggle-run off by back: {}", mapping.id);
+                    }
+                }
+
+                // First Shift press/release turns sprint on and leaves it latched.
+                // A later Shift press arms cancellation, and releasing that press turns
+                // sprint off. This preserves the meaning of “non-hold sprint”.
+                if toggle_run_available
+                    && boost_just_released
+                    && movement_assist
+                        .toggle_run_stop_on_release_actions
+                        .remove(&key)
+                {
+                    if movement_assist.toggle_run_actions.remove(&key) {
+                        log::debug!(
+                            "[MovementAssist] toggle-run off by boost release: {}",
+                            mapping.id
+                        );
+                    }
                 } else if !toggle_run_available {
                     // Prevent stale state after editing/switching this feature off.
                     movement_assist.toggle_run_actions.remove(&key);
+                    movement_assist
+                        .toggle_run_stop_on_release_actions
+                        .remove(&key);
                 }
 
                 let mut state = scale_direction_2d_state(raw_state, mapping);

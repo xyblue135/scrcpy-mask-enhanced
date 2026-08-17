@@ -23,7 +23,12 @@ pub fn movement_assist_init(mut commands: Commands) {
 
 #[derive(Resource, Default, Debug)]
 pub struct MovementAssistState {
+    /// Direction pads whose non-hold sprint is currently latched on.
     pub toggle_run_actions: HashSet<String>,
+    /// A second press of the boost key arms sprint cancellation; the actual
+    /// cancellation happens on that key's release. This keeps the first
+    /// press/release usable as a true non-hold sprint toggle.
+    pub toggle_run_stop_on_release_actions: HashSet<String>,
     pub stealth_actions: HashSet<String>,
 }
 

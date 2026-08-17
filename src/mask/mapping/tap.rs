@@ -253,6 +253,7 @@ pub fn handle_single_tap(
                         } else {
                             // Stealth and toggle-run are mutually exclusive.
                             movement_assist.toggle_run_actions.clear();
+                            movement_assist.toggle_run_stop_on_release_actions.clear();
                             send_stealth_toggle(&cs_tx_res, mapping, original_size);
                             movement_assist.stealth_actions.insert(key.clone());
                             log::debug!("[MovementAssist] stealth on: {}", mapping.id);

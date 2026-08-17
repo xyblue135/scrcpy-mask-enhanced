@@ -309,6 +309,18 @@ impl ButtonBinding {
             .iter()
             .any(|btn| matches!(btn, MergedButton::Mouse(b) if mouse_input.just_pressed(*b)))
     }
+
+    pub fn is_any_key_just_released(&self, key_input: &ButtonInput<KeyCode>) -> bool {
+        self.0
+            .iter()
+            .any(|btn| matches!(btn, MergedButton::Keyboard(k) if key_input.just_released(*k)))
+    }
+
+    pub fn is_any_mouse_just_released(&self, mouse_input: &ButtonInput<MouseButton>) -> bool {
+        self.0
+            .iter()
+            .any(|btn| matches!(btn, MergedButton::Mouse(b) if mouse_input.just_released(*b)))
+    }
 }
 
 impl ToString for ButtonBinding {
