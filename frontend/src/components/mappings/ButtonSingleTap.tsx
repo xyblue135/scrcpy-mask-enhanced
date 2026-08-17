@@ -112,7 +112,7 @@ export default function ButtonSingleTap({
         justify="center"
         align="center"
       >
-        <Tooltip trigger="click" title={`${config.type}: ${bindText}`}>
+        <Tooltip trigger="click" title={`${config.stealth_mode ? "StealthTap" : config.type}: ${bindText}`}>
           <Typography.Text ellipsis={true} className="text-2.5 font-bold">
             {bindText}
           </Typography.Text>
@@ -138,11 +138,25 @@ function Setting({
   return (
     <div>
       <h1 className="title-with-line">
-        {t("mappings.singleTap.setting.title")}
+        {t(
+          config.stealth_mode
+            ? "mappings.stealthTap.setting.title"
+            : "mappings.singleTap.setting.title"
+        )}
       </h1>
       <ItemBoxContainer className="max-h-70vh overflow-y-auto pr-2 scrollbar">
         <SettingMappingId id={config.id} />
         <SettingBind
+          label={
+            config.stealth_mode
+              ? t("mappings.stealthTap.setting.triggerKey")
+              : undefined
+          }
+          tooltip={
+            config.stealth_mode
+              ? t("mappings.stealthTap.setting.triggerKeyHint")
+              : undefined
+          }
           bind={config.bind}
           onBindChange={(bind) => onConfigChange((pre) => ({ ...pre, bind }))}
         />
@@ -152,15 +166,17 @@ function Setting({
             onConfigChange({ ...config, pointer_id: pointerId })
           }
         />
-        <ItemBox label={t("mappings.singleTap.setting.sync")} tooltip={t("mappings.singleTap.setting.syncHint")}>
-          <Switch
-            checked={config.sync}
-            onChange={(v) => {
-              onConfigChange({ ...config, sync: v });
-            }}
-          />
-        </ItemBox>
-        {!config.sync && (
+        {!config.stealth_mode && (
+          <ItemBox label={t("mappings.singleTap.setting.sync")} tooltip={t("mappings.singleTap.setting.syncHint")}>
+            <Switch
+              checked={config.sync}
+              onChange={(v) => {
+                onConfigChange({ ...config, sync: v });
+              }}
+            />
+          </ItemBox>
+        )}
+        {!config.stealth_mode && !config.sync && (
           <ItemBox label={t("mappings.singleTap.setting.duration")} tooltip={t("mappings.singleTap.setting.durationHint")}>
             <InputNumber
               className="w-full"
@@ -171,6 +187,16 @@ function Setting({
               }
             />
           </ItemBox>
+        )}
+        {config.stealth_mode && (
+          <SettingBind
+            label={t("mappings.stealthTap.setting.cancelKeys")}
+            tooltip={t("mappings.stealthTap.setting.cancelKeysHint")}
+            bind={config.cancel_bind ?? []}
+            onBindChange={(cancel_bind) =>
+              onConfigChange((pre) => ({ ...pre, cancel_bind }))
+            }
+          />
         )}
         <ItemBox label={t("mappings.common.randomOffsetX")} tooltip={t("mappings.common.randomOffsetXHint")}>
           <InputNumber
@@ -196,12 +222,14 @@ function Setting({
           note={config.note}
           onNoteChange={(note) => onConfigChange({ ...config, note })}
         />
-        <SettingScriptHooks
-          scriptHooks={config.script_hooks}
-          onScriptHooksChange={(script_hooks) =>
-            onConfigChange({ ...config, script_hooks })
-          }
-        />
+        {!config.stealth_mode && (
+          <SettingScriptHooks
+            scriptHooks={config.script_hooks}
+            onScriptHooksChange={(script_hooks) =>
+              onConfigChange({ ...config, script_hooks })
+            }
+          />
+        )}
         <SettingFooter onDelete={onConfigDelete} onCopy={onConfigCopy} />
       </ItemBoxContainer>
     </div>

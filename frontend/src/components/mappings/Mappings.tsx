@@ -38,6 +38,9 @@ import {
   DeleteOutlined,
   EditOutlined,
   EyeOutlined,
+  LockOutlined,
+  UnlockOutlined,
+  ThunderboltOutlined,
   FileAddOutlined,
   FileSyncOutlined,
   FileTextOutlined,
@@ -74,6 +77,7 @@ import { useTranslation } from "react-i18next";
 import { ItemBox, ItemBoxContainer } from "../common/ItemBox";
 import ButtonFire from "./ButtonFire";
 import ButtonScript from "./ButtonScript";
+import MacroPresetModal, { isMacroScript, syncMacroScripts } from "./MacroPresetModal";
 import { MappingOverlayProvider } from "./MappingOverlay";
 
 type MappingFileTabelItem = {
@@ -507,10 +511,14 @@ const mappingConstructorMap: any = Object.fromEntries(
   ]),
 );
 
-const menuItems = buttonTypes.map((key) => [
-  key,
-  `mappings.${key.charAt(0).toLowerCase() + key.slice(1)}.name`,
-]);
+const menuItems = [
+  ...buttonTypes.map((key) => [
+    key,
+    `mappings.${key.charAt(0).toLowerCase() + key.slice(1)}.name`,
+  ]),
+  ["DirectionPadToggleRun", "mappings.directionPadToggleRun.name"],
+  ["StealthTap", "mappings.stealthTap.name"],
+];
 
 const firstAutoPointerId = 1;
 
@@ -747,7 +755,15 @@ function Displayer({
             })),
             onClick({ key }) {
               let config: MappingType;
-              if (key === "MouseCastSpell") {
+              if (key === "DirectionPadToggleRun") {
+                config = MappingConstructor.newDirectionPadToggleRun(
+                  contextMenuPosRef.current,
+                );
+              } else if (key === "StealthTap") {
+                config = MappingConstructor.newStealthTap(
+                  contextMenuPosRef.current,
+                );
+              } else if (key === "MouseCastSpell") {
                 config = mappingConstructorMap.MouseCastSpell(
                   contextMenuPosRef.current,
                   {
@@ -800,6 +816,9 @@ function Displayer({
                 ),
             };
 
+            // Macro presets reuse the Script backend but are maintained from the top macro manager.
+            // Do not render them as normal circular mapping buttons on the canvas.
+            if (isMacroScript(mapping)) return null;
             if (mapping.type in mappingButtonMap) {
               const ButtonComponent =
                 mappingButtonMap[mapping.type as keyof typeof mappingButtonMap];
@@ -828,6 +847,8 @@ export default function Mappings() {
   const [editState, setEditState] = useState<EditState | null>(null);
   const [mappingList, setMappingList] = useState<string[]>([]);
   const [showAllMappingGuides, setShowAllMappingGuides] = useState(false);
+  const [positionUnlocked, setPositionUnlocked] = useState(false);
+  const [isMacroManagerOpen, setIsMacroManagerOpen] = useState(false);
   const [validationDiagnostics, setValidationDiagnostics] = useState<
     MappingDiagnostic[]
   >([]);
@@ -927,7 +948,8 @@ export default function Mappings() {
   async function updateMappingFile() {
     if (editState) {
       const errorMag = t("mappings.home.emptyBind");
-      const curConfig = editState.current;
+      // Rebuild hidden macro scripts against the latest dragged mapping positions before validation/save.
+      const curConfig = syncMacroScripts(editState.current);
       const validateDirectionBind = (bind: DirectionBinding) => {
         if (bind.type === "Button") {
           for (const b of [bind.up, bind.down, bind.left, bind.right]) {
@@ -1102,6 +1124,16 @@ export default function Mappings() {
 
   return (
     <>
+      <MacroPresetModal
+        open={isMacroManagerOpen}
+        config={editState?.current ?? null}
+        onClose={() => setIsMacroManagerOpen(false)}
+        onConfigChange={(config) =>
+          setEditState((prev) =>
+            prev ? { ...prev, current: config, edited: true } : prev,
+          )
+        }
+      />
       <Modal
         title="Mapping validation failed"
         open={validationDiagnostics.length > 0}
@@ -1124,6 +1156,7 @@ export default function Mappings() {
         vertical
         gap={32}
         id="mappings-container"
+        data-mapping-drag-enabled={positionUnlocked ? "true" : "false"}
         className="page-container hide-scrollbar"
       >
       <Manager
@@ -1189,6 +1222,26 @@ export default function Mappings() {
             </Button>
           </Space.Compact>
           <Space>
+            <Button
+              type={positionUnlocked ? "primary" : "default"}
+              icon={positionUnlocked ? <UnlockOutlined /> : <LockOutlined />}
+              title={
+                positionUnlocked
+                  ? "当前位置已解锁：直接拖动键位即可调整，点击可重新锁定"
+                  : "默认锁定位置：点击解锁后可直接拖动键位，不再需要删除重建"
+              }
+              onClick={() => setPositionUnlocked((value) => !value)}
+            >
+              {positionUnlocked ? "拖动调整" : "位置锁定"}
+            </Button>
+            <Button
+              type={isMacroManagerOpen ? "primary" : "default"}
+              icon={<ThunderboltOutlined />}
+              disabled={!editState}
+              onClick={() => setIsMacroManagerOpen(true)}
+            >
+              宏预设
+            </Button>
             <Button
               type={showAllMappingGuides ? "primary" : "default"}
               icon={<EyeOutlined />}

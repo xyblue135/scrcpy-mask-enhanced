@@ -1,10 +1,10 @@
 {
-  "_meta": {
-    "languageName": "English"
-  },
   "404": {
     "title": "Looks like the page has vanished into thin air.",
     "back": "Back Home"
+  },
+  "_meta": {
+    "languageName": "English"
   },
   "sider": {
     "devices": "Devices",
@@ -380,6 +380,24 @@
         "result": "Running result"
       },
       "name": "Script"
+    },
+    "directionPadToggleRun": {
+      "name": "Direction Pad (Toggle Sprint)",
+      "setting": {
+        "title": "Mapping - Direction Pad (Toggle Sprint)",
+        "enabled": "Toggle sprint",
+        "enabledHint": "Enabled by default, but only works when Up Boost has a key. Press the boost key once to latch sprint and release it normally; A/D keep sprint active, while S/back cancels immediately. To cancel with the boost key, press it again and release it. Starting sprint also cancels stealth."
+      }
+    },
+    "stealthTap": {
+      "name": "Stealth Toggle",
+      "setting": {
+        "title": "Mapping - Stealth Toggle",
+        "triggerKey": "Stealth key",
+        "triggerKeyHint": "Tap once to press the configured stealth coordinate; tap again to leave stealth. Entering stealth cancels latched sprint.",
+        "cancelKeys": "Cancel stealth keys (ANY)",
+        "cancelKeysHint": "These keys are OR conditions, not a chord. Pressing any one while stealth is active taps the stealth coordinate again. Defaults to W/A/S/D/Left Shift/Right Shift."
+      }
     }
   },
   "settings": {

@@ -12,3 +12,7 @@ assets/lib
 .codex
 AGENTS.md
 CLAUDE.md
+# LowCast: local merge/build artifacts; do not commit these into the source tree.
+/src.zip
+/*.patch
+/*.bak

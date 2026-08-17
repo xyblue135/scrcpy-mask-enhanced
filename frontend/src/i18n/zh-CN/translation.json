@@ -1,10 +1,10 @@
 {
-  "_meta": {
-    "languageName": "简体中文"
-  },
   "404": {
     "title": "看来这个页面已经消失得无影无踪了",
     "back": "返回主页"
+  },
+  "_meta": {
+    "languageName": "简体中文"
   },
   "sider": {
     "devices": "设备",
@@ -380,6 +380,24 @@
         "result": "运行结果"
       },
       "name": "脚本"
+    },
+    "directionPadToggleRun": {
+      "name": "方向轮盘（非按住跑步）",
+      "setting": {
+        "title": "映射配置 - 方向轮盘（非按住跑步）",
+        "enabled": "非按住跑步",
+        "enabledHint": "默认开启，但仅在“向上延长”已启用并配置按键后生效。按一次向上延长键（例如 Shift）锁定跑步，第一次松开 Shift 后仍保持自动跑；A/D 只改变方向，不取消跑步；按 S/后退会立即取消。若要用 Shift 取消，请再次按下 Shift，并在这次松开时取消跑步。开启自动跑时会自动取消静步。"
+      }
+    },
+    "stealthTap": {
+      "name": "静步按键",
+      "setting": {
+        "title": "映射配置 - 静步按键",
+        "triggerKey": "静步按键",
+        "triggerKeyHint": "按一次会点击配置的静步坐标并进入静步状态，再按一次会再次点击该坐标并退出。开启静步会取消已锁定的自动跑。",
+        "cancelKeys": "取消静步按键（任意一个）",
+        "cancelKeysHint": "这里按“任意一个键”判断，不是组合键。静步激活后，按下其中任意键都会再次点击静步坐标以取消静步。默认 W/A/S/D/左 Shift/右 Shift，可自行修改。"
+      }
     }
   },
   "settings": {
