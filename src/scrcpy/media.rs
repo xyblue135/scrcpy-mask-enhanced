@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{collections::VecDeque, fmt, time::Instant};
 
 use ffmpeg_next::{
     ChannelLayout, Packet, Rational, codec, decoder, ffi, frame, packet,
@@ -16,12 +16,52 @@ const MAX_MEDIA_PACKET_SIZE: usize = 64 * 1024 * 1024;
 const SC_PACKET_TIME_BASE: Rational = Rational(1, 1_000_000);
 const SC_AUDIO_SAMPLE_RATE: i32 = 48_000;
 
+
+#[derive(Clone, Copy, Debug)]
+pub struct VideoFrameTrace {
+    pub sequence: u64,
+    pub pts: Option<i64>,
+    pub socket_received_at: Instant,
+    pub decode_submitted_at: Instant,
+    pub decode_output_at: Option<Instant>,
+    pub copy_finished_at: Option<Instant>,
+    pub queued_at: Option<Instant>,
+    pub ui_taken_at: Option<Instant>,
+    pub ui_ready_at: Option<Instant>,
+}
+
+impl VideoFrameTrace {
+    pub fn new(
+        sequence: u64,
+        pts: Option<i64>,
+        socket_received_at: Instant,
+        decode_submitted_at: Instant,
+    ) -> Self {
+        Self {
+            sequence,
+            pts,
+            socket_received_at,
+            decode_submitted_at,
+            decode_output_at: None,
+            copy_finished_at: None,
+            queued_at: None,
+            ui_taken_at: None,
+            ui_ready_at: None,
+        }
+    }
+
+    pub fn elapsed_ms(start: Instant, end: Instant) -> f64 {
+        end.saturating_duration_since(start).as_secs_f64() * 1000.0
+    }
+}
+
 pub struct MediaPacket {
     data: Vec<u8>,
     pts: Option<i64>,
     is_config: bool,
     is_key_frame: bool,
     session: Option<MediaSession>,
+    received_at: Instant,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -50,6 +90,10 @@ impl MediaPacket {
 
     pub fn pts(&self) -> Option<i64> {
         self.pts
+    }
+
+    pub fn received_at(&self) -> Instant {
+        self.received_at
     }
 
     fn ffmpeg_packet(data: Vec<u8>, pts: Option<i64>, is_key_frame: bool) -> Packet {
@@ -91,6 +135,7 @@ pub async fn read_media_packet(socket: &mut TcpStream) -> std::result::Result<Me
                 height: len as u32,
                 is_client_resize: (pts_flags & (1u64 << 32)) != 0,
             }),
+            received_at: Instant::now(),
         });
     }
 
@@ -121,6 +166,7 @@ pub async fn read_media_packet(socket: &mut TcpStream) -> std::result::Result<Me
         is_config,
         is_key_frame: (pts_flags & SC_PACKET_FLAG_KEY_FRAME) != 0,
         session: None,
+        received_at: Instant::now(),
     })
 }
 
@@ -320,6 +366,7 @@ pub struct VideoDecoder {
     pixel_format: Option<Pixel>,
     pub must_merge_config: bool,
     pub packet_merger: PacketMerger,
+    pending_traces: VecDeque<VideoFrameTrace>,
 }
 
 impl VideoDecoder {
@@ -347,7 +394,27 @@ impl VideoDecoder {
             must_merge_config: matches!(codec_id, VideoCodec::H264 | VideoCodec::H265),
             packet_merger: PacketMerger::new(),
             pixel_format: None,
+            pending_traces: VecDeque::with_capacity(16),
         })
+    }
+
+    pub fn track_packet(&mut self, trace: VideoFrameTrace) {
+        self.pending_traces.push_back(trace);
+        while self.pending_traces.len() > 32 {
+            self.pending_traces.pop_front();
+        }
+    }
+
+    pub fn take_trace(&mut self, pts: Option<i64>) -> Option<VideoFrameTrace> {
+        if let Some(pts) = pts
+            && let Some(index) = self
+                .pending_traces
+                .iter()
+                .position(|trace| trace.pts == Some(pts))
+        {
+            return self.pending_traces.remove(index);
+        }
+        self.pending_traces.pop_front()
     }
 
     pub fn update(&mut self, decoded: &frame::Video) -> std::result::Result<bool, String> {
@@ -414,6 +481,7 @@ pub enum VideoMsg {
         height: u32,
         planes: YuvPlaneLayout,
         color: YuvColorInfo,
+        trace: Option<VideoFrameTrace>,
     },
     Nv12 {
         y: Vec<u8>,
@@ -422,6 +490,20 @@ pub enum VideoMsg {
         height: u32,
         planes: YuvPlaneLayout,
         color: YuvColorInfo,
+        trace: Option<VideoFrameTrace>,
     },
     Close,
+}
+
+impl VideoMsg {
+    pub fn is_video_frame(&self) -> bool {
+        matches!(self, Self::Yuv420p { .. } | Self::Nv12 { .. })
+    }
+
+    pub fn trace_mut(&mut self) -> Option<&mut VideoFrameTrace> {
+        match self {
+            Self::Yuv420p { trace, .. } | Self::Nv12 { trace, .. } => trace.as_mut(),
+            Self::Close => None,
+        }
+    }
 }

@@ -70,6 +70,9 @@ pub struct LocalConfig {
     pub clipboard_sync: bool,
     // video config
     pub video_codec: VideoCodec,
+    pub video_encoder: String,
+    pub video_codec_options: String,
+    pub qualcomm_low_latency: bool,
     pub video_bit_rate: u32,
     pub video_max_size: u32,
     pub video_max_fps: u32,
@@ -109,9 +112,12 @@ impl Default for LocalConfig {
             language: DEFAULT_LANGUAGE.to_string(),
             clipboard_sync: true,
             video_codec: VideoCodec::H264,
-            video_bit_rate: 8_000000, // 8M
-            video_max_size: 0,        // default no limit
-            video_max_fps: 0,         // default no limit
+            video_encoder: "c2.qti.avc.encoder".to_string(), // LowCast/RMX3700 Qualcomm H.264 HW encoder
+            video_codec_options: String::new(),
+            qualcomm_low_latency: false, // experimental; enable for A/B testing
+            video_bit_rate: 12_000_000, // LowCast default: 12M
+            video_max_size: 0,          // default no limit
+            video_max_fps: 60,          // LowCast default: 60 FPS
             display_id: 0,
             new_display_enabled: false,
             new_display_use_main_size: true,
@@ -140,6 +146,30 @@ macro_rules! define_setter {
             )*
         }
     };
+}
+
+
+fn sanitize_window_config(config: &mut LocalConfig) {
+    if config.horizontal_mask_width < 64 {
+        config.horizontal_mask_width = 1280;
+    }
+    if config.vertical_mask_height < 64 {
+        config.vertical_mask_height = 720;
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        // 旧配置中的 -32000 物理坐标可能经过 DPI 换算后变成 -21333 等值，
+        // 因此历史坏值使用更宽松阈值，同时要求 X/Y 都是极端负数。
+        let looks_like_minimized = |(x, y): (i32, i32)| x < -10_000 && y < -10_000;
+
+        if looks_like_minimized(config.horizontal_position) {
+            config.horizontal_position = (100, 100);
+        }
+        if looks_like_minimized(config.vertical_position) {
+            config.vertical_position = (100, 100);
+        }
+    }
 }
 
 impl LocalConfig {
@@ -181,8 +211,9 @@ impl LocalConfig {
                 e
             )
         })?;
-        let config: LocalConfig = serde_json::from_str(&config_string)
+        let mut config: LocalConfig = serde_json::from_str(&config_string)
             .map_err(|e| format!("{}: {}", t!("localConfig.serializeConfigError"), e))?;
+        sanitize_window_config(&mut config);
         *CONFIG.write().unwrap() = config;
         Ok(())
     }
@@ -212,6 +243,9 @@ impl LocalConfig {
         (language, String),
         (clipboard_sync, bool),
         (video_codec, VideoCodec),
+        (video_encoder, String),
+        (video_codec_options, String),
+        (qualcomm_low_latency, bool),
         (video_bit_rate, u32),
         (video_max_size, u32),
         (video_max_fps, u32),

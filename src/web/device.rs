@@ -193,6 +193,23 @@ async fn _control_device(
 
             // video shell args
             args.push(format!("video_codec={}", local_config.video_codec));
+            if !local_config.video_encoder.trim().is_empty() {
+                args.push(format!("video_encoder={}", local_config.video_encoder.trim()));
+            }
+
+            let mut codec_options = local_config.video_codec_options.trim().to_string();
+            if local_config.qualcomm_low_latency
+                && !codec_options.contains("vendor.qti-ext-enc-low-latency.enable")
+            {
+                if !codec_options.is_empty() {
+                    codec_options.push(',');
+                }
+                codec_options.push_str("vendor.qti-ext-enc-low-latency.enable=1");
+            }
+            if !codec_options.is_empty() {
+                args.push(format!("video_codec_options={codec_options}"));
+            }
+
             args.push(format!("video_bit_rate={}", local_config.video_bit_rate));
             if local_config.video_max_size > 0 {
                 args.push(format!("max_size={}", local_config.video_max_size));
