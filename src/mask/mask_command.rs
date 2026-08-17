@@ -31,6 +31,9 @@ pub enum MaskCommand {
     DeviceConnectionChange {
         connect: bool,
     },
+    SetMappingEnabled {
+        enabled: bool,
+    },
     GetActiveMapping,
     GetScaleFactor,
     LoadAndActivateMappingConfig {
@@ -124,8 +127,14 @@ pub fn handle_mask_command(
             }
             MaskCommand::DeviceConnectionChange { connect } => {
                 let msg = if connect {
-                    next_mapping_state.set(MappingState::Normal);
-                    log::info!("[Mapping] {}", t!("mask.enterNormalMappingMode"));
+                    let mapping_enabled = LocalConfig::get().mapping_enabled;
+                    if mapping_enabled {
+                        next_mapping_state.set(MappingState::Normal);
+                        log::info!("[Mapping] {}", t!("mask.enterNormalMappingMode"));
+                    } else {
+                        next_mapping_state.set(MappingState::Stop);
+                        log::info!("[Mapping] keyboard mapping disabled by config");
+                    }
                     window.visible = true;
                     window.focused = false;
                     pending_focus.frames_remaining = 2;
@@ -141,6 +150,18 @@ pub fn handle_mask_command(
                 };
                 log::info!("[Mask] {}", msg);
                 oneshot_tx.send(Ok(msg)).unwrap();
+            }
+            MaskCommand::SetMappingEnabled { enabled } => {
+                LocalConfig::set_mapping_enabled(enabled);
+                if enabled && window.visible {
+                    next_mapping_state.set(MappingState::Normal);
+                    log::info!("[Mapping] keyboard mapping enabled");
+                } else {
+                    next_cursor_state.set(CursorState::Normal);
+                    next_mapping_state.set(MappingState::Stop);
+                    log::info!("[Mapping] keyboard mapping disabled");
+                }
+                oneshot_tx.send(Ok(enabled.to_string())).unwrap();
             }
             MaskCommand::GetActiveMapping => {
                 oneshot_tx.send(Ok(active_mapping.1.clone())).unwrap();

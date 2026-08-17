@@ -28,10 +28,10 @@ use crate::{
             handle_mask_command, physical_to_logical_i32,
         },
         ui::basic::TITLEBAR_HEIGHT,
-        video::{YuvVideoMaterial, handle_video_msg},
+        video::{VideoViewport, YuvVideoMaterial, handle_video_msg, sync_video_viewport},
         window_state::{
-            MaskFullscreenState, apply_pending_window_restore, handle_fullscreen_hotkey,
-            is_persistable_window_position,
+            MaskFullscreenState, MaskMaximizeState, apply_pending_window_restore,
+            handle_fullscreen_hotkey, is_persistable_window_position,
         },
     },
     utils::{ChannelSenderWS, DeviceOrientation, share::ControlledDevice},
@@ -52,6 +52,8 @@ impl Plugin for MaskPlugins {
             .init_resource::<PendingWindowFocus>()
             .init_resource::<MaskResizeState>()
             .init_resource::<MaskFullscreenState>()
+            .init_resource::<MaskMaximizeState>()
+            .init_resource::<VideoViewport>()
             .configure_sets(
                 Update,
                 (MaskFrameSet::Resize, CursorFrameSet::UpdatePosition).chain(),
@@ -67,6 +69,10 @@ impl Plugin for MaskPlugins {
                     handle_mask_command,
                     apply_pending_window_focus.after(handle_mask_command),
                     handle_video_msg,
+                    sync_video_viewport
+                        .after(handle_video_msg)
+                        .after(MaskFrameSet::Resize)
+                        .before(CursorFrameSet::UpdatePosition),
                 ),
             );
     }
@@ -166,6 +172,7 @@ fn sync_mask_size(
     mouse_input: Res<ButtonInput<MouseButton>>,
     mut resize_state: ResMut<MaskResizeState>,
     fullscreen_state: Res<MaskFullscreenState>,
+    maximize_state: Res<MaskMaximizeState>,
     ws_tx: Res<ChannelSenderWS>,
 ) {
     for e in resize_reader.read() {
@@ -187,14 +194,16 @@ fn sync_mask_size(
         };
         mask_size.0 = Vec2::new(e.width, h);
 
-        if !fullscreen_state.active {
+        if !fullscreen_state.active && !maximize_state.active {
             resize_state.mark_resized();
         }
     }
 
     // 无边框全屏使用当前显示器分辨率，不执行普通窗口宽高比修正，
     // 也不把全屏尺寸写回 horizontal_mask_width / vertical_mask_height。
-    if fullscreen_state.suppress_window_persistence() {
+    if fullscreen_state.suppress_window_persistence()
+        || maximize_state.suppress_window_persistence()
+    {
         return;
     }
 
@@ -272,6 +281,7 @@ fn sync_mask_position(
     time: Res<Time>,
     mut debounce: Local<MoveDebounce>,
     fullscreen_state: Res<MaskFullscreenState>,
+    maximize_state: Res<MaskMaximizeState>,
     ws_tx: Res<ChannelSenderWS>,
 ) {
     debounce.ensure_init();
@@ -283,7 +293,9 @@ fn sync_mask_position(
 
     // 全屏和退出全屏的恢复阶段都会产生系统级 WindowMoved，
     // 这些位置不能覆盖普通窗口的保存位置。
-    if fullscreen_state.suppress_window_persistence() {
+    if fullscreen_state.suppress_window_persistence()
+        || maximize_state.suppress_window_persistence()
+    {
         debounce.pending = false;
         return;
     }

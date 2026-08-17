@@ -7,10 +7,87 @@ use bevy::render::render_resource::{
 use bevy::shader::ShaderRef;
 use bevy_ui_render::prelude::{MaterialNode, UiMaterial};
 
+use crate::mask::{
+    mask_command::{MaskSize, TitlebarState},
+    window_state::{MaskFullscreenState, MaskMaximizeState},
+};
 use crate::scrcpy::media::{
     VideoFrameTrace, VideoMsg, YuvColorInfo, YuvMatrix, YuvPlaneLayout, YuvRange,
 };
 use crate::utils::ChannelReceiverV;
+
+
+#[derive(Resource, Clone, Copy, Debug)]
+pub struct VideoViewport {
+    /// 最新视频帧原始尺寸，用于 contain 缩放。
+    pub source_size: Vec2,
+    /// 视频画面相对投屏内容区域左上角的偏移（黑边大小）。
+    pub offset: Vec2,
+    /// 实际显示视频区域尺寸，也是键位映射使用的 MaskSize。
+    pub size: Vec2,
+}
+
+impl Default for VideoViewport {
+    fn default() -> Self {
+        Self {
+            source_size: Vec2::ZERO,
+            offset: Vec2::ZERO,
+            size: Vec2::ZERO,
+        }
+    }
+}
+
+impl VideoViewport {
+    fn contain(source: Vec2, available: Vec2) -> (Vec2, Vec2) {
+        if source.x <= 0.0 || source.y <= 0.0 || available.x <= 0.0 || available.y <= 0.0 {
+            return (Vec2::ZERO, Vec2::new(available.x.max(0.0), available.y.max(0.0)));
+        }
+
+        let scale = (available.x / source.x).min(available.y / source.y);
+        let size = source * scale;
+        let offset = ((available - size) * 0.5).max(Vec2::ZERO);
+        (offset, size)
+    }
+}
+
+/// 统一计算视频显示矩形。普通窗口保持原来的等比例窗口行为；
+/// F11 全屏和普通窗口最大化时使用 contain 缩放，多余区域显示黑边而不是拉伸。
+pub fn sync_video_viewport(
+    window: Single<&Window>,
+    titlebar_state: Res<TitlebarState>,
+    fullscreen_state: Res<MaskFullscreenState>,
+    maximize_state: Res<MaskMaximizeState>,
+    mut viewport: ResMut<VideoViewport>,
+    mut mask_size: ResMut<MaskSize>,
+    mut video_query: Query<&mut Node, With<VideoPlayer>>,
+) {
+    let available = Vec2::new(
+        window.size().x.max(0.0),
+        if fullscreen_state.active {
+            window.size().y.max(0.0)
+        } else {
+            (window.size().y - titlebar_state.offset()).max(0.0)
+        },
+    );
+
+    let letterbox = fullscreen_state.active || maximize_state.active;
+    let (offset, size) = if letterbox {
+        VideoViewport::contain(viewport.source_size, available)
+    } else {
+        (Vec2::ZERO, available)
+    };
+
+    viewport.offset = offset;
+    viewport.size = size;
+    mask_size.0 = size;
+
+    for mut node in video_query.iter_mut() {
+        node.left = Val::Px(offset.x);
+        node.top = Val::Px(offset.y);
+        node.width = Val::Px(size.x);
+        node.height = Val::Px(size.y);
+    }
+}
 
 #[derive(AsBindGroup, Asset, TypePath, Debug, Clone)]
 pub struct YuvVideoMaterial {
@@ -264,6 +341,7 @@ pub fn create_initial_yuv_material(
 
 pub fn handle_video_msg(
     v_rx: Res<ChannelReceiverV>,
+    mut viewport: ResMut<VideoViewport>,
     mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<YuvVideoMaterial>>,
     mut video_attr: Local<VideoAttributes>,
@@ -288,6 +366,7 @@ pub fn handle_video_msg(
                 color,
                 mut trace,
             } => {
+                viewport.source_size = Vec2::new(width as f32, height as f32);
                 video_attr.update_yuv420p(
                     Yuv420pFrame {
                         y,
@@ -315,6 +394,7 @@ pub fn handle_video_msg(
                 color,
                 mut trace,
             } => {
+                viewport.source_size = Vec2::new(width as f32, height as f32);
                 video_attr.update_nv12(
                     Nv12Frame {
                         y,
@@ -333,6 +413,9 @@ pub fn handle_video_msg(
                 finish_lowcast_trace(&mut trace, &v_rx);
             }
             VideoMsg::Close => {
+                viewport.source_size = Vec2::ZERO;
+                viewport.offset = Vec2::ZERO;
+                viewport.size = Vec2::ZERO;
                 video_attr.clear(&mut images, &v_rx);
                 video_node.1.display = Display::None;
             }

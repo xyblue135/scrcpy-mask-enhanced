@@ -14,6 +14,7 @@ use crate::{
         mapping::{MappingState, mask_not_resizing, utils::ControlMsgHelper},
         mask_command::{MaskSize, TitlebarState},
         ui::basic::{MaskContentEntity, TITLEBAR_HEIGHT},
+        video::VideoViewport,
     },
     scrcpy::{constant::MotionEventAction, control_msg::ScrcpyControlMsg},
     utils::ChannelSenderCS,
@@ -309,6 +310,7 @@ fn handle_cursor_normal(
     window: Single<&Window>,
     mut cursor_pos: ResMut<CursorPosition>,
     titlebar_state: Res<TitlebarState>,
+    viewport: Res<VideoViewport>,
     mut normal_capture: ResMut<NormalCursorCapture>,
     mask_size: Res<MaskSize>,
 ) {
@@ -322,7 +324,10 @@ fn handle_cursor_normal(
             new_pos = clamped_virtual_cursor_pos(new_pos, mask_size.0);
         }
     } else if let Some(pos) = window.cursor_position() {
-        new_pos = pos - Vec2::new(0., titlebar_state.offset());
+        new_pos = clamped_virtual_cursor_pos(
+            pos - Vec2::new(0., titlebar_state.offset()) - viewport.offset,
+            mask_size.0,
+        );
     } else {
         new_pos += accumulated_motion.delta;
     }
@@ -337,6 +342,7 @@ fn sync_normal_cursor_capture_window(
     mut cursor_pos: ResMut<CursorPosition>,
     mask_size: Res<MaskSize>,
     titlebar_state: Res<TitlebarState>,
+    viewport: Res<VideoViewport>,
 ) {
     let (mut window, mut cursor_options) = window.into_inner();
     let active = normal_capture.is_active() && window.focused;
@@ -344,7 +350,7 @@ fn sync_normal_cursor_capture_window(
     if active && !normal_capture.grabbed {
         if let Some(pos) = window.cursor_position() {
             cursor_pos.0 = clamped_virtual_cursor_pos(
-                pos - Vec2::new(0., titlebar_state.offset()),
+                pos - Vec2::new(0., titlebar_state.offset()) - viewport.offset,
                 mask_size.0,
             );
         }
@@ -359,7 +365,9 @@ fn sync_normal_cursor_capture_window(
         let restore_pos = clamped_system_cursor_restore_pos(cursor_pos.0, mask_size.0);
         cursor_pos.0 = restore_pos;
         cursor_options.grab_mode = CursorGrabMode::None;
-        window.set_cursor_position(Some(restore_pos + Vec2::new(0., titlebar_state.offset())));
+        window.set_cursor_position(Some(
+            restore_pos + viewport.offset + Vec2::new(0., titlebar_state.offset()),
+        ));
         cursor_options.visible = true;
         normal_capture.grabbed = false;
         normal_capture.skip_next_nonzero_motion = false;
@@ -372,6 +380,7 @@ fn sync_virtual_cursor(
     normal_capture: Res<NormalCursorCapture>,
     cursor_pos: Res<CursorPosition>,
     mask_size: Res<MaskSize>,
+    viewport: Res<VideoViewport>,
     mut query: Query<&mut Node, With<VirtualCursor>>,
 ) {
     if query.is_empty() {
@@ -473,8 +482,8 @@ fn sync_virtual_cursor(
         } else {
             Display::None
         };
-        node.left = Val::Px(display_pos.x - VIRTUAL_CURSOR_SIZE / 2.0);
-        node.top = Val::Px(display_pos.y - VIRTUAL_CURSOR_SIZE / 2.0);
+        node.left = Val::Px(viewport.offset.x + display_pos.x - VIRTUAL_CURSOR_SIZE / 2.0);
+        node.top = Val::Px(viewport.offset.y + display_pos.y - VIRTUAL_CURSOR_SIZE / 2.0);
     }
 }
 
@@ -498,6 +507,7 @@ fn on_enter_cursor_fps(
     fps_config: Res<ActiveCursorFpsConfig>,
     mask_size: Res<MaskSize>,
     titlebar_state: Res<TitlebarState>,
+    viewport: Res<VideoViewport>,
     mut normal_capture: ResMut<NormalCursorCapture>,
 ) {
     let center_pos = fps_config.original_pos / fps_config.original_size * mask_size.0;
@@ -508,7 +518,9 @@ fn on_enter_cursor_fps(
     cursor_options.visible = false;
 
     if window.cursor_position().is_none() {
-        window.set_cursor_position(Some(center_pos + Vec2::new(0., titlebar_state.offset())));
+        window.set_cursor_position(Some(
+            center_pos + viewport.offset + Vec2::new(0., titlebar_state.offset()),
+        ));
         ignore_first_motion.0 = true;
     }
 
@@ -521,12 +533,15 @@ fn on_exit_cursor_fps(
     fps_config: Res<ActiveCursorFpsConfig>,
     mask_size: Res<MaskSize>,
     titlebar_state: Res<TitlebarState>,
+    viewport: Res<VideoViewport>,
     mut normal_capture: ResMut<NormalCursorCapture>,
 ) {
     let center_pos = fps_config.original_pos / fps_config.original_size * mask_size.0;
     let (mut window, mut cursor_options) = window.into_inner();
 
-    window.set_cursor_position(Some(center_pos + Vec2::new(0., titlebar_state.offset())));
+    window.set_cursor_position(Some(
+        center_pos + viewport.offset + Vec2::new(0., titlebar_state.offset()),
+    ));
     cursor_pos.0 = center_pos;
     cursor_options.grab_mode = CursorGrabMode::None;
     cursor_options.visible = true;
