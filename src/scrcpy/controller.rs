@@ -4,6 +4,7 @@ use bevy::log;
 use copypasta::{ClipboardContext, ClipboardProvider};
 use rust_i18n::t;
 use tokio::{
+    io::AsyncWriteExt,
     net::TcpListener,
     sync::{
         broadcast,
@@ -161,7 +162,25 @@ impl Controller {
                         let cr_tx_copy = cr_tx.clone();
                         let m_tx_copy = m_tx.clone();
                         match listener.accept().await {
-                            Ok((socket, _)) => {
+                            Ok((mut socket, _)) => {
+                                let config = LocalConfig::get();
+                                if config.new_display_enabled && config.new_display_start_app_enabled {
+                                    let package = config.new_display_start_app_package.trim();
+                                    if !package.is_empty() {
+                                        let name = if config.new_display_start_app_force_stop {
+                                            format!("+{package}")
+                                        } else {
+                                            package.to_string()
+                                        };
+                                        let data: Vec<u8> = ScrcpyControlMsg::StartApp { name: name.clone() }.into();
+                                        if let Err(e) = socket.write_all(&data).await {
+                                            log::warn!("[Controller] failed to start app on virtual display ({name}): {e}");
+                                        } else {
+                                            log::info!("[Controller] started app on virtual display: {name}");
+                                        }
+                                    }
+                                }
+
                                 let ws_tx_copy = ws_tx.clone();
                                 let scid_copy = scid.clone();
                                 ws_tx_copy

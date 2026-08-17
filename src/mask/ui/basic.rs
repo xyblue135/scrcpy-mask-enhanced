@@ -15,7 +15,7 @@ use crate::{
         MaskFrameSet, MaskResizeState,
         mask_command::TitlebarState,
         video::{VideoPlayer, YuvVideoMaterial, create_initial_yuv_material},
-        window_state::MaskFullscreenState,
+        window_state::{MaskFullscreenState, MaskMaximizeState, toggle_window_maximized},
     },
     scrcpy::{constant::Keycode, controller::ControllerCommand, device_action},
     utils::{ChannelSenderCS, ChannelSenderD, share::ControlledDevice},
@@ -44,6 +44,9 @@ struct MinimizeButton;
 
 #[derive(Component)]
 struct CloseButton;
+
+#[derive(Component)]
+struct MaximizeButton;
 
 #[derive(Component)]
 struct PushpinButton;
@@ -162,7 +165,7 @@ fn setup_ui(
         .id();
 
     commands.entity(titlebar_entity).with_children(|titlebar| {
-        // Left group: window buttons + app name
+        // Left group: pin + app name
         titlebar
             .spawn(Node {
                 flex_direction: FlexDirection::Row,
@@ -171,50 +174,6 @@ fn setup_ui(
                 ..default()
             })
             .with_children(|left| {
-                left.spawn((
-                    Button,
-                    Node {
-                        width: Val::Px(14.),
-                        height: Val::Px(14.),
-                        border_radius: BorderRadius::all(Val::Px(7.)),
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        ..default()
-                    },
-                    BackgroundColor(MAC_CLOSE_BG),
-                    CloseButton,
-                ))
-                .with_child((
-                    Node {
-                        width: Val::Px(10.),
-                        height: Val::Px(10.),
-                        ..default()
-                    },
-                    ImageNode::new(close_icon.clone()),
-                ));
-
-                left.spawn((
-                    Button,
-                    Node {
-                        width: Val::Px(14.),
-                        height: Val::Px(14.),
-                        border_radius: BorderRadius::all(Val::Px(7.)),
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        ..default()
-                    },
-                    BackgroundColor(MAC_MINIMIZE_BG),
-                    MinimizeButton,
-                ))
-                .with_child((
-                    Node {
-                        width: Val::Px(10.),
-                        height: Val::Px(10.),
-                        ..default()
-                    },
-                    ImageNode::new(minimize_icon),
-                ));
-
                 left.spawn((
                     Button,
                     Node {
@@ -349,6 +308,81 @@ fn setup_ui(
                             ImageNode::new(icon),
                         ));
                 }
+
+                // Separator before Windows-style window controls
+                right
+                    .spawn(Node {
+                        width: Val::Px(1.),
+                        height: Val::Px(16.),
+                        margin: UiRect::px(4., 2., 0., 0.),
+                        ..default()
+                    })
+                    .insert(BackgroundColor(Color::srgba(0.4, 0.4, 0.4, 0.5)));
+
+                // 普通最小化：保留任务栏行为
+                right
+                    .spawn((
+                        Button,
+                        Node {
+                            width: Val::Px(30.),
+                            height: Val::Px(24.),
+                            justify_content: JustifyContent::Center,
+                            align_items: AlignItems::Center,
+                            ..default()
+                        },
+                        BackgroundColor(NORMAL_BG),
+                        MinimizeButton,
+                    ))
+                    .with_child((
+                        Node {
+                            width: Val::Px(10.),
+                            height: Val::Px(10.),
+                            ..default()
+                        },
+                        ImageNode::new(minimize_icon),
+                    ));
+
+                // 普通最大化：Windowed + set_maximized(true)，不会覆盖 Windows 任务栏
+                right
+                    .spawn((
+                        Button,
+                        Node {
+                            width: Val::Px(30.),
+                            height: Val::Px(24.),
+                            justify_content: JustifyContent::Center,
+                            align_items: AlignItems::Center,
+                            ..default()
+                        },
+                        BackgroundColor(NORMAL_BG),
+                        MaximizeButton,
+                    ))
+                    .with_child((
+                        Text::new("□"),
+                        TextFont { font_size: FontSize::Px(14.), ..default() },
+                        TextColor(Color::WHITE),
+                    ));
+
+                right
+                    .spawn((
+                        Button,
+                        Node {
+                            width: Val::Px(30.),
+                            height: Val::Px(24.),
+                            justify_content: JustifyContent::Center,
+                            align_items: AlignItems::Center,
+                            ..default()
+                        },
+                        BackgroundColor(NORMAL_BG),
+                        CloseButton,
+                    ))
+                    .with_child((
+                        Node {
+                            width: Val::Px(10.),
+                            height: Val::Px(10.),
+                            ..default()
+                        },
+                        ImageNode::new(close_icon.clone()),
+                    ));
             });
     });
 
@@ -360,6 +394,7 @@ fn setup_ui(
                 flex_grow: 1.,
                 ..default()
             },
+            BackgroundColor(Color::BLACK),
             MaskContentMarker,
         ))
         .id();
@@ -527,17 +562,22 @@ fn setup_ui(
 
 fn handle_titlebar_drag(
     mut window: Single<&mut Window>,
+    maximize_state: Res<MaskMaximizeState>,
     interaction_query: Query<&Interaction, (With<TitlebarMarker>, Changed<Interaction>)>,
     button_query: Query<
         &Interaction,
         Or<(
             With<MinimizeButton>,
+            With<MaximizeButton>,
             With<PushpinButton>,
             With<CloseButton>,
             With<DeviceButton>,
         )>,
     >,
 ) {
+    if maximize_state.active {
+        return;
+    }
     let button_pressed = button_query.iter().any(|i| *i == Interaction::Pressed);
     if !button_pressed && interaction_query.iter().any(|i| *i == Interaction::Pressed) {
         window.start_drag_move();
@@ -547,13 +587,21 @@ fn handle_titlebar_drag(
 fn handle_titlebar_buttons(
     mut window: Single<&mut Window>,
     minimize_query: Query<&Interaction, (With<MinimizeButton>, Changed<Interaction>)>,
+    maximize_query: Query<&Interaction, (With<MaximizeButton>, Changed<Interaction>)>,
     pushpin_query: Query<&Interaction, (With<PushpinButton>, Changed<Interaction>)>,
     close_query: Query<&Interaction, (With<CloseButton>, Changed<Interaction>)>,
+    mut maximize_state: ResMut<MaskMaximizeState>,
+    fullscreen_state: Res<MaskFullscreenState>,
     d_tx: Res<ChannelSenderD>,
 ) {
     for interaction in minimize_query.iter() {
         if *interaction == Interaction::Pressed {
             window.set_minimized(true);
+        }
+    }
+    for interaction in maximize_query.iter() {
+        if *interaction == Interaction::Pressed {
+            toggle_window_maximized(&mut window, &mut maximize_state, &fullscreen_state);
         }
     }
     for interaction in pushpin_query.iter() {
@@ -618,6 +666,7 @@ const MAC_PIN_INACTIVE_BG: Color = Color::srgba(0.157, 0.784, 0.251, 0.4);
 fn button_interaction(
     window: Single<&Window>,
     minimize_query: Query<(Entity, &Interaction), (With<MinimizeButton>, Changed<Interaction>)>,
+    maximize_query: Query<(Entity, &Interaction), (With<MaximizeButton>, Changed<Interaction>)>,
     pushpin_query: Query<(Entity, &Interaction), (With<PushpinButton>, Changed<Interaction>)>,
     close_query: Query<(Entity, &Interaction), (With<CloseButton>, Changed<Interaction>)>,
     device_btn_query: Query<(Entity, &Interaction), (With<DeviceButton>, Changed<Interaction>)>,
@@ -629,6 +678,16 @@ fn button_interaction(
                 Interaction::Pressed => MAC_MINIMIZE_PRESSED_BG,
                 Interaction::Hovered => MAC_MINIMIZE_HOVER_BG,
                 Interaction::None => MAC_MINIMIZE_BG,
+            }
+            .into();
+        }
+    }
+    for (entity, interaction) in maximize_query.iter() {
+        if let Ok(mut bg) = bg_query.get_mut(entity) {
+            *bg = match *interaction {
+                Interaction::Pressed => PRESSED_BG,
+                Interaction::Hovered => HOVERED_BG,
+                Interaction::None => NORMAL_BG,
             }
             .into();
         }
@@ -703,9 +762,10 @@ fn handle_resize(
     mut window: Single<&mut Window>,
     mut resize_state: ResMut<MaskResizeState>,
     fullscreen_state: Res<MaskFullscreenState>,
+    maximize_state: Res<MaskMaximizeState>,
     query: Query<(&ResizeHandle, &Interaction), Changed<Interaction>>,
 ) {
-    if fullscreen_state.suppress_window_persistence() {
+    if fullscreen_state.suppress_window_persistence() || maximize_state.active {
         return;
     }
     let Some(handle) = query
@@ -736,9 +796,10 @@ fn active_resize_handle(
 fn sync_resize_cursor(
     resize_query: Query<(&ResizeHandle, &Interaction)>,
     fullscreen_state: Res<MaskFullscreenState>,
+    maximize_state: Res<MaskMaximizeState>,
     mut cursor_query: Single<&mut CursorIcon, With<Window>>,
 ) {
-    let resize_cursor = if fullscreen_state.suppress_window_persistence() {
+    let resize_cursor = if fullscreen_state.suppress_window_persistence() || maximize_state.active {
         SystemCursorIcon::Default
     } else {
         active_resize_handle(resize_query)

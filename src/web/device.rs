@@ -813,6 +813,8 @@ async fn adb_restart() -> Result<JsonResponse, WebServerError> {
 #[derive(Deserialize)]
 struct PostDataId {
     id: String,
+    #[serde(default)]
+    display_id: Option<String>,
 }
 
 async fn adb_screenshot(
@@ -820,24 +822,54 @@ async fn adb_screenshot(
 ) -> Result<impl IntoResponse, WebServerError> {
     let src = "/data/local/tmp/_screenshot_scrcpy_mask.png";
 
-    let mut display_id_info = Vec::new();
-    Device::shell(
-        &payload.id,
-        ["dumpsys", "SurfaceFlinger", "--display-id"],
-        &mut display_id_info,
-    )
-    .map_err(|e| WebServerError::bad_request(format!("failed get display id: {}", e)))?;
-    let text = String::from_utf8_lossy(&display_id_info);
-    let first_line = text
-        .lines()
-        .next()
-        .ok_or_else(|| WebServerError::bad_request("no display found"))?;
-    let display_id = first_line
-        .split_whitespace()
-        .nth(1)
-        .ok_or_else(|| WebServerError::bad_request("invalid display line"))?;
+    let display_id = if let Some(display_id) = payload.display_id.as_deref() {
+        let display_id = display_id.trim();
+        if display_id.is_empty() || !display_id.chars().all(|c| c.is_ascii_digit()) {
+            return Err(WebServerError::bad_request("invalid display_id"));
+        }
+        display_id.to_string()
+    } else {
+        let mut display_id_info = Vec::new();
+        Device::shell(
+            &payload.id,
+            ["dumpsys", "SurfaceFlinger", "--display-id"],
+            &mut display_id_info,
+        )
+        .map_err(|e| WebServerError::bad_request(format!("failed get display id: {}", e)))?;
+        let text = String::from_utf8_lossy(&display_id_info);
+        let ids = text
+            .lines()
+            .filter_map(|line| line.split_whitespace().nth(1))
+            .map(|value| value.trim_matches(|c: char| matches!(c, ':' | ',' | '(' | ')')).to_string())
+            .filter(|value| !value.is_empty())
+            .collect::<Vec<_>>();
 
-    Device::shell_logged(&payload.id, ["screencap", "-p", "-d", display_id, src]).map_err(|e| {
+        if ids.is_empty() {
+            return Err(WebServerError::bad_request("no display found"));
+        }
+
+        let config = LocalConfig::get();
+        // SurfaceFlinger usually lists the physical/main display first and newly-created
+        // virtual displays afterwards. The old implementation always picked index 0,
+        // which is why mapping-background refresh captured the phone main screen.
+        if config.new_display_enabled && ids.len() > 1 {
+            ids.last().cloned().unwrap()
+        } else {
+            ids.first().cloned().unwrap()
+        }
+    };
+
+    log::info!(
+        "[WebServe] screenshot source display={} virtual_display={}",
+        display_id,
+        LocalConfig::get().new_display_enabled
+    );
+
+    Device::shell_logged(
+        &payload.id,
+        ["screencap", "-p", "-d", display_id.as_str(), src],
+    )
+    .map_err(|e| {
         WebServerError::bad_request(format!(
             "{} {}: {}",
             t!("web.device.screenshotError"),

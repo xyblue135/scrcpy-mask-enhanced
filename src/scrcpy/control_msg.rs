@@ -48,6 +48,13 @@ impl Binary {
         buf.extend_from_slice(&utf8.as_bytes()[..len])
     }
 
+    pub fn write_string_tiny(utf8: &str, max_len: usize, buf: &mut Vec<u8>) {
+        let max_len = max_len.min(u8::MAX as usize);
+        let len = Self::str_utf8_truncation_index(utf8, max_len);
+        buf.push(len as u8);
+        buf.extend_from_slice(&utf8.as_bytes()[..len]);
+    }
+
     // truncate utf8 string to max_len bytes
     fn str_utf8_truncation_index(utf8: &str, max_len: usize) -> usize {
         let len = utf8.len();
@@ -128,6 +135,9 @@ pub enum ScrcpyControlMsg {
     },
     SetDisplayPower {
         mode: bool, // u8
+    },
+    StartApp {
+        name: String,
     },
     RotateDevice,
     ResetVideo,
@@ -213,6 +223,11 @@ impl From<ScrcpyControlMsg> for Vec<u8> {
             }
             ScrcpyControlMsg::SetDisplayPower { mode } => {
                 vec![ScrcpyControlMsgType::SetDisplayPower as u8, mode as u8]
+            }
+            ScrcpyControlMsg::StartApp { name } => {
+                let mut buf = vec![ScrcpyControlMsgType::StartApp as u8];
+                Binary::write_string_tiny(&name, 255, &mut buf);
+                buf
             }
             ScrcpyControlMsg::RotateDevice => {
                 vec![ScrcpyControlMsgType::RotateDevice as u8]

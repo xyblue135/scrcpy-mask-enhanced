@@ -33,6 +33,7 @@ pub fn routers(
 ) -> Router {
     Router::new()
         .route("/get_config", get(get_config))
+        .route("/get_config_sections", get(get_config_sections))
         .route("/update_config", post(update_config))
         .route("/open_data_path", get(open_data_path))
         .route("/get_update_info", get(get_update_info))
@@ -46,6 +47,72 @@ async fn get_config() -> Result<JsonResponse, WebServerError> {
         t!("web.config.getLocalConfigSuccess"),
         Some(serde_json::to_value(&config).unwrap()),
     ))
+}
+
+async fn get_config_sections() -> Result<JsonResponse, WebServerError> {
+    let sections = serde_json::json!([
+        {
+            "id": "general",
+            "title": "基础",
+            "keys": ["language", "always_on_top", "titlebar_visible", "clipboard_sync"]
+        },
+        {
+            "id": "mapping",
+            "title": "键盘映射",
+            "keys": ["mapping_enabled", "active_mapping_file", "mapping_label_opacity"]
+        },
+        {
+            "id": "virtual_display",
+            "title": "虚拟屏幕",
+            "keys": [
+                "display_id", "new_display_enabled", "new_display_use_main_size",
+                "new_display_width", "new_display_height", "new_display_dpi",
+                "new_display_start_app_enabled", "new_display_start_app_package",
+                "new_display_start_app_force_stop"
+            ],
+            "note": "部分手机创建虚拟屏幕后无法从虚拟桌面正常进入应用。可启用“启动指定应用”，填写包名；LowCast 会在虚拟屏建立完成后直接通过 scrcpy 控制通道启动该应用。"
+        },
+        {
+            "id": "video",
+            "title": "视频 / 低延迟",
+            "keys": [
+                "video_codec", "video_encoder", "video_bit_rate", "video_max_fps",
+                "video_max_size", "video_codec_options", "qualcomm_low_latency"
+            ],
+            "controls": {
+                "video_max_fps": {
+                    "label": "帧率上限",
+                    "type": "select",
+                    "options": [
+                        {"value": 0, "label": "跟随设备（不限制）"},
+                        {"value": 30, "label": "30 FPS"},
+                        {"value": 60, "label": "60 FPS（推荐）"},
+                        {"value": 90, "label": "90 FPS"},
+                        {"value": 120, "label": "120 FPS"}
+                    ],
+                    "allow_custom": true,
+                    "note": "这是编码帧率上限，不会强制手机固定刷新率；修改后在下次重新建立投屏连接时生效。"
+                }
+            }
+        },
+        {
+            "id": "audio",
+            "title": "音频",
+            "keys": ["audio_codec", "audio_bit_rate", "audio_source", "audio_dup"]
+        },
+        {
+            "id": "device",
+            "title": "设备行为",
+            "keys": ["stay_awake", "screen_off_timeout", "power_off_on_close"]
+        },
+        {
+            "id": "advanced",
+            "title": "连接 / 高级",
+            "keys": ["adb_path", "adb_connect_address", "web_bind_addr", "web_port", "controller_port"]
+        }
+    ]);
+
+    Ok(JsonResponse::success("config sections", Some(sections)))
 }
 
 async fn open_data_path() -> Result<JsonResponse, WebServerError> {
@@ -122,6 +189,14 @@ fn u32_to_logical(value: u64, scale_factor: f32) -> u32 {
 
 fn i32_to_logical(value: i64, scale_factor: f32) -> i32 {
     (value as f32 / scale_factor).round() as i32
+}
+
+fn is_valid_package_name(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 255
+        && value.split('.').all(|part| {
+            !part.is_empty() && part.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+        })
 }
 
 async fn update_config(
@@ -384,6 +459,26 @@ async fn update_config(
                 "web.config.horizontalPositionTypeError"
             )));
         }
+        "mapping_enabled" => {
+            if let Some(value) = payload.value.as_bool() {
+                let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
+                state
+                    .m_tx
+                    .send((MaskCommand::SetMappingEnabled { enabled: value }, oneshot_tx))
+                    .map_err(|e| WebServerError::internal_error(e.to_string()))?;
+                oneshot_rx
+                    .await
+                    .map_err(|e| WebServerError::internal_error(e.to_string()))?
+                    .map_err(WebServerError::bad_request)?;
+                return Ok(JsonResponse::success(
+                    format!("mapping_enabled: {}", value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(
+                "mapping_enabled must be a boolean",
+            ));
+        }
         "active_mapping_file" => {
             return Err(WebServerError::bad_request(format!(
                 "{}",
@@ -608,6 +703,48 @@ async fn update_config(
             return Err(WebServerError::bad_request(t!(
                 "web.config.newDisplayDpiTypeError"
             )));
+        }
+        "new_display_start_app_enabled" => {
+            if let Some(value) = payload.value.as_bool() {
+                LocalConfig::set_new_display_start_app_enabled(value);
+                return Ok(JsonResponse::success(
+                    format!("new_display_start_app_enabled: {}", value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(
+                "new_display_start_app_enabled must be a boolean",
+            ));
+        }
+        "new_display_start_app_package" => {
+            if let Some(value) = payload.value.as_str() {
+                let value = value.trim();
+                if !value.is_empty() && !is_valid_package_name(value) {
+                    return Err(WebServerError::bad_request(
+                        "new_display_start_app_package must be an Android package name, e.g. com.example.app",
+                    ));
+                }
+                LocalConfig::set_new_display_start_app_package(value.to_string());
+                return Ok(JsonResponse::success(
+                    format!("new_display_start_app_package: {}", value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(
+                "new_display_start_app_package must be a string",
+            ));
+        }
+        "new_display_start_app_force_stop" => {
+            if let Some(value) = payload.value.as_bool() {
+                LocalConfig::set_new_display_start_app_force_stop(value);
+                return Ok(JsonResponse::success(
+                    format!("new_display_start_app_force_stop: {}", value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(
+                "new_display_start_app_force_stop must be a boolean",
+            ));
         }
         "audio_codec" => {
             if let Some(value) = payload.value.as_str() {

@@ -10,6 +10,7 @@ use crate::{
         },
         mask_command::MaskSize,
         ui::basic::MaskContentEntity,
+        video::VideoViewport,
     },
 };
 
@@ -126,6 +127,7 @@ fn redraw_normal_mapping_label(
 
 fn update_labels(
     mask_size: Res<MaskSize>,
+    viewport: Res<VideoViewport>,
     opacity: Res<LabelOpacity>,
     window: Single<&Window>,
     mut query: Query<(
@@ -142,8 +144,9 @@ fn update_labels(
         let node_size = cp_node.size();
 
         let scale = window.scale_factor();
-        let new_pos =
-            label.original_pos / label.original_size * mask_size.0 - node_size / scale / 2.;
+        let new_pos = viewport.offset
+            + label.original_pos / label.original_size * mask_size.0
+            - node_size / scale / 2.;
         node.left = Val::Px(new_pos.x);
         node.top = Val::Px(new_pos.y);
 
