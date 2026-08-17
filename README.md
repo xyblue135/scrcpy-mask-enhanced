@@ -1,6 +1,6 @@
-# LowCast Enhanced
+#scrcpy-mask-enhanced-xyblue
 
-> LowCast Enhanced 是基于 **scrcpy-mask** 的 Windows 低延迟增强分支。  
+>scrcpy-mask-enhanced-xyblue 是基于 **scrcpy-mask** 的 Windows 低延迟增强分支。  
 > 在保留原有键鼠映射、脚本系统、虚拟屏与 Web 配置能力的基础上，重点增强了 **Qualcomm 设备视频参数、Windows 全屏/最大化与等比例显示、虚拟屏应用生命周期、键位编辑体验，以及自动跑、静步和可视化宏预设等手游键鼠功能**。
 
 ---
@@ -37,7 +37,7 @@ scrcpy-mask-src
 dev
 ```
 
-作为 LowCast Enhanced 的主要开发分支。
+作为scrcpy-mask-enhanced-xyblue 的主要开发分支。
 
 ---
 
@@ -674,7 +674,7 @@ LowCast Enhanced 将设置重新分组：
 
 # 原作者已有能力说明
 
-为了明确项目归属，以下能力属于 scrcpy-mask 原有设计，并非 LowCast Enhanced 从零实现：
+为了明确项目归属，以下能力属于 scrcpy-mask 原有设计，并非scrcpy-mask-enhanced-xyblue 从零实现：
 
 ## FFmpeg LOW_DELAY
 
@@ -867,7 +867,7 @@ scrcpy-mask-src
 dev
 ```
 
-作为 LowCast Enhanced 的主要开发分支。
+作为scrcpy-mask-enhanced-xyblue 的主要开发分支。
 
 在新增功能或重构时，可以通过：
 
@@ -878,7 +878,7 @@ git diff scrcpy-mask-src..dev
 持续确认：
 
 - 哪些是原项目能力
-- 哪些是 LowCast Enhanced 新增功能
+- 哪些是scrcpy-mask-enhanced-xyblue 新增功能
 - 哪些是 Bug 修复
 - 哪些是性能优化
 
