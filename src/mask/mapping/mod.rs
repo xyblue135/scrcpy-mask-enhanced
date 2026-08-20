@@ -7,6 +7,7 @@ pub mod executor;
 pub mod fire;
 pub mod movement_assist;
 pub mod observation;
+pub mod quick_switch;
 pub mod raw_input;
 pub mod script;
 pub mod script_helper;
@@ -97,6 +98,10 @@ impl Plugin for MappingPlugins {
                 ),
             )
             // normal mapping mode
+            .add_systems(
+                Update,
+                quick_switch::handle_mapping_quick_switch.before(CursorFrameSet::HandleMappings),
+            )
             .add_systems(
                 Update,
                 script_helper::handle_script_runtime_commands

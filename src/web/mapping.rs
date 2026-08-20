@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, str::FromStr};
 
 use axum::{
     Json, Router,
@@ -12,10 +12,14 @@ use serde_json::json;
 use tokio::sync::oneshot;
 
 use crate::{
-    config::LocalConfig,
+    config::{LocalConfig, MappingQuickSwitch},
     mask::{
-        mapping::config::{
-            MappingConfig, MappingType, save_mapping_config, validate_mapping_config_diagnostics,
+        mapping::{
+            binding::MergedButton,
+            config::{
+                MappingConfig, MappingType, save_mapping_config,
+                validate_mapping_config_diagnostics,
+            },
         },
         mask_command::MaskCommand,
     },
@@ -41,6 +45,10 @@ pub fn routers(
         .route("/validate", post(validate_mapping))
         .route("/read_mapping", post(read_mapping))
         .route("/get_mapping_list", get(get_mapping_list))
+        .route(
+            "/update_mapping_quick_switch",
+            post(update_mapping_quick_switch),
+        )
         .route("/migrate_mapping", post(migrate_mapping))
         .with_state(AppStatMapping { m_tx })
 }
@@ -235,6 +243,10 @@ async fn delete_mapping(
         ))
     })?;
 
+    let mut quick_switches = LocalConfig::get_mapping_quick_switches();
+    quick_switches.retain(|config| config.file != payload.file);
+    LocalConfig::set_mapping_quick_switches(quick_switches);
+
     log::info!(
         "[WebServer] {}: {}",
         t!("web.mapping.deleteMappingConfig"),
@@ -304,6 +316,15 @@ async fn rename_mapping(
         ));
     }
     fs::rename(old_path, new_path).map_err(|e| WebServerError::internal_error(e.to_string()))?;
+
+    let mut quick_switches = LocalConfig::get_mapping_quick_switches();
+    if let Some(config) = quick_switches
+        .iter_mut()
+        .find(|config| config.file == payload.file)
+    {
+        config.file.clone_from(&payload.new_file);
+        LocalConfig::set_mapping_quick_switches(quick_switches);
+    }
 
     // get active mapping file
     let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
@@ -533,12 +554,113 @@ async fn get_mapping_list(
         .unwrap();
     let file = oneshot_rx.await.unwrap().unwrap();
 
+    let quick_switches: Vec<MappingQuickSwitch> = LocalConfig::get_mapping_quick_switches()
+        .into_iter()
+        .filter(|config| mapping_files.contains(&config.file))
+        .collect();
+
     Ok(JsonResponse::success(
         t!("web.mapping.readMappingListSuccess"),
         Some(json!({
             "mapping_list": mapping_files,
             "active_mapping": file,
+            "mapping_quick_switches": quick_switches,
         })),
+    ))
+}
+
+#[derive(Deserialize)]
+struct PostDataMappingQuickSwitch {
+    file: String,
+    enabled: bool,
+    shortcut: Vec<String>,
+}
+
+fn canonical_shortcut(shortcut: &[String]) -> Vec<String> {
+    let mut canonical = shortcut.to_vec();
+    canonical.sort();
+    canonical
+}
+
+async fn update_mapping_quick_switch(
+    Json(mut payload): Json<PostDataMappingQuickSwitch>,
+) -> Result<JsonResponse, WebServerError> {
+    if !payload.file.ends_with(".json") {
+        payload.file.push_str(".json");
+    }
+    if !is_safe_file_name(&payload.file) {
+        return Err(WebServerError::bad_request(format!(
+            "{}: {}",
+            t!("web.mapping.nameNotSafe"),
+            payload.file
+        )));
+    }
+    if !relate_to_data_path(["mapping", &payload.file]).is_file() {
+        return Err(WebServerError::bad_request(format!(
+            "{}: {}",
+            t!("web.mapping.mappingConfigNotExists"),
+            payload.file
+        )));
+    }
+    if payload.shortcut.len() > 4 {
+        return Err(WebServerError::bad_request(
+            "A quick-switch shortcut may contain at most 4 keys",
+        ));
+    }
+    for key in &payload.shortcut {
+        match MergedButton::from_str(key) {
+            Ok(MergedButton::Keyboard(_)) => {}
+            Ok(_) => {
+                return Err(WebServerError::bad_request(
+                    "Mapping quick switch only accepts keyboard keys",
+                ));
+            }
+            Err(error) => return Err(WebServerError::bad_request(error)),
+        }
+    }
+    let canonical = canonical_shortcut(&payload.shortcut);
+    if canonical.windows(2).any(|keys| keys[0] == keys[1]) {
+        return Err(WebServerError::bad_request(
+            "A quick-switch shortcut cannot contain duplicate keys",
+        ));
+    }
+    if payload.enabled && canonical.is_empty() {
+        return Err(WebServerError::bad_request(
+            "Set a keyboard shortcut before enabling quick switch",
+        ));
+    }
+
+    let mut quick_switches = LocalConfig::get_mapping_quick_switches();
+    if payload.enabled
+        && quick_switches.iter().any(|config| {
+            config.enabled
+                && config.file != payload.file
+                && canonical_shortcut(&config.shortcut) == canonical
+        })
+    {
+        return Err(WebServerError::bad_request(
+            "This quick-switch shortcut is already used by another preset",
+        ));
+    }
+
+    let next = MappingQuickSwitch {
+        file: payload.file.clone(),
+        enabled: payload.enabled,
+        shortcut: payload.shortcut,
+    };
+    if let Some(config) = quick_switches
+        .iter_mut()
+        .find(|config| config.file == payload.file)
+    {
+        *config = next.clone();
+    } else {
+        quick_switches.push(next.clone());
+    }
+    LocalConfig::set_mapping_quick_switches(quick_switches);
+
+    Ok(JsonResponse::success(
+        format!("Mapping quick switch updated: {}", payload.file),
+        Some(json!(next)),
     ))
 }
 

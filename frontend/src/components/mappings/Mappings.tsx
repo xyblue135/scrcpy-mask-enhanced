@@ -19,7 +19,9 @@ import {
   Select,
   Space,
   Splitter,
+  Switch,
   Table,
+  Tooltip,
   type TableProps,
 } from "antd";
 import {
@@ -34,6 +36,7 @@ import {
 import { useAppDispatch, useAppSelector } from "../../store/store";
 import {
   CheckCircleOutlined,
+  CloseCircleOutlined,
   CopyOutlined,
   DeleteOutlined,
   EditOutlined,
@@ -79,11 +82,19 @@ import ButtonFire from "./ButtonFire";
 import ButtonScript from "./ButtonScript";
 import MacroPresetModal, { isMacroScript, syncMacroScripts } from "./MacroPresetModal";
 import { MappingOverlayProvider } from "./MappingOverlay";
+import { EVENT_CODE_TO_KEY_CODE } from "./keyCode";
+
+type MappingQuickSwitch = {
+  file: string;
+  enabled: boolean;
+  shortcut: string[];
+};
 
 type MappingFileTabelItem = {
   file: string;
   active: boolean;
   displayed: boolean;
+  quickSwitch: MappingQuickSwitch;
 };
 
 type ScriptDiagnostic = {
@@ -211,6 +222,8 @@ function Manager({
   onCreateAction,
   onRenameAction,
   onMigrateAction,
+  quickSwitches,
+  onQuickSwitchChange,
 }: {
   open: boolean;
   onCancel: () => void;
@@ -229,6 +242,11 @@ function Manager({
     file: string,
     newFile: string,
     size: { width: number; height: number },
+  ) => void;
+  quickSwitches: MappingQuickSwitch[];
+  onQuickSwitchChange: (
+    file: string,
+    quickSwitch: Omit<MappingQuickSwitch, "file">,
   ) => void;
 }) {
   const { t } = useTranslation();
@@ -251,9 +269,14 @@ function Manager({
         file,
         active: file === activeMappingFile,
         displayed: file === displayedMapping,
+        quickSwitch: quickSwitches.find((config) => config.file === file) ?? {
+          file,
+          enabled: false,
+          shortcut: [],
+        },
       };
     });
-  }, [mappingList, activeMappingFile, displayedMapping]);
+  }, [mappingList, activeMappingFile, displayedMapping, quickSwitches]);
 
   const columns: TableProps<MappingFileTabelItem>["columns"] = [
     {
@@ -319,6 +342,71 @@ function Manager({
               <Badge status="success" text={t("mappings.home.active")} />
             )}
           </Space>
+        </Flex>
+      ),
+    },
+    {
+      title: t("mappings.home.quickSwitch"),
+      key: "quickSwitch",
+      width: 370,
+      render: (_, record) => (
+        <Flex align="center" gap="small" wrap={false}>
+          <Switch
+            checked={record.quickSwitch.enabled}
+            onChange={(enabled) =>
+              onQuickSwitchChange(record.file, {
+                enabled,
+                shortcut: record.quickSwitch.shortcut,
+              })
+            }
+          />
+          <Tooltip title={t("mappings.home.quickSwitchHint")}>
+            <Input
+              readOnly
+              value={record.quickSwitch.shortcut.join(" + ")}
+              placeholder={t("mappings.home.quickSwitchPlaceholder")}
+              onKeyDown={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                if (event.code === "Backspace" || event.code === "Delete") {
+                  onQuickSwitchChange(record.file, {
+                    enabled: false,
+                    shortcut: [],
+                  });
+                  return;
+                }
+                if (
+                  ["ControlLeft", "ControlRight", "AltLeft", "AltRight", "ShiftLeft", "ShiftRight", "MetaLeft", "MetaRight"].includes(event.code)
+                ) {
+                  return;
+                }
+                const key = EVENT_CODE_TO_KEY_CODE[event.code as keyof typeof EVENT_CODE_TO_KEY_CODE];
+                if (!key) return;
+                const shortcut: string[] = [];
+                if (event.ctrlKey) shortcut.push("ControlLeft");
+                if (event.altKey) shortcut.push("AltLeft");
+                if (event.shiftKey) shortcut.push("ShiftLeft");
+                if (event.metaKey) shortcut.push("SuperLeft");
+                shortcut.push(key);
+                onQuickSwitchChange(record.file, {
+                  enabled: record.quickSwitch.enabled,
+                  shortcut,
+                });
+              }}
+            />
+          </Tooltip>
+          <Button
+            type="text"
+            danger
+            aria-label={t("mappings.home.clearQuickSwitch")}
+            icon={<CloseCircleOutlined />}
+            onClick={() =>
+              onQuickSwitchChange(record.file, {
+                enabled: false,
+                shortcut: [],
+              })
+            }
+          />
         </Flex>
       ),
     },
@@ -846,6 +934,7 @@ export default function Mappings() {
   const [isManagerOpen, setIsManagerOpen] = useState(false);
   const [editState, setEditState] = useState<EditState | null>(null);
   const [mappingList, setMappingList] = useState<string[]>([]);
+  const [mappingQuickSwitches, setMappingQuickSwitches] = useState<MappingQuickSwitch[]>([]);
   const [showAllMappingGuides, setShowAllMappingGuides] = useState(false);
   const [positionUnlocked, setPositionUnlocked] = useState(false);
   const [isMacroManagerOpen, setIsMacroManagerOpen] = useState(false);
@@ -884,8 +973,10 @@ export default function Mappings() {
       const res = await requestGet<{
         mapping_list: string[];
         active_mapping: string;
+        mapping_quick_switches: MappingQuickSwitch[];
       }>("/api/mapping/get_mapping_list");
       setMappingList(res.data.mapping_list);
+      setMappingQuickSwitches(res.data.mapping_quick_switches ?? []);
       if (activeMappingFile !== res.data.active_mapping)
         dispatch(setActiveMappingFile(res.data.active_mapping));
 
@@ -943,6 +1034,27 @@ export default function Mappings() {
       messageApi?.error(error);
     }
     dispatch(setIsLoading(false));
+  }
+
+  async function updateMappingQuickSwitch(
+    file: string,
+    quickSwitch: Omit<MappingQuickSwitch, "file">,
+  ) {
+    const previous = mappingQuickSwitches;
+    const next = [
+      ...mappingQuickSwitches.filter((config) => config.file !== file),
+      { file, ...quickSwitch },
+    ];
+    setMappingQuickSwitches(next);
+    try {
+      await requestPost("/api/mapping/update_mapping_quick_switch", {
+        file,
+        ...quickSwitch,
+      });
+    } catch (error) {
+      setMappingQuickSwitches(previous);
+      messageApi?.error(error as string);
+    }
   }
 
   async function updateMappingFile() {
@@ -1171,6 +1283,8 @@ export default function Mappings() {
         onCreateAction={createMappingFile}
         onRenameAction={renameMappingFile}
         onMigrateAction={migrateMappingFile}
+        quickSwitches={mappingQuickSwitches}
+        onQuickSwitchChange={updateMappingQuickSwitch}
       />
       <section>
         <Flex justify="space-between" align="center">

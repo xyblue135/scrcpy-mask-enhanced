@@ -60,7 +60,10 @@ async fn get_config_sections() -> Result<JsonResponse, WebServerError> {
         {
             "id": "mapping",
             "title": "键盘映射",
-            "keys": ["mapping_enabled", "active_mapping_file", "mapping_label_opacity"]
+            "keys": [
+                "mapping_enabled", "active_mapping_file",
+                "mapping_quick_switches", "mapping_label_opacity"
+            ]
         },
         {
             "id": "scrcpy_module",

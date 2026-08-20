@@ -24,6 +24,13 @@ static CONFIG: Lazy<RwLock<LocalConfig>> = Lazy::new(|| RwLock::default());
 
 pub const AUDIO_BIT_RATE_MIN: u32 = 16_000;
 
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MappingQuickSwitch {
+    pub file: String,
+    pub enabled: bool,
+    pub shortcut: Vec<String>,
+}
+
 fn default_web_bind_addr() -> Ipv4Addr {
     Ipv4Addr::new(127, 0, 0, 1)
 }
@@ -67,6 +74,7 @@ pub struct LocalConfig {
     // mapping
     pub mapping_enabled: bool,
     pub active_mapping_file: String,
+    pub mapping_quick_switches: Vec<MappingQuickSwitch>,
     pub mapping_label_opacity: f32,
     // language
     pub language: String,
@@ -118,6 +126,7 @@ impl Default for LocalConfig {
             horizontal_position: (100, 100),
             mapping_enabled: true,
             active_mapping_file: "default.json".to_string(),
+            mapping_quick_switches: Vec::new(),
             mapping_label_opacity: 0.3,
             language: DEFAULT_LANGUAGE.to_string(),
             clipboard_sync: true,
@@ -243,6 +252,10 @@ impl LocalConfig {
         CONFIG.read().unwrap().clipboard_sync
     }
 
+    pub fn get_mapping_quick_switches() -> Vec<MappingQuickSwitch> {
+        CONFIG.read().unwrap().mapping_quick_switches.clone()
+    }
+
     define_setter!(
         (web_port, u16),
         (web_bind_addr, Ipv4Addr),
@@ -257,6 +270,7 @@ impl LocalConfig {
         (horizontal_position, (i32, i32)),
         (mapping_enabled, bool),
         (active_mapping_file, String),
+        (mapping_quick_switches, Vec<MappingQuickSwitch>),
         (mapping_label_opacity, f32),
         (language, String),
         (clipboard_sync, bool),
