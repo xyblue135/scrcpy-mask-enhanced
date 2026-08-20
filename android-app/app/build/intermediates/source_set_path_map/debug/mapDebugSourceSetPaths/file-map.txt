@@ -1,0 +1,7 @@
+com.xyblue.k100mapper.app-pngs-0 D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\build\generated\res\pngs\debug
+com.xyblue.k100mapper.app-resValues-1 D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\build\generated\res\resValues\debug
+com.xyblue.k100mapper.app-packageDebugResources-2 D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
+com.xyblue.k100mapper.app-packageDebugResources-3 D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
+com.xyblue.k100mapper.app-debug-4 D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\build\intermediates\merged_res\debug\mergeDebugResources
+com.xyblue.k100mapper.app-debug-5 D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\debug\res
+com.xyblue.k100mapper.app-main-6 D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\res

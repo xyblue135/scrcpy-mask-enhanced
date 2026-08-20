@@ -1,0 +1,7 @@
+com.xyblue.k100mapper
+drawable ic_launcher
+string app_name
+string service_description
+string service_name
+style AppTheme
+xml accessibility_service_config

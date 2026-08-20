@@ -1,0 +1,322 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<incidents format="6" by="lint 8.9.0" type="incidents">
+
+    <incident
+        id="OldTargetApi"
+        severity="warning"
+        message="Not targeting the latest versions of Android; compatibility modes apply. Consider testing and updating this version. Consult the `android.os.Build.VERSION_CODES` javadoc for details.">
+        <fix-replace
+            description="Update targetSdkVersion to 35"
+            oldString="34"
+            replacement="35"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="12"
+            column="9"
+            startOffset="252"
+            endLine="12"
+            endColumn="23"
+            endOffset="266"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of `compileSdkVersion` than 34 is available: 35">
+        <fix-replace
+            description="Set compileSdkVersion to 35"
+            oldString="34"
+            replacement="35"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="7"
+            column="5"
+            startOffset="139"
+            endLine="7"
+            endColumn="20"
+            endOffset="154"/>
+    </incident>
+
+    <incident
+        id="ClickableViewAccessibility"
+        severity="warning"
+        message="Custom view ``FrameLayout`` has `setOnTouchListener` called on it but does not override `performClick`">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/xyblue/k100mapper/KeyMapperAccessibilityService.kt"
+            line="133"
+            column="9"
+            startOffset="4966"
+            endLine="141"
+            endColumn="10"
+            endOffset="5240"/>
+    </incident>
+
+    <incident
+        id="ClickableViewAccessibility"
+        severity="warning"
+        message="`onTouch` lambda should call `View#performClick` when a click is detected">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/xyblue/k100mapper/KeyMapperAccessibilityService.kt"
+            line="133"
+            column="33"
+            startOffset="4990"
+            endLine="141"
+            endColumn="10"
+            endOffset="5240"/>
+    </incident>
+
+    <incident
+        id="ClickableViewAccessibility"
+        severity="warning"
+        message="Custom view ``TextView`` has `setOnTouchListener` called on it but does not override `performClick`">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/xyblue/k100mapper/KeyMapperAccessibilityService.kt"
+            line="207"
+            column="9"
+            startOffset="7888"
+            endLine="232"
+            endColumn="10"
+            endOffset="8925"/>
+    </incident>
+
+    <incident
+        id="ClickableViewAccessibility"
+        severity="warning"
+        message="`onTouch` lambda should call `View#performClick` when a click is detected">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/xyblue/k100mapper/KeyMapperAccessibilityService.kt"
+            line="207"
+            column="35"
+            startOffset="7914"
+            endLine="232"
+            endColumn="10"
+            endOffset="8925"/>
+    </incident>
+
+    <incident
+        id="SetTextI18n"
+        severity="warning"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders.">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/xyblue/k100mapper/KeyMapperAccessibilityService.kt"
+            line="118"
+            column="20"
+            startOffset="4396"
+            endLine="118"
+            endColumn="46"
+            endOffset="4422"/>
+    </incident>
+
+    <incident
+        id="SetTextI18n"
+        severity="warning"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders.">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/xyblue/k100mapper/KeyMapperAccessibilityService.kt"
+            line="241"
+            column="20"
+            startOffset="9164"
+            endLine="241"
+            endColumn="86"
+            endOffset="9230"/>
+    </incident>
+
+    <incident
+        id="SetTextI18n"
+        severity="warning"
+        message="String literal in `setText` can not be translated. Use Android resources instead.">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/xyblue/k100mapper/KeyMapperAccessibilityService.kt"
+            line="241"
+            column="54"
+            startOffset="9198"
+            endLine="241"
+            endColumn="77"
+            endOffset="9221"/>
+    </incident>
+
+    <incident
+        id="SetTextI18n"
+        severity="warning"
+        message="String literal in `setText` can not be translated. Use Android resources instead.">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/xyblue/k100mapper/MainActivity.kt"
+            line="106"
+            column="21"
+            startOffset="3882"
+            endLine="106"
+            endColumn="40"
+            endOffset="3901"/>
+    </incident>
+
+    <incident
+        id="SetTextI18n"
+        severity="warning"
+        message="String literal in `setText` can not be translated. Use Android resources instead.">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/xyblue/k100mapper/MainActivity.kt"
+            line="112"
+            column="21"
+            startOffset="4089"
+            endLine="112"
+            endColumn="69"
+            endOffset="4137"/>
+    </incident>
+
+    <incident
+        id="SetTextI18n"
+        severity="warning"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders.">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/xyblue/k100mapper/MainActivity.kt"
+            line="205"
+            column="20"
+            startOffset="7674"
+            endLine="205"
+            endColumn="43"
+            endOffset="7697"/>
+    </incident>
+
+    <incident
+        id="SetTextI18n"
+        severity="warning"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders.">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/xyblue/k100mapper/MainActivity.kt"
+            line="205"
+            column="20"
+            startOffset="7674"
+            endLine="206"
+            endColumn="39"
+            endOffset="7738"/>
+    </incident>
+
+    <incident
+        id="SetTextI18n"
+        severity="warning"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders.">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/xyblue/k100mapper/MainActivity.kt"
+            line="205"
+            column="20"
+            startOffset="7674"
+            endLine="207"
+            endColumn="50"
+            endOffset="7790"/>
+    </incident>
+
+    <incident
+        id="SetTextI18n"
+        severity="warning"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders.">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/xyblue/k100mapper/MainActivity.kt"
+            line="205"
+            column="20"
+            startOffset="7674"
+            endLine="208"
+            endColumn="61"
+            endOffset="7853"/>
+    </incident>
+
+    <incident
+        id="SetTextI18n"
+        severity="warning"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders.">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/xyblue/k100mapper/MainActivity.kt"
+            line="206"
+            column="17"
+            startOffset="7716"
+            endLine="206"
+            endColumn="39"
+            endOffset="7738"/>
+    </incident>
+
+    <incident
+        id="SetTextI18n"
+        severity="warning"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders.">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/xyblue/k100mapper/MainActivity.kt"
+            line="207"
+            column="17"
+            startOffset="7757"
+            endLine="207"
+            endColumn="50"
+            endOffset="7790"/>
+    </incident>
+
+    <incident
+        id="SetTextI18n"
+        severity="warning"
+        message="String literal in `setText` can not be translated. Use Android resources instead.">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/xyblue/k100mapper/MainActivity.kt"
+            line="207"
+            column="18"
+            startOffset="7758"
+            endLine="207"
+            endColumn="47"
+            endOffset="7787"/>
+    </incident>
+
+    <incident
+        id="SetTextI18n"
+        severity="warning"
+        message="String literal in `setText` can not be translated. Use Android resources instead.">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/xyblue/k100mapper/MainActivity.kt"
+            line="208"
+            column="18"
+            startOffset="7810"
+            endLine="208"
+            endColumn="60"
+            endOffset="7852"/>
+    </incident>
+
+    <incident
+        id="SetTextI18n"
+        severity="warning"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders.">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/xyblue/k100mapper/MainActivity.kt"
+            line="263"
+            column="20"
+            startOffset="9955"
+            endLine="263"
+            endColumn="84"
+            endOffset="10019"/>
+    </incident>
+
+    <incident
+        id="SetTextI18n"
+        severity="warning"
+        message="Number formatting does not take into account locale settings. Consider using `String.format` instead.">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/xyblue/k100mapper/MainActivity.kt"
+            line="388"
+            column="32"
+            startOffset="15559"
+            endLine="388"
+            endColumn="54"
+            endOffset="15581"/>
+    </incident>
+
+    <incident
+        id="SetTextI18n"
+        severity="warning"
+        message="Number formatting does not take into account locale settings. Consider using `String.format` instead.">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/xyblue/k100mapper/MainActivity.kt"
+            line="389"
+            column="33"
+            startOffset="15615"
+            endLine="389"
+            endColumn="56"
+            endOffset="15638"/>
+    </incident>
+
+</incidents>

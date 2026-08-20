@@ -1,0 +1,26 @@
+<dependencies>
+  <compile
+      roots=":@@:app::debug,org.jetbrains.kotlin:kotlin-stdlib:2.0.0@jar,dev.rikka.shizuku:api:13.1.5@aar,dev.rikka.shizuku:provider:13.1.5@aar,org.jetbrains:annotations:13.0@jar,dev.rikka.shizuku:aidl:13.1.5@aar,dev.rikka.shizuku:shared:13.1.5@aar">
+    <dependency
+        name=":@@:app::debug"
+        simpleName="artifacts::app"/>
+    <dependency
+        name="org.jetbrains.kotlin:kotlin-stdlib:2.0.0@jar"
+        simpleName="org.jetbrains.kotlin:kotlin-stdlib"/>
+    <dependency
+        name="dev.rikka.shizuku:api:13.1.5@aar"
+        simpleName="dev.rikka.shizuku:api"/>
+    <dependency
+        name="dev.rikka.shizuku:provider:13.1.5@aar"
+        simpleName="dev.rikka.shizuku:provider"/>
+    <dependency
+        name="org.jetbrains:annotations:13.0@jar"
+        simpleName="org.jetbrains:annotations"/>
+    <dependency
+        name="dev.rikka.shizuku:aidl:13.1.5@aar"
+        simpleName="dev.rikka.shizuku:aidl"/>
+    <dependency
+        name="dev.rikka.shizuku:shared:13.1.5@aar"
+        simpleName="dev.rikka.shizuku:shared"/>
+  </compile>
+</dependencies>

@@ -1,0 +1,124 @@
+-- Merging decision tree log ---
+provider#rikka.shizuku.ShizukuProvider
+INJECTED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:38:9-44:82
+	android:enabled
+		ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:41:13-35
+	android:authorities
+		INJECTED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml
+		ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:40:13-59
+	android:multiprocess
+		ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:43:13-41
+	android:exported
+		ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:42:13-36
+	android:permission
+		ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:44:13-79
+	android:name
+		ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:39:13-57
+manifest
+ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:2:1-47:12
+INJECTED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:2:1-47:12
+INJECTED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:2:1-47:12
+INJECTED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:2:1-47:12
+MERGED from [dev.rikka.shizuku:provider:13.1.5] C:\Users\xyblu\.gradle\caches\8.11.1\transforms\483199a6abc63960cc4e0626077229ce\transformed\provider-13.1.5\AndroidManifest.xml:2:1-16:12
+MERGED from [dev.rikka.shizuku:api:13.1.5] C:\Users\xyblu\.gradle\caches\8.11.1\transforms\a5b535d98f45a0796ebda0e90d7d93fe\transformed\api-13.1.5\AndroidManifest.xml:2:1-7:12
+MERGED from [dev.rikka.shizuku:shared:13.1.5] C:\Users\xyblu\.gradle\caches\8.11.1\transforms\8dbc4f9702450311909b13ba5c9f7dfd\transformed\shared-13.1.5\AndroidManifest.xml:2:1-7:12
+MERGED from [dev.rikka.shizuku:aidl:13.1.5] C:\Users\xyblu\.gradle\caches\8.11.1\transforms\38f3fb534627ef76b6e26d0d6fdf7cbe\transformed\aidl-13.1.5\AndroidManifest.xml:2:1-7:12
+	package
+		INJECTED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml
+	android:versionName
+		INJECTED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml
+	android:versionCode
+		INJECTED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml
+	xmlns:android
+		ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:2:11-69
+uses-feature#android.hardware.usb.host
+ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:4:5-6:36
+	android:required
+		ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:6:9-33
+	android:name
+		ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:5:9-49
+application
+ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:8:5-45:19
+INJECTED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:8:5-45:19
+MERGED from [dev.rikka.shizuku:provider:13.1.5] C:\Users\xyblu\.gradle\caches\8.11.1\transforms\483199a6abc63960cc4e0626077229ce\transformed\provider-13.1.5\AndroidManifest.xml:10:5-14:19
+MERGED from [dev.rikka.shizuku:provider:13.1.5] C:\Users\xyblu\.gradle\caches\8.11.1\transforms\483199a6abc63960cc4e0626077229ce\transformed\provider-13.1.5\AndroidManifest.xml:10:5-14:19
+	android:extractNativeLibs
+		INJECTED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml
+	android:supportsRtl
+		ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:12:9-35
+	android:label
+		ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:11:9-41
+	tools:ignore
+		ADDED from [dev.rikka.shizuku:provider:13.1.5] C:\Users\xyblu\.gradle\caches\8.11.1\transforms\483199a6abc63960cc4e0626077229ce\transformed\provider-13.1.5\AndroidManifest.xml:10:18-69
+	android:icon
+		ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:10:9-45
+	android:allowBackup
+		ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:9:9-35
+	android:theme
+		ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:13:9-40
+activity#com.xyblue.k100mapper.MainActivity
+ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:15:9-22:20
+	android:exported
+		ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:17:13-36
+	android:name
+		ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:16:13-41
+intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
+ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:18:13-21:29
+action#android.intent.action.MAIN
+ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:19:17-69
+	android:name
+		ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:19:25-66
+category#android.intent.category.LAUNCHER
+ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:20:17-77
+	android:name
+		ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:20:27-74
+service#com.xyblue.k100mapper.KeyMapperAccessibilityService
+ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:24:9-36:19
+	android:label
+		ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:28:13-49
+	android:exported
+		ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:27:13-37
+	android:permission
+		ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:29:13-79
+	android:description
+		ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:26:13-62
+	android:name
+		ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:25:13-58
+intent-filter#action:name:android.accessibilityservice.AccessibilityService
+ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:30:13-32:29
+action#android.accessibilityservice.AccessibilityService
+ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:31:17-92
+	android:name
+		ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:31:25-89
+meta-data#android.accessibilityservice
+ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:33:13-35:72
+	android:resource
+		ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:35:17-69
+	android:name
+		ADDED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml:34:17-60
+uses-sdk
+INJECTED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml
+INJECTED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml
+MERGED from [dev.rikka.shizuku:provider:13.1.5] C:\Users\xyblu\.gradle\caches\8.11.1\transforms\483199a6abc63960cc4e0626077229ce\transformed\provider-13.1.5\AndroidManifest.xml:6:5-44
+MERGED from [dev.rikka.shizuku:provider:13.1.5] C:\Users\xyblu\.gradle\caches\8.11.1\transforms\483199a6abc63960cc4e0626077229ce\transformed\provider-13.1.5\AndroidManifest.xml:6:5-44
+MERGED from [dev.rikka.shizuku:api:13.1.5] C:\Users\xyblu\.gradle\caches\8.11.1\transforms\a5b535d98f45a0796ebda0e90d7d93fe\transformed\api-13.1.5\AndroidManifest.xml:5:5-44
+MERGED from [dev.rikka.shizuku:api:13.1.5] C:\Users\xyblu\.gradle\caches\8.11.1\transforms\a5b535d98f45a0796ebda0e90d7d93fe\transformed\api-13.1.5\AndroidManifest.xml:5:5-44
+MERGED from [dev.rikka.shizuku:shared:13.1.5] C:\Users\xyblu\.gradle\caches\8.11.1\transforms\8dbc4f9702450311909b13ba5c9f7dfd\transformed\shared-13.1.5\AndroidManifest.xml:5:5-44
+MERGED from [dev.rikka.shizuku:shared:13.1.5] C:\Users\xyblu\.gradle\caches\8.11.1\transforms\8dbc4f9702450311909b13ba5c9f7dfd\transformed\shared-13.1.5\AndroidManifest.xml:5:5-44
+MERGED from [dev.rikka.shizuku:aidl:13.1.5] C:\Users\xyblu\.gradle\caches\8.11.1\transforms\38f3fb534627ef76b6e26d0d6fdf7cbe\transformed\aidl-13.1.5\AndroidManifest.xml:5:5-44
+MERGED from [dev.rikka.shizuku:aidl:13.1.5] C:\Users\xyblu\.gradle\caches\8.11.1\transforms\38f3fb534627ef76b6e26d0d6fdf7cbe\transformed\aidl-13.1.5\AndroidManifest.xml:5:5-44
+	android:targetSdkVersion
+		INJECTED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from D:\0_desktop\2_Frequently-Used Folders\scrcpy-mask-enhanced-xyblue\android-app\app\src\main\AndroidManifest.xml
+uses-permission#moe.shizuku.manager.permission.API_V23
+ADDED from [dev.rikka.shizuku:provider:13.1.5] C:\Users\xyblu\.gradle\caches\8.11.1\transforms\483199a6abc63960cc4e0626077229ce\transformed\provider-13.1.5\AndroidManifest.xml:8:5-78
+	android:name
+		ADDED from [dev.rikka.shizuku:provider:13.1.5] C:\Users\xyblu\.gradle\caches\8.11.1\transforms\483199a6abc63960cc4e0626077229ce\transformed\provider-13.1.5\AndroidManifest.xml:8:22-75
+meta-data#moe.shizuku.client.V3_SUPPORT
+ADDED from [dev.rikka.shizuku:provider:13.1.5] C:\Users\xyblu\.gradle\caches\8.11.1\transforms\483199a6abc63960cc4e0626077229ce\transformed\provider-13.1.5\AndroidManifest.xml:11:9-13:36
+	android:value
+		ADDED from [dev.rikka.shizuku:provider:13.1.5] C:\Users\xyblu\.gradle\caches\8.11.1\transforms\483199a6abc63960cc4e0626077229ce\transformed\provider-13.1.5\AndroidManifest.xml:13:13-33
+	android:name
+		ADDED from [dev.rikka.shizuku:provider:13.1.5] C:\Users\xyblu\.gradle\caches\8.11.1\transforms\483199a6abc63960cc4e0626077229ce\transformed\provider-13.1.5\AndroidManifest.xml:12:13-57
