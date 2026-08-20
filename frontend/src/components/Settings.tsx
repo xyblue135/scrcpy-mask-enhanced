@@ -284,7 +284,7 @@ export default function Settings() {
         </Section>
 
         <Section
-          title={isZh ? "关于 scrcpy / 参数预设" : "About scrcpy / Parameter Presets"}
+          title={isZh ? "关于 scrcpy / 完整参数调试中心" : "About scrcpy / Full Parameter Lab"}
           subtitle={localConfig.scrcpyModule.enabled ? activeScrcpyPreset?.name : "OFF"}
         >
           <ItemBoxContainer>
@@ -301,7 +301,7 @@ export default function Settings() {
             </ItemBox>
             <ItemBox>
               <Button type="primary" onClick={() => setScrcpyModuleOpen(true)}>
-                {isZh ? "打开 scrcpy 参数模块" : "Open scrcpy parameter module"}
+                {isZh ? "打开完整参数调试中心" : "Open full parameter lab"}
               </Button>
             </ItemBox>
           </ItemBoxContainer>
@@ -311,8 +311,8 @@ export default function Settings() {
             showIcon
             message={
               isZh
-                ? "启用后，所选预设会在下一次连接设备时覆盖对应的 scrcpy server 参数。"
-                : "When enabled, the selected preset overrides matching scrcpy server options on the next connection."
+                ? "启用后，所选预设会在下一次连接设备时应用 scrcpy server 参数和虚拟屏配置。"
+                : "When enabled, the selected preset applies its scrcpy server options and virtual-display configuration on the next connection."
             }
           />
         </Section>

@@ -163,9 +163,18 @@ async fn _control_device(
     args.push(SCRCPY_SERVER_VERSION.to_string());
     args.push(format!("scid={}", scid));
     args.push(format!("video={}", video));
-    if video && local_config.new_display_enabled {
-        if local_config.new_display_use_main_size {
+    if video
+        && active_scrcpy_preset
+            .map_or(local_config.new_display_enabled, |preset| {
+                preset.virtual_display.enabled
+            })
+    {
+        if let Some(preset) = active_scrcpy_preset {
+            args.extend(preset.virtual_display.server_args());
+        } else if local_config.new_display_use_main_size {
             args.push("new_display=".to_string());
+            args.push("keep_active=true".to_string());
+            args.push("vd_destroy_content=false".to_string());
         } else {
             args.push(format!(
                 "new_display={}x{}/{}",
@@ -173,17 +182,9 @@ async fn _control_device(
                 local_config.new_display_height,
                 local_config.new_display_dpi
             ));
+            args.push("keep_active=true".to_string());
+            args.push("vd_destroy_content=false".to_string());
         }
-
-        // LowCast virtual-display persistence:
-        // 1) keep_active prevents the virtual display from becoming inactive while LowCast is
-        //    minimized, unfocused or temporarily hidden;
-        // 2) vd_destroy_content=false preserves the Android task if the scrcpy virtual display
-        //    is actually destroyed (for example, a reconnect or unexpected disconnect). Android
-        //    moves the task to the main display instead of destroying it, so START_APP can bring
-        //    the existing task back to the next virtual display without a forced cold reload.
-        args.push("keep_active=true".to_string());
-        args.push("vd_destroy_content=false".to_string());
     } else {
         args.push(format!("display_id={}", local_config.display_id));
     }

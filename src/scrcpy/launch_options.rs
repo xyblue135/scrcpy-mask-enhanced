@@ -10,10 +10,14 @@ const RESERVED_SERVER_KEYS: &[&str] = &[
     "audio",
     "control",
     "tunnel_forward",
+    "new_display",
+    "vd_destroy_content",
+    "vd_system_decorations",
+    "keep_active",
     "send_device_meta",
     "send_frame_meta",
     "send_dummy_byte",
-    "send_codec_meta",
+    "send_stream_meta",
     "raw_stream",
 ];
 
@@ -52,11 +56,83 @@ impl Default for ScrcpyParameter {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
+pub struct ScrcpyVirtualDisplayConfig {
+    pub enabled: bool,
+    pub use_main_size: bool,
+    pub width: u32,
+    pub height: u32,
+    pub dpi: u32,
+    pub keep_active: bool,
+    pub destroy_content: bool,
+    pub system_decorations: bool,
+    pub start_app_enabled: bool,
+    pub start_app_package: String,
+    pub start_app_force_stop: bool,
+}
+
+impl Default for ScrcpyVirtualDisplayConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            use_main_size: true,
+            width: 1280,
+            height: 720,
+            dpi: 240,
+            keep_active: true,
+            destroy_content: false,
+            system_decorations: true,
+            start_app_enabled: false,
+            start_app_package: String::new(),
+            start_app_force_stop: false,
+        }
+    }
+}
+
+impl ScrcpyVirtualDisplayConfig {
+    fn validate(&self) -> Result<(), String> {
+        if self.enabled && !self.use_main_size {
+            if self.width == 0 || self.height == 0 || self.dpi == 0 {
+                return Err("virtual display width, height and dpi must be greater than 0".to_string());
+            }
+            if self.width > 16_384 || self.height > 16_384 || self.dpi > 2_000 {
+                return Err("virtual display size or dpi is outside the supported range".to_string());
+            }
+        }
+        if self.start_app_enabled {
+            let package = self.start_app_package.trim();
+            if !is_valid_package_name(package) {
+                return Err(format!("invalid virtual-display app package: {package}"));
+            }
+        }
+        Ok(())
+    }
+
+    pub fn server_args(&self) -> Vec<String> {
+        if !self.enabled {
+            return Vec::new();
+        }
+        let new_display = if self.use_main_size {
+            "new_display=".to_string()
+        } else {
+            format!("new_display={}x{}/{}", self.width, self.height, self.dpi)
+        };
+        vec![
+            new_display,
+            format!("keep_active={}", self.keep_active),
+            format!("vd_destroy_content={}", self.destroy_content),
+            format!("vd_system_decorations={}", self.system_decorations),
+        ]
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
 pub struct ScrcpyPreset {
     pub id: String,
     pub name: String,
     pub video: bool,
     pub audio: bool,
+    pub virtual_display: ScrcpyVirtualDisplayConfig,
     pub parameters: Vec<ScrcpyParameter>,
 }
 
@@ -67,6 +143,7 @@ impl Default for ScrcpyPreset {
             name: "自定义预设".to_string(),
             video: true,
             audio: true,
+            virtual_display: ScrcpyVirtualDisplayConfig::default(),
             parameters: Vec::new(),
         }
     }
@@ -80,6 +157,7 @@ impl ScrcpyPreset {
             name: "Qualcomm H.265 低延迟".to_string(),
             video: true,
             audio: false,
+            virtual_display: ScrcpyVirtualDisplayConfig::default(),
             parameters: vec![
                 parameter("video-codec", "video_codec", "h265", server),
                 parameter(
@@ -90,7 +168,12 @@ impl ScrcpyPreset {
                 ),
                 parameter("video-bit-rate", "video_bit_rate", "5000000", server),
                 parameter("max-fps", "max_fps", "60", server),
-                parameter("mouse", "mouse", "uhid", server),
+                parameter(
+                    "mouse",
+                    "mouse",
+                    "uhid",
+                    ScrcpyParameterScope::ClientOnly,
+                ),
                 parameter(
                     "video-buffer",
                     "video_buffer",
@@ -114,6 +197,7 @@ impl ScrcpyPreset {
                 self.name
             ));
         }
+        self.virtual_display.validate()?;
 
         let mut ids = HashSet::new();
         let mut server_keys = HashSet::new();
@@ -261,6 +345,17 @@ fn validate_value(value: &str) -> Result<(), String> {
     Ok(())
 }
 
+fn is_valid_package_name(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 255
+        && value.split('.').all(|part| {
+            !part.is_empty()
+                && part
+                    .chars()
+                    .all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
+        })
+}
+
 fn upsert_server_arg(args: &mut Vec<String>, key: &str, value: &str) {
     let prefix = format!("{key}=");
     let replacement = format!("{key}={value}");
@@ -290,7 +385,7 @@ mod tests {
         assert!(args.contains(&"video_encoder=c2.qti.hevc.encoder.cq".to_string()));
         assert!(args.contains(&"video_bit_rate=5000000".to_string()));
         assert!(args.contains(&"max_fps=60".to_string()));
-        assert!(args.contains(&"mouse=uhid".to_string()));
+        assert!(!args.iter().any(|arg| arg.starts_with("mouse=")));
         assert!(!args.iter().any(|arg| arg.starts_with("video_buffer=")));
     }
 
@@ -308,5 +403,26 @@ mod tests {
         preset.parameters[0].key = "encoder".to_string();
         preset.parameters[0].value = "ok;rm".to_string();
         assert!(preset.validate().is_err());
+    }
+
+    #[test]
+    fn virtual_display_builds_server_options_and_validates_package() {
+        let mut display = ScrcpyVirtualDisplayConfig {
+            enabled: true,
+            use_main_size: false,
+            width: 1920,
+            height: 1080,
+            dpi: 420,
+            start_app_enabled: true,
+            start_app_package: "com.example.game".to_string(),
+            ..Default::default()
+        };
+        assert!(display.validate().is_ok());
+        assert!(display
+            .server_args()
+            .contains(&"new_display=1920x1080/420".to_string()));
+
+        display.start_app_package = "bad package".to_string();
+        assert!(display.validate().is_err());
     }
 }

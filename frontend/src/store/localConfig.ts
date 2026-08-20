@@ -37,7 +37,38 @@ export interface ScrcpyPreset {
   name: string;
   video: boolean;
   audio: boolean;
+  virtualDisplay: ScrcpyVirtualDisplayConfig;
   parameters: ScrcpyParameter[];
+}
+
+export interface ScrcpyVirtualDisplayConfig {
+  enabled: boolean;
+  useMainSize: boolean;
+  width: number;
+  height: number;
+  dpi: number;
+  keepActive: boolean;
+  destroyContent: boolean;
+  systemDecorations: boolean;
+  startAppEnabled: boolean;
+  startAppPackage: string;
+  startAppForceStop: boolean;
+}
+
+export function defaultScrcpyVirtualDisplay(): ScrcpyVirtualDisplayConfig {
+  return {
+    enabled: false,
+    useMainSize: true,
+    width: 1280,
+    height: 720,
+    dpi: 240,
+    keepActive: true,
+    destroyContent: false,
+    systemDecorations: true,
+    startAppEnabled: false,
+    startAppPackage: "",
+    startAppForceStop: false,
+  };
 }
 
 export interface ScrcpyModuleConfig {
@@ -52,12 +83,13 @@ export function qualcommHevcLowLatencyPreset(): ScrcpyPreset {
     name: "Qualcomm H.265 低延迟",
     video: true,
     audio: false,
+    virtualDisplay: defaultScrcpyVirtualDisplay(),
     parameters: [
       { id: "video-codec", enabled: true, key: "video_codec", value: "h265", scope: "server" },
       { id: "video-encoder", enabled: true, key: "video_encoder", value: "c2.qti.hevc.encoder.cq", scope: "server" },
       { id: "video-bit-rate", enabled: true, key: "video_bit_rate", value: "5000000", scope: "server" },
       { id: "max-fps", enabled: true, key: "max_fps", value: "60", scope: "server" },
-      { id: "mouse", enabled: true, key: "mouse", value: "uhid", scope: "server" },
+      { id: "mouse", enabled: true, key: "mouse", value: "uhid", scope: "clientOnly" },
       { id: "video-buffer", enabled: true, key: "video_buffer", value: "0", scope: "clientOnly" },
     ],
   };
