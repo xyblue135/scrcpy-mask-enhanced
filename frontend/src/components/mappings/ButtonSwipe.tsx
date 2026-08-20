@@ -59,6 +59,7 @@ export default function ButtonSwipe({
   const [showSetting, setShowSetting] = useState(false);
   const [isEditingPos, setIsEditingPos] = useState(false);
   const mappingGuide = useMappingGuideState(showSetting && !isEditingPos);
+  const mappingButtonScale = useAppSelector((state) => state.localConfig.mappingButtonScale);
 
   const scale = useMemo(() => {
     return {
@@ -68,8 +69,8 @@ export default function ButtonSwipe({
   }, [originalSize, maskArea]);
 
   const buttonStyle = useMemo(
-    () => mappingButtonScaledPresetStyle(52, maskArea),
-    [maskArea],
+    () => mappingButtonScaledPresetStyle(52, maskArea, undefined, mappingButtonScale),
+    [maskArea, mappingButtonScale],
   );
 
   const tracePoints = useMemo<MappingOverlayPoint[]>(() => {

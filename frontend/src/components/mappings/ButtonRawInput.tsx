@@ -42,6 +42,7 @@ export default function ButtonRawInput({
       : "border-primary hover:border-primary-hover");
 
   const maskArea = useAppSelector((state) => state.other.maskArea);
+  const mappingButtonScale = useAppSelector((state) => state.localConfig.mappingButtonScale);
   const [showSetting, setShowSetting] = useState(false);
 
   const scale = useMemo(() => {
@@ -52,8 +53,8 @@ export default function ButtonRawInput({
   }, [originalSize, maskArea]);
 
   const buttonStyle = useMemo(
-    () => mappingButtonScaledPresetStyle(52, maskArea),
-    [maskArea],
+    () => mappingButtonScaledPresetStyle(52, maskArea, undefined, mappingButtonScale),
+    [maskArea, mappingButtonScale],
   );
 
   useEffect(() => {

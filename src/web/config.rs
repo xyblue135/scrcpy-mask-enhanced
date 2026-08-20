@@ -82,8 +82,10 @@ async fn get_config_sections() -> Result<JsonResponse, WebServerError> {
 }
 
 async fn open_data_path() -> Result<JsonResponse, WebServerError> {
-    let path = dirs::data_dir().unwrap().join(IDENTIFIER);
-    opener::open(path).map_err(|e| {
+    // 配置目录为程序（源码）同级目录，而不是系统 AppData（C 盘）。
+    let path = crate::config::get_config_dir();
+    let _ = std::fs::create_dir_all(&path);
+    opener::open(&path).map_err(|e| {
         WebServerError::bad_request(format!("{}: {}", t!("web.config.openDataPathFailed"), e))
     })?;
 

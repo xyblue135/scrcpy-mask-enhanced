@@ -424,6 +424,8 @@
     "verticalMaskHeight": "Vertical mask height",
     "verticalMaskPosition": "Vertical mask position",
     "mappingLabelOpacity": "Mapping label opacity",
+    "mappingButtonScale": "Mapping button display size",
+    "mappingButtonScaleTip": "Only adjusts the visual size of the mapping button. The actual adb tap point stays at the button center, so operation accuracy is unaffected.",
     "clipboardSync": "Clipboard sync",
     "videoCodec": "Video codec",
     "videoBitRate": "Video bit rate",

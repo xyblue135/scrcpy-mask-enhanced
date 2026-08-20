@@ -121,6 +121,7 @@ export default function ButtonMouseCastSpell({
   const maskArea = useAppSelector((state) => state.other.maskArea);
   const [showSetting, setShowSetting] = useState(false);
   const mappingGuide = useMappingGuideState(showSetting);
+  const mappingButtonScale = useAppSelector((state) => state.localConfig.mappingButtonScale);
 
   const scale = useMemo(() => {
     return {
@@ -130,8 +131,8 @@ export default function ButtonMouseCastSpell({
   }, [originalSize, maskArea]);
 
   const buttonStyle = useMemo(
-    () => mappingButtonScaledPresetStyle(64, maskArea),
-    [maskArea],
+    () => mappingButtonScaledPresetStyle(64, maskArea, undefined, mappingButtonScale),
+    [maskArea, mappingButtonScale],
   );
 
   const dragRadiusShape = useMemo<MappingOverlayCircleShape>(() => {

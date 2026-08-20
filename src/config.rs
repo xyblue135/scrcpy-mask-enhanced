@@ -12,13 +12,33 @@ use crate::{
         launch_options::ScrcpyModuleConfig,
         media::{AudioCodec, AudioSource, VideoCodec},
     },
-    utils::{relate_to_data_path, relate_to_root_path},
+    utils::relate_to_root_path,
 };
 use once_cell::sync::Lazy;
 use paste::paste;
 use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 use serde_json::to_string_pretty;
+
+// 旧版本把配置放在系统数据目录（Windows 上是 C 盘 AppData）。
+// 这里保留旧路径用于首次启动自动迁移到程序（源码）同级目录。
+fn old_config_path() -> PathBuf {
+    if let Some(data_dir) = dirs::data_dir() {
+        data_dir
+            .join("com.akichase.scrcpy-mask")
+            .join("config.json")
+    } else {
+        relate_to_root_path(["config.json"])
+    }
+}
+
+// 配置目录：用于“打开配置目录”按钮，指向程序（源码）同级目录。
+pub fn get_config_dir() -> PathBuf {
+    relate_to_root_path(["config.json"])
+        .parent()
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|| PathBuf::from("."))
+}
 
 static CONFIG: Lazy<RwLock<LocalConfig>> = Lazy::new(|| RwLock::default());
 
@@ -76,6 +96,8 @@ pub struct LocalConfig {
     pub active_mapping_file: String,
     pub mapping_quick_switches: Vec<MappingQuickSwitch>,
     pub mapping_label_opacity: f32,
+    // 键盘映射按钮的显示大小倍数（仅影响可视化按钮大小，adb 点击仍为按钮中心）
+    pub mapping_button_scale: f32,
     // language
     pub language: String,
     // clipboard sync
@@ -128,6 +150,7 @@ impl Default for LocalConfig {
             active_mapping_file: "default.json".to_string(),
             mapping_quick_switches: Vec::new(),
             mapping_label_opacity: 0.3,
+            mapping_button_scale: 1.0,
             language: DEFAULT_LANGUAGE.to_string(),
             clipboard_sync: true,
             video_codec: VideoCodec::H264,
@@ -211,7 +234,8 @@ impl LocalConfig {
         let config_json = to_string_pretty(&Self::get())
             .map_err(|e| format!("{}: {}", t!("localConfig.serializeConfigError"), e))?;
 
-        let path = relate_to_data_path(["config.json"]);
+        // 配置文件保存在程序（源码）同级目录，而不是系统 AppData（C 盘）。
+        let path = relate_to_root_path(["config.json"]);
         if let Some(parent) = path.parent() {
             create_dir_all(parent)
                 .map_err(|e| format!("{}: {}", t!("localConfig.createConfigDirError"), e))?;
@@ -224,7 +248,28 @@ impl LocalConfig {
     }
 
     pub fn load() -> Result<(), String> {
-        let path = relate_to_data_path(["config.json"]);
+        // 配置文件保存在程序（源码）同级目录，而不是系统 AppData（C 盘）。
+        let path = relate_to_root_path(["config.json"]);
+        // 首次启动：若新位置没有配置，但旧位置（C 盘 AppData）存在，则自动迁移。
+        if !path.exists() {
+            let old = old_config_path();
+            if old.exists() && old != path {
+                if let Some(parent) = path.parent() {
+                    let _ = create_dir_all(parent);
+                }
+                if let Err(e) = std::fs::copy(&old, &path) {
+                    log::warn!("[LocalConfig] 迁移旧配置失败: {e}");
+                } else {
+                    log::info!("[LocalConfig] 已从旧位置迁移配置到 {}", path.display());
+                }
+            }
+        }
+
+        if !path.exists() {
+            // 没有任何配置时回到默认，保证首次启动可用。
+            return Ok(());
+        }
+
         let config_string = std::fs::read_to_string(&path).map_err(|e| {
             format!(
                 "{} {}: {}",
@@ -272,6 +317,7 @@ impl LocalConfig {
         (active_mapping_file, String),
         (mapping_quick_switches, Vec<MappingQuickSwitch>),
         (mapping_label_opacity, f32),
+        (mapping_button_scale, f32),
         (language, String),
         (clipboard_sync, bool),
         (video_codec, VideoCodec),

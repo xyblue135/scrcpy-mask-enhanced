@@ -424,6 +424,8 @@
     "verticalMaskHeight": "竖屏蒙版高度",
     "verticalMaskPosition": "竖屏蒙版位置",
     "mappingLabelOpacity": "映射标签不透明度",
+    "mappingButtonScale": "映射按钮显示大小",
+    "mappingButtonScaleTip": "仅调整可视化按钮的显示大小，adb 实际点击位置始终是按钮中心，不影响操作精度。",
     "clipboardSync": "剪切板同步",
     "videoCodec": "视频编码",
     "videoBitRate": "视频码率",

@@ -27,6 +27,7 @@ import {
   setLanguage,
   setMappingEnabled,
   setMappingLabelOpacity,
+  setMappingButtonScale,
   setTitlebarVisible,
   setVerticalPosition,
   setWebBindAddr,
@@ -162,6 +163,7 @@ export default function Settings() {
           <ItemBoxContainer>
             <ItemBox label={ui.mappingEnabled} tooltip={ui.mappingEnabledTip}><Switch checked={localConfig.mappingEnabled} onChange={(value) => dispatch(setMappingEnabled(value))} /></ItemBox>
             <ItemBox label={t("settings.mappingLabelOpacity")}><Slider style={{ width: 240 }} min={0} max={1} step={0.05} value={localConfig.mappingLabelOpacity} onChange={(value) => dispatch(setMappingLabelOpacity(value))} /></ItemBox>
+            <ItemBox label={t("settings.mappingButtonScale")} tooltip={t("settings.mappingButtonScaleTip")}><Slider style={{ width: 240 }} min={0.5} max={2} step={0.05} value={localConfig.mappingButtonScale} onChange={(value) => dispatch(setMappingButtonScale(value))} /></ItemBox>
           </ItemBoxContainer>
           <Alert className="mt-3" type="info" showIcon message={ui.displayTip} />
         </Section>

@@ -1,0 +1,1623 @@
+{
+  "web_port": 60001,
+  "web_bind_addr": "127.0.0.1",
+  "controller_port": 60000,
+  "adb_path": "D:\\4environment\\adb\\platform-tools\\adb.exe",
+  "adb_connect_address": "",
+  "always_on_top": false,
+  "titlebar_visible": true,
+  "vertical_mask_height": 720,
+  "horizontal_mask_width": 1051,
+  "vertical_position": [
+    1121,
+    296
+  ],
+  "horizontal_position": [
+    991,
+    509
+  ],
+  "mapping_enabled": true,
+  "active_mapping_file": "k100promax_主屏幕.json",
+  "mapping_quick_switches": [],
+  "mapping_label_opacity": 0.1,
+  "mapping_button_scale": 1.0,
+  "language": "zh-CN",
+  "clipboard_sync": false,
+  "video_codec": "H265",
+  "video_encoder": "c2.qti.hevc.encoder.cq",
+  "video_codec_options": "",
+  "qualcomm_low_latency": true,
+  "video_bit_rate": 50000000,
+  "video_max_size": 0,
+  "video_max_fps": 60,
+  "display_id": 0,
+  "new_display_enabled": true,
+  "new_display_use_main_size": true,
+  "new_display_width": 1920,
+  "new_display_height": 1080,
+  "new_display_dpi": 240,
+  "new_display_start_app_enabled": false,
+  "new_display_start_app_package": "com.tencent.tmgp.dfm",
+  "new_display_start_app_force_stop": false,
+  "audio_codec": "OPUS",
+  "audio_bit_rate": 128000,
+  "audio_source": "OUTPUT",
+  "audio_dup": false,
+  "scrcpy_module": {
+    "enabled": true,
+    "activePresetId": "preset-384498bd44f840edb539e2262fd99de6",
+    "presets": [
+      {
+        "id": "qualcomm-hevc-low-latency",
+        "name": "Qualcomm H.265 低延迟",
+        "video": true,
+        "audio": false,
+        "virtualDisplay": {
+          "enabled": false,
+          "useMainSize": true,
+          "width": 1280,
+          "height": 720,
+          "dpi": 240,
+          "keepActive": true,
+          "destroyContent": false,
+          "systemDecorations": true,
+          "startAppEnabled": false,
+          "startAppPackage": "",
+          "startAppForceStop": false
+        },
+        "parameters": [
+          {
+            "id": "official-video-codec",
+            "enabled": false,
+            "key": "video_codec",
+            "value": "h264",
+            "scope": "server"
+          },
+          {
+            "id": "official-video-source",
+            "enabled": false,
+            "key": "video_source",
+            "value": "display",
+            "scope": "server"
+          },
+          {
+            "id": "official-video-encoder",
+            "enabled": false,
+            "key": "video_encoder",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-video-bit-rate",
+            "enabled": true,
+            "key": "video_bit_rate",
+            "value": "5000000",
+            "scope": "server"
+          },
+          {
+            "id": "official-video-codec-options",
+            "enabled": false,
+            "key": "video_codec_options",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-max-size",
+            "enabled": false,
+            "key": "max_size",
+            "value": "0",
+            "scope": "server"
+          },
+          {
+            "id": "official-min-size-alignment",
+            "enabled": false,
+            "key": "min_size_alignment",
+            "value": "1",
+            "scope": "server"
+          },
+          {
+            "id": "official-max-fps",
+            "enabled": true,
+            "key": "max_fps",
+            "value": "60",
+            "scope": "server"
+          },
+          {
+            "id": "official-angle",
+            "enabled": false,
+            "key": "angle",
+            "value": "0",
+            "scope": "server"
+          },
+          {
+            "id": "official-crop",
+            "enabled": false,
+            "key": "crop",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-id",
+            "enabled": false,
+            "key": "camera_id",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-size",
+            "enabled": false,
+            "key": "camera_size",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-facing",
+            "enabled": false,
+            "key": "camera_facing",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-ar",
+            "enabled": false,
+            "key": "camera_ar",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-zoom",
+            "enabled": false,
+            "key": "camera_zoom",
+            "value": "1",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-fps",
+            "enabled": false,
+            "key": "camera_fps",
+            "value": "0",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-high-speed",
+            "enabled": false,
+            "key": "camera_high_speed",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-torch",
+            "enabled": false,
+            "key": "camera_torch",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-audio-codec",
+            "enabled": false,
+            "key": "audio_codec",
+            "value": "opus",
+            "scope": "server"
+          },
+          {
+            "id": "official-audio-source",
+            "enabled": false,
+            "key": "audio_source",
+            "value": "output",
+            "scope": "server"
+          },
+          {
+            "id": "official-audio-dup",
+            "enabled": false,
+            "key": "audio_dup",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-audio-bit-rate",
+            "enabled": false,
+            "key": "audio_bit_rate",
+            "value": "128000",
+            "scope": "server"
+          },
+          {
+            "id": "official-audio-codec-options",
+            "enabled": false,
+            "key": "audio_codec_options",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-audio-encoder",
+            "enabled": false,
+            "key": "audio_encoder",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-display-id",
+            "enabled": false,
+            "key": "display_id",
+            "value": "0",
+            "scope": "server"
+          },
+          {
+            "id": "official-capture-orientation",
+            "enabled": false,
+            "key": "capture_orientation",
+            "value": "0",
+            "scope": "server"
+          },
+          {
+            "id": "official-display-ime-policy",
+            "enabled": false,
+            "key": "display_ime_policy",
+            "value": "-1",
+            "scope": "server"
+          },
+          {
+            "id": "official-show-touches",
+            "enabled": false,
+            "key": "show_touches",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-flex-display",
+            "enabled": false,
+            "key": "flex_display",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-stay-awake",
+            "enabled": false,
+            "key": "stay_awake",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-screen-off-timeout",
+            "enabled": false,
+            "key": "screen_off_timeout",
+            "value": "-1",
+            "scope": "server"
+          },
+          {
+            "id": "official-power-off-on-close",
+            "enabled": false,
+            "key": "power_off_on_close",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-clipboard-autosync",
+            "enabled": false,
+            "key": "clipboard_autosync",
+            "value": "true",
+            "scope": "server"
+          },
+          {
+            "id": "official-downsize-on-error",
+            "enabled": false,
+            "key": "downsize_on_error",
+            "value": "true",
+            "scope": "server"
+          },
+          {
+            "id": "official-cleanup",
+            "enabled": false,
+            "key": "cleanup",
+            "value": "true",
+            "scope": "server"
+          },
+          {
+            "id": "official-power-on",
+            "enabled": false,
+            "key": "power_on",
+            "value": "true",
+            "scope": "server"
+          },
+          {
+            "id": "official-log-level",
+            "enabled": false,
+            "key": "log_level",
+            "value": "debug",
+            "scope": "server"
+          },
+          {
+            "id": "official-list-encoders",
+            "enabled": false,
+            "key": "list_encoders",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-list-displays",
+            "enabled": false,
+            "key": "list_displays",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-list-cameras",
+            "enabled": false,
+            "key": "list_cameras",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-list-camera-sizes",
+            "enabled": false,
+            "key": "list_camera_sizes",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-list-apps",
+            "enabled": false,
+            "key": "list_apps",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-mouse",
+            "enabled": true,
+            "key": "mouse",
+            "value": "uhid",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-keyboard",
+            "enabled": false,
+            "key": "keyboard",
+            "value": "uhid",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-gamepad",
+            "enabled": false,
+            "key": "gamepad",
+            "value": "uhid",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-video-buffer",
+            "enabled": true,
+            "key": "video_buffer",
+            "value": "0",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-audio-buffer",
+            "enabled": false,
+            "key": "audio_buffer",
+            "value": "50",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-time-limit",
+            "enabled": false,
+            "key": "time_limit",
+            "value": "0",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-record",
+            "enabled": false,
+            "key": "record",
+            "value": "",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-fullscreen",
+            "enabled": false,
+            "key": "fullscreen",
+            "value": "false",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-always-on-top",
+            "enabled": false,
+            "key": "always_on_top",
+            "value": "false",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-window-title",
+            "enabled": false,
+            "key": "window_title",
+            "value": "",
+            "scope": "clientOnly"
+          }
+        ]
+      },
+      {
+        "id": "preset-a855f7fb53e54651aa8ffe5c9d5c773e",
+        "name": "测试",
+        "video": true,
+        "audio": false,
+        "virtualDisplay": {
+          "enabled": false,
+          "useMainSize": true,
+          "width": 1280,
+          "height": 720,
+          "dpi": 240,
+          "keepActive": true,
+          "destroyContent": false,
+          "systemDecorations": true,
+          "startAppEnabled": false,
+          "startAppPackage": "",
+          "startAppForceStop": false
+        },
+        "parameters": [
+          {
+            "id": "official-video-codec",
+            "enabled": true,
+            "key": "video_codec",
+            "value": "h265",
+            "scope": "server"
+          },
+          {
+            "id": "official-video-source",
+            "enabled": false,
+            "key": "video_source",
+            "value": "display",
+            "scope": "server"
+          },
+          {
+            "id": "official-video-encoder",
+            "enabled": true,
+            "key": "video_encoder",
+            "value": "c2.qti.hevc.encoder",
+            "scope": "server"
+          },
+          {
+            "id": "official-video-bit-rate",
+            "enabled": true,
+            "key": "video_bit_rate",
+            "value": "6000000",
+            "scope": "server"
+          },
+          {
+            "id": "official-video-codec-options",
+            "enabled": true,
+            "key": "video_codec_options",
+            "value": "bitrate-mode=2,keyint=60,max-bframes=0",
+            "scope": "server"
+          },
+          {
+            "id": "official-max-size",
+            "enabled": true,
+            "key": "max_size",
+            "value": "1920",
+            "scope": "server"
+          },
+          {
+            "id": "official-min-size-alignment",
+            "enabled": false,
+            "key": "min_size_alignment",
+            "value": "1",
+            "scope": "server"
+          },
+          {
+            "id": "official-max-fps",
+            "enabled": true,
+            "key": "max_fps",
+            "value": "60",
+            "scope": "server"
+          },
+          {
+            "id": "official-angle",
+            "enabled": false,
+            "key": "angle",
+            "value": "0",
+            "scope": "server"
+          },
+          {
+            "id": "official-crop",
+            "enabled": false,
+            "key": "crop",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-id",
+            "enabled": false,
+            "key": "camera_id",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-size",
+            "enabled": false,
+            "key": "camera_size",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-facing",
+            "enabled": false,
+            "key": "camera_facing",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-ar",
+            "enabled": false,
+            "key": "camera_ar",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-zoom",
+            "enabled": false,
+            "key": "camera_zoom",
+            "value": "1",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-fps",
+            "enabled": false,
+            "key": "camera_fps",
+            "value": "0",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-high-speed",
+            "enabled": false,
+            "key": "camera_high_speed",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-torch",
+            "enabled": false,
+            "key": "camera_torch",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-audio-codec",
+            "enabled": false,
+            "key": "audio_codec",
+            "value": "opus",
+            "scope": "server"
+          },
+          {
+            "id": "official-audio-source",
+            "enabled": false,
+            "key": "audio_source",
+            "value": "output",
+            "scope": "server"
+          },
+          {
+            "id": "official-audio-dup",
+            "enabled": false,
+            "key": "audio_dup",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-audio-bit-rate",
+            "enabled": false,
+            "key": "audio_bit_rate",
+            "value": "128000",
+            "scope": "server"
+          },
+          {
+            "id": "official-audio-codec-options",
+            "enabled": false,
+            "key": "audio_codec_options",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-audio-encoder",
+            "enabled": false,
+            "key": "audio_encoder",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-display-id",
+            "enabled": false,
+            "key": "display_id",
+            "value": "0",
+            "scope": "server"
+          },
+          {
+            "id": "official-capture-orientation",
+            "enabled": false,
+            "key": "capture_orientation",
+            "value": "0",
+            "scope": "server"
+          },
+          {
+            "id": "official-display-ime-policy",
+            "enabled": false,
+            "key": "display_ime_policy",
+            "value": "-1",
+            "scope": "server"
+          },
+          {
+            "id": "official-show-touches",
+            "enabled": false,
+            "key": "show_touches",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-flex-display",
+            "enabled": false,
+            "key": "flex_display",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-stay-awake",
+            "enabled": false,
+            "key": "stay_awake",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-screen-off-timeout",
+            "enabled": false,
+            "key": "screen_off_timeout",
+            "value": "-1",
+            "scope": "server"
+          },
+          {
+            "id": "official-power-off-on-close",
+            "enabled": false,
+            "key": "power_off_on_close",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-clipboard-autosync",
+            "enabled": false,
+            "key": "clipboard_autosync",
+            "value": "true",
+            "scope": "server"
+          },
+          {
+            "id": "official-downsize-on-error",
+            "enabled": false,
+            "key": "downsize_on_error",
+            "value": "true",
+            "scope": "server"
+          },
+          {
+            "id": "official-cleanup",
+            "enabled": false,
+            "key": "cleanup",
+            "value": "true",
+            "scope": "server"
+          },
+          {
+            "id": "official-power-on",
+            "enabled": false,
+            "key": "power_on",
+            "value": "true",
+            "scope": "server"
+          },
+          {
+            "id": "official-log-level",
+            "enabled": false,
+            "key": "log_level",
+            "value": "debug",
+            "scope": "server"
+          },
+          {
+            "id": "official-list-encoders",
+            "enabled": false,
+            "key": "list_encoders",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-list-displays",
+            "enabled": false,
+            "key": "list_displays",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-list-cameras",
+            "enabled": false,
+            "key": "list_cameras",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-list-camera-sizes",
+            "enabled": false,
+            "key": "list_camera_sizes",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-list-apps",
+            "enabled": false,
+            "key": "list_apps",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-mouse",
+            "enabled": true,
+            "key": "mouse",
+            "value": "uhid",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-keyboard",
+            "enabled": true,
+            "key": "keyboard",
+            "value": "uhid",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-gamepad",
+            "enabled": false,
+            "key": "gamepad",
+            "value": "uhid",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-video-buffer",
+            "enabled": true,
+            "key": "video_buffer",
+            "value": "10",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-audio-buffer",
+            "enabled": false,
+            "key": "audio_buffer",
+            "value": "50",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-time-limit",
+            "enabled": false,
+            "key": "time_limit",
+            "value": "0",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-record",
+            "enabled": false,
+            "key": "record",
+            "value": "",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-fullscreen",
+            "enabled": false,
+            "key": "fullscreen",
+            "value": "false",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-always-on-top",
+            "enabled": false,
+            "key": "always_on_top",
+            "value": "false",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-window-title",
+            "enabled": false,
+            "key": "window_title",
+            "value": "",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "parameter-6a435c415cd9428cb66d4a7327ba0706",
+            "enabled": true,
+            "key": "render_driver",
+            "value": "opengl",
+            "scope": "clientOnly"
+          }
+        ]
+      },
+      {
+        "id": "preset-4dc3ad8d85cc4ebd9ae66695deb63bcd",
+        "name": "新 scrcpy 预设",
+        "video": true,
+        "audio": false,
+        "virtualDisplay": {
+          "enabled": false,
+          "useMainSize": true,
+          "width": 1280,
+          "height": 720,
+          "dpi": 240,
+          "keepActive": true,
+          "destroyContent": false,
+          "systemDecorations": true,
+          "startAppEnabled": false,
+          "startAppPackage": "",
+          "startAppForceStop": false
+        },
+        "parameters": [
+          {
+            "id": "official-video-codec",
+            "enabled": true,
+            "key": "video_codec",
+            "value": "h264",
+            "scope": "server"
+          },
+          {
+            "id": "official-video-source",
+            "enabled": false,
+            "key": "video_source",
+            "value": "display",
+            "scope": "server"
+          },
+          {
+            "id": "official-video-encoder",
+            "enabled": true,
+            "key": "video_encoder",
+            "value": "c2.qti.avc.encoder",
+            "scope": "server"
+          },
+          {
+            "id": "official-video-bit-rate",
+            "enabled": true,
+            "key": "video_bit_rate",
+            "value": "12000000",
+            "scope": "server"
+          },
+          {
+            "id": "official-video-codec-options",
+            "enabled": false,
+            "key": "video_codec_options",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-max-size",
+            "enabled": false,
+            "key": "max_size",
+            "value": "0",
+            "scope": "server"
+          },
+          {
+            "id": "official-min-size-alignment",
+            "enabled": false,
+            "key": "min_size_alignment",
+            "value": "1",
+            "scope": "server"
+          },
+          {
+            "id": "official-max-fps",
+            "enabled": true,
+            "key": "max_fps",
+            "value": "60",
+            "scope": "server"
+          },
+          {
+            "id": "official-angle",
+            "enabled": false,
+            "key": "angle",
+            "value": "0",
+            "scope": "server"
+          },
+          {
+            "id": "official-crop",
+            "enabled": false,
+            "key": "crop",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-id",
+            "enabled": false,
+            "key": "camera_id",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-size",
+            "enabled": false,
+            "key": "camera_size",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-facing",
+            "enabled": false,
+            "key": "camera_facing",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-ar",
+            "enabled": false,
+            "key": "camera_ar",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-zoom",
+            "enabled": false,
+            "key": "camera_zoom",
+            "value": "1",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-fps",
+            "enabled": false,
+            "key": "camera_fps",
+            "value": "0",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-high-speed",
+            "enabled": false,
+            "key": "camera_high_speed",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-torch",
+            "enabled": false,
+            "key": "camera_torch",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-audio-codec",
+            "enabled": false,
+            "key": "audio_codec",
+            "value": "opus",
+            "scope": "server"
+          },
+          {
+            "id": "official-audio-source",
+            "enabled": false,
+            "key": "audio_source",
+            "value": "output",
+            "scope": "server"
+          },
+          {
+            "id": "official-audio-dup",
+            "enabled": false,
+            "key": "audio_dup",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-audio-bit-rate",
+            "enabled": false,
+            "key": "audio_bit_rate",
+            "value": "128000",
+            "scope": "server"
+          },
+          {
+            "id": "official-audio-codec-options",
+            "enabled": false,
+            "key": "audio_codec_options",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-audio-encoder",
+            "enabled": false,
+            "key": "audio_encoder",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-display-id",
+            "enabled": false,
+            "key": "display_id",
+            "value": "0",
+            "scope": "server"
+          },
+          {
+            "id": "official-capture-orientation",
+            "enabled": false,
+            "key": "capture_orientation",
+            "value": "0",
+            "scope": "server"
+          },
+          {
+            "id": "official-display-ime-policy",
+            "enabled": false,
+            "key": "display_ime_policy",
+            "value": "-1",
+            "scope": "server"
+          },
+          {
+            "id": "official-show-touches",
+            "enabled": false,
+            "key": "show_touches",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-flex-display",
+            "enabled": false,
+            "key": "flex_display",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-stay-awake",
+            "enabled": false,
+            "key": "stay_awake",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-screen-off-timeout",
+            "enabled": false,
+            "key": "screen_off_timeout",
+            "value": "-1",
+            "scope": "server"
+          },
+          {
+            "id": "official-power-off-on-close",
+            "enabled": false,
+            "key": "power_off_on_close",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-clipboard-autosync",
+            "enabled": false,
+            "key": "clipboard_autosync",
+            "value": "true",
+            "scope": "server"
+          },
+          {
+            "id": "official-downsize-on-error",
+            "enabled": false,
+            "key": "downsize_on_error",
+            "value": "true",
+            "scope": "server"
+          },
+          {
+            "id": "official-cleanup",
+            "enabled": false,
+            "key": "cleanup",
+            "value": "true",
+            "scope": "server"
+          },
+          {
+            "id": "official-power-on",
+            "enabled": false,
+            "key": "power_on",
+            "value": "true",
+            "scope": "server"
+          },
+          {
+            "id": "official-log-level",
+            "enabled": false,
+            "key": "log_level",
+            "value": "debug",
+            "scope": "server"
+          },
+          {
+            "id": "official-list-encoders",
+            "enabled": false,
+            "key": "list_encoders",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-list-displays",
+            "enabled": false,
+            "key": "list_displays",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-list-cameras",
+            "enabled": false,
+            "key": "list_cameras",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-list-camera-sizes",
+            "enabled": false,
+            "key": "list_camera_sizes",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-list-apps",
+            "enabled": false,
+            "key": "list_apps",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-mouse",
+            "enabled": true,
+            "key": "mouse",
+            "value": "uhid",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-keyboard",
+            "enabled": false,
+            "key": "keyboard",
+            "value": "uhid",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-gamepad",
+            "enabled": false,
+            "key": "gamepad",
+            "value": "uhid",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-video-buffer",
+            "enabled": true,
+            "key": "video_buffer",
+            "value": "0",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-audio-buffer",
+            "enabled": false,
+            "key": "audio_buffer",
+            "value": "50",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-time-limit",
+            "enabled": false,
+            "key": "time_limit",
+            "value": "0",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-record",
+            "enabled": false,
+            "key": "record",
+            "value": "",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-fullscreen",
+            "enabled": false,
+            "key": "fullscreen",
+            "value": "false",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-always-on-top",
+            "enabled": false,
+            "key": "always_on_top",
+            "value": "false",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-window-title",
+            "enabled": false,
+            "key": "window_title",
+            "value": "",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "parameter-7b5ead44dcc247a88487a581b2c56669",
+            "enabled": true,
+            "key": "render_driver",
+            "value": "direct3d11",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "parameter-30034af5d87d4fa08ea5a219ab68bc9e",
+            "enabled": true,
+            "key": "display_buffer",
+            "value": "0",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "parameter-afb9c3baec0c4fa2adcedf50838378c5",
+            "enabled": true,
+            "key": "shortcut_mod",
+            "value": "rctrl",
+            "scope": "clientOnly"
+          }
+        ]
+      },
+      {
+        "id": "preset-384498bd44f840edb539e2262fd99de6",
+        "name": "键盘鼠标",
+        "video": true,
+        "audio": true,
+        "virtualDisplay": {
+          "enabled": false,
+          "useMainSize": true,
+          "width": 1280,
+          "height": 720,
+          "dpi": 240,
+          "keepActive": true,
+          "destroyContent": false,
+          "systemDecorations": true,
+          "startAppEnabled": false,
+          "startAppPackage": "",
+          "startAppForceStop": false
+        },
+        "parameters": [
+          {
+            "id": "official-video-codec",
+            "enabled": false,
+            "key": "video_codec",
+            "value": "h264",
+            "scope": "server"
+          },
+          {
+            "id": "official-video-source",
+            "enabled": false,
+            "key": "video_source",
+            "value": "display",
+            "scope": "server"
+          },
+          {
+            "id": "official-video-encoder",
+            "enabled": false,
+            "key": "video_encoder",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-video-bit-rate",
+            "enabled": false,
+            "key": "video_bit_rate",
+            "value": "8000000",
+            "scope": "server"
+          },
+          {
+            "id": "official-video-codec-options",
+            "enabled": false,
+            "key": "video_codec_options",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-max-size",
+            "enabled": false,
+            "key": "max_size",
+            "value": "0",
+            "scope": "server"
+          },
+          {
+            "id": "official-min-size-alignment",
+            "enabled": false,
+            "key": "min_size_alignment",
+            "value": "1",
+            "scope": "server"
+          },
+          {
+            "id": "official-max-fps",
+            "enabled": false,
+            "key": "max_fps",
+            "value": "60",
+            "scope": "server"
+          },
+          {
+            "id": "official-angle",
+            "enabled": false,
+            "key": "angle",
+            "value": "0",
+            "scope": "server"
+          },
+          {
+            "id": "official-crop",
+            "enabled": false,
+            "key": "crop",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-id",
+            "enabled": false,
+            "key": "camera_id",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-size",
+            "enabled": false,
+            "key": "camera_size",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-facing",
+            "enabled": false,
+            "key": "camera_facing",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-ar",
+            "enabled": false,
+            "key": "camera_ar",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-zoom",
+            "enabled": false,
+            "key": "camera_zoom",
+            "value": "1",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-fps",
+            "enabled": false,
+            "key": "camera_fps",
+            "value": "0",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-high-speed",
+            "enabled": false,
+            "key": "camera_high_speed",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-camera-torch",
+            "enabled": false,
+            "key": "camera_torch",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-audio-codec",
+            "enabled": false,
+            "key": "audio_codec",
+            "value": "opus",
+            "scope": "server"
+          },
+          {
+            "id": "official-audio-source",
+            "enabled": false,
+            "key": "audio_source",
+            "value": "output",
+            "scope": "server"
+          },
+          {
+            "id": "official-audio-dup",
+            "enabled": false,
+            "key": "audio_dup",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-audio-bit-rate",
+            "enabled": false,
+            "key": "audio_bit_rate",
+            "value": "128000",
+            "scope": "server"
+          },
+          {
+            "id": "official-audio-codec-options",
+            "enabled": false,
+            "key": "audio_codec_options",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-audio-encoder",
+            "enabled": false,
+            "key": "audio_encoder",
+            "value": "",
+            "scope": "server"
+          },
+          {
+            "id": "official-display-id",
+            "enabled": false,
+            "key": "display_id",
+            "value": "0",
+            "scope": "server"
+          },
+          {
+            "id": "official-capture-orientation",
+            "enabled": false,
+            "key": "capture_orientation",
+            "value": "0",
+            "scope": "server"
+          },
+          {
+            "id": "official-display-ime-policy",
+            "enabled": false,
+            "key": "display_ime_policy",
+            "value": "-1",
+            "scope": "server"
+          },
+          {
+            "id": "official-show-touches",
+            "enabled": false,
+            "key": "show_touches",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-flex-display",
+            "enabled": false,
+            "key": "flex_display",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-stay-awake",
+            "enabled": false,
+            "key": "stay_awake",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-screen-off-timeout",
+            "enabled": false,
+            "key": "screen_off_timeout",
+            "value": "-1",
+            "scope": "server"
+          },
+          {
+            "id": "official-power-off-on-close",
+            "enabled": false,
+            "key": "power_off_on_close",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-clipboard-autosync",
+            "enabled": false,
+            "key": "clipboard_autosync",
+            "value": "true",
+            "scope": "server"
+          },
+          {
+            "id": "official-downsize-on-error",
+            "enabled": false,
+            "key": "downsize_on_error",
+            "value": "true",
+            "scope": "server"
+          },
+          {
+            "id": "official-cleanup",
+            "enabled": false,
+            "key": "cleanup",
+            "value": "true",
+            "scope": "server"
+          },
+          {
+            "id": "official-power-on",
+            "enabled": false,
+            "key": "power_on",
+            "value": "true",
+            "scope": "server"
+          },
+          {
+            "id": "official-log-level",
+            "enabled": false,
+            "key": "log_level",
+            "value": "debug",
+            "scope": "server"
+          },
+          {
+            "id": "official-list-encoders",
+            "enabled": false,
+            "key": "list_encoders",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-list-displays",
+            "enabled": false,
+            "key": "list_displays",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-list-cameras",
+            "enabled": false,
+            "key": "list_cameras",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-list-camera-sizes",
+            "enabled": false,
+            "key": "list_camera_sizes",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-list-apps",
+            "enabled": false,
+            "key": "list_apps",
+            "value": "false",
+            "scope": "server"
+          },
+          {
+            "id": "official-mouse",
+            "enabled": false,
+            "key": "mouse",
+            "value": "uhid",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-keyboard",
+            "enabled": false,
+            "key": "keyboard",
+            "value": "uhid",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-gamepad",
+            "enabled": false,
+            "key": "gamepad",
+            "value": "uhid",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-video-buffer",
+            "enabled": false,
+            "key": "video_buffer",
+            "value": "0",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-audio-buffer",
+            "enabled": false,
+            "key": "audio_buffer",
+            "value": "50",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-time-limit",
+            "enabled": false,
+            "key": "time_limit",
+            "value": "0",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-record",
+            "enabled": false,
+            "key": "record",
+            "value": "",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-fullscreen",
+            "enabled": false,
+            "key": "fullscreen",
+            "value": "false",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-always-on-top",
+            "enabled": false,
+            "key": "always_on_top",
+            "value": "false",
+            "scope": "clientOnly"
+          },
+          {
+            "id": "official-window-title",
+            "enabled": false,
+            "key": "window_title",
+            "value": "",
+            "scope": "clientOnly"
+          }
+        ]
+      }
+    ]
+  },
+  "stay_awake": false,
+  "screen_off_timeout": -1,
+  "power_off_on_close": false
+}

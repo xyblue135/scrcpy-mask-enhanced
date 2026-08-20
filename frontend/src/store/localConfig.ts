@@ -95,9 +95,102 @@ export function qualcommHevcLowLatencyPreset(): ScrcpyPreset {
   };
 }
 
+export function h264BalancedPreset(): ScrcpyPreset {
+  return {
+    id: "h264-balanced",
+    name: "H.264 通用均衡",
+    video: true,
+    audio: true,
+    virtualDisplay: defaultScrcpyVirtualDisplay(),
+    parameters: [
+      { id: "video-codec", enabled: true, key: "video_codec", value: "h264", scope: "server" },
+      { id: "video-encoder", enabled: true, key: "video_encoder", value: "c2.qti.avc.encoder", scope: "server" },
+      { id: "video-bit-rate", enabled: true, key: "video_bit_rate", value: "12000000", scope: "server" },
+      { id: "max-fps", enabled: true, key: "max_fps", value: "60", scope: "server" },
+      { id: "audio-codec", enabled: true, key: "audio_codec", value: "opus", scope: "server" },
+      { id: "mouse", enabled: true, key: "mouse", value: "uhid", scope: "clientOnly" },
+      { id: "video-buffer", enabled: true, key: "video_buffer", value: "0", scope: "clientOnly" },
+    ],
+  };
+}
+
+export function highBitrateClearPreset(): ScrcpyPreset {
+  return {
+    id: "high-bitrate-clear",
+    name: "高码率清晰画质",
+    video: true,
+    audio: true,
+    virtualDisplay: defaultScrcpyVirtualDisplay(),
+    parameters: [
+      { id: "video-codec", enabled: true, key: "video_codec", value: "h264", scope: "server" },
+      { id: "video-encoder", enabled: true, key: "video_encoder", value: "c2.qti.avc.encoder", scope: "server" },
+      { id: "video-bit-rate", enabled: true, key: "video_bit_rate", value: "24000000", scope: "server" },
+      { id: "video-max-size", enabled: true, key: "video_max_size", value: "0", scope: "server" },
+      { id: "max-fps", enabled: true, key: "max_fps", value: "120", scope: "server" },
+      { id: "audio-codec", enabled: true, key: "audio_codec", value: "opus", scope: "server" },
+      { id: "mouse", enabled: true, key: "mouse", value: "uhid", scope: "clientOnly" },
+      { id: "video-buffer", enabled: true, key: "video_buffer", value: "0", scope: "clientOnly" },
+    ],
+  };
+}
+
+export function lowBandwidthPreset(): ScrcpyPreset {
+  return {
+    id: "low-bandwidth",
+    name: "低带宽 / 远程网络",
+    video: true,
+    audio: true,
+    virtualDisplay: defaultScrcpyVirtualDisplay(),
+    parameters: [
+      { id: "video-codec", enabled: true, key: "video_codec", value: "h264", scope: "server" },
+      { id: "video-encoder", enabled: true, key: "video_encoder", value: "c2.qti.avc.encoder", scope: "server" },
+      { id: "video-bit-rate", enabled: true, key: "video_bit_rate", value: "3000000", scope: "server" },
+      { id: "video-max-size", enabled: true, key: "video_max_size", value: "1024", scope: "server" },
+      { id: "max-fps", enabled: true, key: "max_fps", value: "30", scope: "server" },
+      { id: "audio-codec", enabled: true, key: "audio_codec", value: "opus", scope: "server" },
+      { id: "mouse", enabled: true, key: "mouse", value: "uhid", scope: "clientOnly" },
+      { id: "video-buffer", enabled: true, key: "video_buffer", value: "0", scope: "clientOnly" },
+    ],
+  };
+}
+
+export function virtualDisplayOfficePreset(): ScrcpyPreset {
+  const vd = defaultScrcpyVirtualDisplay();
+  vd.enabled = true;
+  vd.useMainSize = false;
+  vd.width = 1280;
+  vd.height = 720;
+  vd.dpi = 240;
+  vd.startAppEnabled = true;
+  return {
+    id: "virtual-display-office",
+    name: "虚拟显示 / 办公分屏",
+    video: true,
+    audio: true,
+    virtualDisplay: vd,
+    parameters: [
+      { id: "video-codec", enabled: true, key: "video_codec", value: "h264", scope: "server" },
+      { id: "video-encoder", enabled: true, key: "video_encoder", value: "c2.qti.avc.encoder", scope: "server" },
+      { id: "video-bit-rate", enabled: true, key: "video_bit_rate", value: "12000000", scope: "server" },
+      { id: "max-fps", enabled: true, key: "max_fps", value: "60", scope: "server" },
+      { id: "display", enabled: true, key: "display_id", value: "2", scope: "server" },
+      { id: "mouse", enabled: true, key: "mouse", value: "uhid", scope: "clientOnly" },
+      { id: "video-buffer", enabled: true, key: "video_buffer", value: "0", scope: "clientOnly" },
+    ],
+  };
+}
+
 function defaultScrcpyModule(): ScrcpyModuleConfig {
-  const preset = qualcommHevcLowLatencyPreset();
-  return { enabled: true, activePresetId: preset.id, presets: [preset] };
+  const presets = [
+    qualcommHevcLowLatencyPreset(),
+    h264BalancedPreset(),
+    highBitrateClearPreset(),
+    lowBandwidthPreset(),
+    virtualDisplayOfficePreset(),
+  ];
+  // 默认激活通用均衡预设，覆盖多数设备场景。
+  const active = h264BalancedPreset();
+  return { enabled: true, activePresetId: active.id, presets };
 }
 
 export interface LocalConfigState {
@@ -115,6 +208,8 @@ export interface LocalConfigState {
   mappingEnabled: boolean;
   activeMappingFile: string;
   mappingLabelOpacity: number;
+  // 键盘映射按钮的显示大小倍数（仅影响可视化按钮大小，adb 点击仍为按钮中心）
+  mappingButtonScale: number;
   language: string;
   clipboardSync: boolean;
   videoCodec: string;
@@ -158,6 +253,7 @@ const initialState: LocalConfigState = {
   mappingEnabled: true,
   activeMappingFile: "",
   mappingLabelOpacity: 0.3,
+  mappingButtonScale: 1.0,
   language: "en-US",
   clipboardSync: true,
   videoCodec: "H264",
@@ -210,6 +306,7 @@ const localConfigSlice = createSlice({
     setMappingEnabled: (state, action: PayloadAction<boolean>) => { state.mappingEnabled = action.payload; updateLocalConfig("mapping_enabled", action.payload, 0); },
     setActiveMappingFile: (state, action: PayloadAction<string>) => { state.activeMappingFile = action.payload; },
     setMappingLabelOpacity: (state, action: PayloadAction<number>) => { state.mappingLabelOpacity = action.payload; updateLocalConfig("mapping_label_opacity", action.payload); },
+    setMappingButtonScale: (state, action: PayloadAction<number>) => { state.mappingButtonScale = action.payload; updateLocalConfig("mapping_button_scale", action.payload); },
     setLanguage: (state, action: PayloadAction<string>) => { state.language = action.payload; i18n.changeLanguage(action.payload); updateLocalConfig("language", action.payload); },
     setClipboardSync: (state, action: PayloadAction<boolean>) => { state.clipboardSync = action.payload; updateLocalConfig("clipboard_sync", action.payload); },
     setVideoCodec: (state, action: PayloadAction<string>) => { state.videoCodec = action.payload; updateLocalConfig("video_codec", action.payload); },
@@ -262,6 +359,7 @@ export const {
   setMappingEnabled,
   setActiveMappingFile,
   setMappingLabelOpacity,
+  setMappingButtonScale,
   setLanguage,
   setClipboardSync,
   setVideoCodec,

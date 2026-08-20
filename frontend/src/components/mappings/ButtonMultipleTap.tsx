@@ -60,6 +60,7 @@ export default function ButtonMultipleTap({
       : "border-primary hover:border-primary-hover");
 
   const maskArea = useAppSelector((state) => state.other.maskArea);
+  const mappingButtonScale = useAppSelector((state) => state.localConfig.mappingButtonScale);
   const [showSetting, setShowSetting] = useState(false);
   const [isEditingPos, setIsEditingPos] = useState(false);
 
@@ -71,8 +72,8 @@ export default function ButtonMultipleTap({
   }, [originalSize, maskArea]);
 
   const buttonStyle = useMemo(
-    () => mappingButtonScaledPresetStyle(52, maskArea),
-    [maskArea],
+    () => mappingButtonScaledPresetStyle(52, maskArea, undefined, mappingButtonScale),
+    [maskArea, mappingButtonScale],
   );
 
   useEffect(() => {

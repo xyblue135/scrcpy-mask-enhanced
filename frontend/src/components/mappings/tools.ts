@@ -16,8 +16,9 @@ export function mappingButtonScaledPresetStyle(
   radiusX: number,
   viewportSize: { width: number; height: number },
   radiusY?: number,
+  scale: number = 1,
 ): React.CSSProperties {
-  const buttonScale = Math.max(viewportSize.width, viewportSize.height) / 960;
+  const buttonScale = (Math.max(viewportSize.width, viewportSize.height) / 960) * scale;
   return mappingButtonPresetStyle(
     Math.round(radiusX * buttonScale),
     Math.round((radiusY ?? radiusX) * buttonScale),

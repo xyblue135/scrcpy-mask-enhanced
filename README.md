@@ -688,7 +688,15 @@ LowCast Enhanced 将设置重新分组：
 
 左侧边栏新增独立的“Scrcpy 预设”页面，作为“关于 scrcpy / 完整参数调试中心”，用于把媒体通道、scrcpy 参数、虚拟屏幕和应用启动行为保存成可复用预设。设置页不再重复显示虚拟屏幕、视频、音频和设备行为参数。
 
-内置的 Qualcomm H.265 低延迟示例等价于：
+内置多套 scrcpy 预设，开箱即可按需切换：
+
+- **Qualcomm H.265 低延迟**：`--video-codec=h265 --video-encoder=c2.qti.hevc.encoder.cq --video-bit-rate=5M --max-fps=60 --no-audio --mouse=uhid --video-buffer=0`
+- **H.264 通用均衡**（默认）：`--video-codec=h264 --video-encoder=c2.qti.avc.encoder --video-bit-rate=12M --max-fps=60 --audio-codec=opus --mouse=uhid --video-buffer=0`
+- **高码率清晰画质**：24M 码率、120 FPS，适合高刷与画质优先场景
+- **低带宽 / 远程网络**：3M 码率、1024 最大尺寸、30 FPS，适合弱网或远程连接
+- **虚拟显示 / 办公分屏**：开启虚拟屏（display_id=2）、指定尺寸与启动应用，适合分屏办公
+
+示例预设等价于：
 
 ```text
 scrcpy --video-codec=h265 --video-encoder=c2.qti.hevc.encoder.cq --video-bit-rate=5M --max-fps=60 --no-audio --mouse=uhid --video-buffer=0
@@ -707,6 +715,24 @@ scrcpy --video-codec=h265 --video-encoder=c2.qti.hevc.encoder.cq --video-bit-rat
 - `scid`、控制通道、隧道方向和流元数据等 LowCast 协议参数由程序管理，不能在预设里覆盖。
 - 自定义 Server 参数会在保存时校验，禁止覆盖连接标识等关键传输参数，也禁止包含 shell 注入字符。
 - 参数在下一次连接或重新连接设备时生效。
+
+---
+
+# 映射按钮显示大小调节
+
+设置页「键盘映射」分组新增：
+
+```text
+映射按钮显示大小
+```
+
+通过滑块以 0.5x ~ 2.0x 调整所有键位映射按钮（单次点击、连点、观察、方向轮盘、FPS、脚本、鼠标施法等）的可视化大小。
+
+重要：
+
+> 该设置只改变按钮在画面上的**显示大小**，adb 实际点击位置始终位于按钮中心，因此不会影响操作精度。
+
+适合在不同分辨率或不同使用距离下，让键位看得更清楚，而不必改动任何坐标或绑定。
 
 ---
 
@@ -971,6 +997,194 @@ LowCast Enhanced 基于：
 - scrcpy 视频与控制集成
 
 LowCast Enhanced 的目标是在尊重原项目设计与功能归属的前提下，对 Windows 低延迟投屏和手游键鼠使用场景进行持续增强。
+
+---
+
+# 配置文件位置
+
+从本次维护起，**配置文件 `config.json` 不再存放在系统 C 盘**（原路径为 `C:\Users\<用户>\AppData\Roaming\com.akichase.scrcpy-mask\config.json`），而是存放到**程序（源码）同级目录**，即：
+
+```text
+程序所在目录 / config.json
+```
+
+- Debug 运行（`cargo run`）：配置位于项目根目录（与 `Cargo.toml`、`config.example.json` 同级）。
+- Release 运行：配置位于 `scrcpy-mask.exe` 所在目录。
+
+行为说明：
+
+- 首次启动时，若新位置没有配置，但旧 C 盘位置存在，会自动把旧配置迁移过来，无需手动拷贝。
+- 设置页「连接 / 高级」中的「打开配置目录」按钮会直接打开新的配置目录。
+- 仓库根目录提供了 `config.example.json` 作为示例副本，方便查看字段结构；它不会覆盖程序实际生成的 `config.json`。
+
+---
+
+# 编译流程详解（面向 Rust 初学者）
+
+本项目是「Rust 后端 + React 前端」的组合：**Rust 负责连接 ADB / scrcpy、视频解码与键鼠映射；React 前端只是一个被内置 Web 服务器托管的配置界面**。所以编译其实分两条线，最后由 Rust 把前端打包产物一起跑起来。
+
+## 1. 三个工具分别干什么
+
+| 工具 | 角色 | 管什么 |
+| --- | --- | --- |
+| `cargo` | Rust 官方构建工具 | 编译 Rust 后端（`src/` 下所有 `.rs`），产出可执行文件 |
+| `pnpm` | Node 包管理器 | 安装并构建前端（`frontend/` 下的 React/TypeScript） |
+| `just` | 命令包装器（task runner） | 把上面那些零散命令串成易记的「配方（recipe）」，一键执行 |
+
+> 简单类比：`cargo` 像后端的「编译器开关」，`pnpm` 像前端的「npm 替代」，而 `just` 只是把一长串 PowerShell/Shell 命令写成 `just build` 这种简短别名，本身不做编译。
+
+## 2. 两条编译线如何衔接
+
+```text
+frontend/  (React + TypeScript)
+   │  pnpm install   → 下载依赖到 frontend/node_modules
+   │  pnpm build     → tsc 类型检查 + vite 打包
+   ▼
+assets/web/  (HTML/JS/CSS 静态文件)   ← 注意 outDir 在 vite.config.ts 里写死为 "../assets/web"
+   │
+   │   Rust 后端通过 src/web/mod.rs 里的 ServeDir 把这些文件当作网页托管
+   ▼
+src/  (Rust 后端)
+   │  cargo run / cargo build
+   ▼
+可执行程序  (启动后监听 27799 端口，浏览器自动打开 assets/web 里的界面)
+```
+
+关键衔接点：
+
+- 前端 `pnpm build` 的产物**必须**先生成到 `assets/web`，后端才看得到界面。
+- 后端 `src/web/mod.rs` 第 92 行 `relate_to_root_path(["assets", "web"])` 就是去程序目录下的 `assets/web` 找网页根目录。
+- 开发模式下，前端 `pnpm dev` 会启动一个 Vite 热更新服务器，并把 `/api` 请求反向代理到 Rust 后端的 `localhost:27799`（`vite.config.ts` 的 `server.proxy`），所以前后端可以分开跑、分别热重载。
+
+## 3. 工具链安装（一次性）
+
+1. **Rust 工具链**：访问 <https://rustup.rs> 安装 `rustup`（自带 `cargo`）。安装后确认：
+   ```powershell
+   cargo --version
+   ```
+2. **Node.js + pnpm**：安装 Node 18+，然后：
+   ```powershell
+   corepack enable      # Node 自带，启用 pnpm
+   pnpm --version
+   ```
+   > 如果 `pnpm` 命令不可用，可改用 `npm i -g pnpm`，或直接用 `npm` 替代文中所有 `pnpm`。
+3. **`just`**：Rust 编写的命令 runner，用 cargo 装最方便：
+   ```powershell
+   cargo install just
+   just --list
+   ```
+4. **ADB**：把 `adb.exe` 放进系统 `PATH`，或后续在程序设置里手动指定路径。
+5. **FFmpeg 静态库**（仅当你要本地重新编译 FFmpeg 时才需要，见第 6 节）：
+   - Windows 需要 **MSYS2**（`C:\msys64\usr\bin\bash.exe`）和 **Visual Studio Build Tools（含 cl.exe）**。
+   - 项目通过 `ffmpeg-next` crate 以 `static` feature 把 FFmpeg 静态链接进后端，所以编译 Rust 时其实也需要 FFmpeg 的库文件存在。
+
+## 4. 标准编译步骤
+
+### 方式 A：用 `just`（推荐，省心）
+
+```powershell
+# 第一次：装前端依赖 + 构建 FFmpeg 静态库（二者都耗时，且只需一次）
+just setup
+
+# 构建前端到 assets/web
+just web-build
+
+# 运行（内部调用 scripts/run-windows.ps1，会先把 assets\lib 加进 PATH 再 cargo run）
+just run
+
+# 仅做编译/类型检查，不运行
+just check
+```
+
+### 方式 B：手动跑每一步（便于理解）
+
+```powershell
+# 1) 前端：装依赖
+cd frontend
+pnpm install
+
+# 2) 前端：类型检查 + 打包 → 输出到 ../assets/web
+pnpm build
+cd ..
+
+# 3) 后端：编译并运行
+cargo run
+# 或者只要发布版：
+cargo build --release
+```
+
+> 常见坑：`cargo run` 之前**忘记先 `pnpm build`**。后果是 `assets/web` 是空的，程序能启动但浏览器打开是空白/404。前端改完界面后，记得重新 `pnpm build`（或开发时用 `just web-dev` 单独起前端热更新）。
+
+## 5. `justfile` 里有哪些配方
+
+`justfile` 本质是「别名表」，每个配方都指向一个脚本或命令：
+
+| 配方 | 实际执行 | 说明 |
+| --- | --- | --- |
+| `just`（无参数） | `just --list` | 列出所有可用配方 |
+| `just setup` | `pnpm --dir frontend install` + `just build-ffmpeg` | 初始化前端依赖并编译 FFmpeg |
+| `just web-dev` | `pnpm --dir frontend dev` | 启动前端热更新服务器（开发用） |
+| `just web-build` | `pnpm --dir frontend build` | 前端类型检查 + 打包到 `assets/web` |
+| `just build-ffmpeg` | `scripts/build-ffmpeg.ps1`（Windows） | 用 MSYS2 + MSVC 编译 FFmpeg 静态库 |
+| `just build` | `scripts/package-windows.ps1` | 打包成可分发的发布包 |
+| `just run` | `scripts/run-windows.ps1` | 注入 `assets\lib` 到 PATH 后 `cargo run` |
+| `just check` | `scripts/check-windows.ps1` + `pnpm lint` | Rust 编译检查 + 前端 lint |
+| `just release-version x.y.z` | `node scripts/release-version.mjs` | 更新版本号并打 tag |
+
+> 这些脚本在 Windows 上是 `.ps1`，在 macOS/Linux 上是 `.sh`，`justfile` 顶部的 `windows-shell` 与 `os()` 判断会自动选择。
+
+## 6. FFmpeg 与 ADB 的编译期/运行期依赖
+
+- **FFmpeg（编译期）**：`Cargo.toml` 里 `ffmpeg-next` 开了 `static` feature，意味着 `cargo build` 时需要链接 FFmpeg 的静态库。这些库由 `just build-ffmpeg` 生成到 `assets/lib`。如果你不做本地 FFmpeg 改动，通常 CI / 已购分支会提供现成库，可跳过 `just build-ffmpeg`，但仍要确认 `assets/lib` 存在。
+- **ADB（运行期）**：后端通过 `which` crate 在运行时查找 `adb`。编译不需要 ADB，但运行时必须能找到。要么 `adb.exe` 在 PATH，要么在程序设置里指定绝对路径。
+- **`build.rs`（Linux 专属）**：里面用 `pkg-config` 探测 `x11 / vdpau / libva` 等系统库，**只在 Linux 编译时生效**（`#[cfg(target_os = "linux")]`）。Windows 下这个文件什么都不做，不会造成编译失败。
+
+## 7. 新手常见报错速查
+
+| 现象 | 原因 | 解决 |
+| --- | --- | --- |
+| `cargo run` 后网页空白 | 没跑 `pnpm build`，`assets/web` 为空 | 先 `just web-build` 再 `cargo run` |
+| `error: failed to find libX11` | 在 Linux 上缺系统库 | 安装对应的 `-dev` 包；Windows 忽略此错 |
+| `cl.exe 未找到` | 想编 FFmpeg 但没装 MSVC 工具链 | 装 Visual Studio Build Tools，或跳过 `just build-ffmpeg` |
+| `MSYS2 bash is required` | 编 FFmpeg 但没装 MSYS2 | 装 MSYS2 或设 `$env:MSYS2_BASH` 指向 bash.exe |
+| `pnpm: command not found` | 没装 pnpm | `corepack enable` 或 `npm i -g pnpm` |
+| `just: command not found` | 没装 just | `cargo install just` |
+| 编译极慢 | 首次编译要拉取并编译 Bevy/wgpu 等大量依赖 | 正常，后续增量编译会快很多；可保留 `target/` 目录 |
+
+---
+
+# 部署与维护
+
+## 部署
+
+1. 安装依赖：Node（pnpm）、Rust 工具链、ADB（可系统 PATH 或程序内指定）。
+2. 构建前端并放入 Web 静态资源目录：
+
+   ```powershell
+   cd frontend
+   pnpm install
+   pnpm build
+   ```
+
+3. 构建运行后端：
+
+   ```powershell
+   # 开发调试
+   cargo run
+
+   # 发布版本
+   cargo build --release
+   ```
+
+4. 发布时，把 `target/release` 下的可执行文件与资源目录整体拷贝到目标机器，配置文件会在首次运行时自动生成于程序目录。
+
+## 维护
+
+- **配置迁移**：升级到本版本后首次启动会自动从旧 C 盘路径迁移配置，迁移失败不影响使用默认配置。
+- **配置备份**：直接复制程序目录下的 `config.json` 即可备份或迁移到其他机器。
+- **恢复默认**：删除程序目录下的 `config.json` 后重启，程序会使用内置默认配置重新生成。
+- **scrcpy 预设**：内置多套预设可直接选用，也可在「Scrcpy 预设」页新建 / 复制 / 编辑 / 删除；参数在下次连接或重连设备时生效。
+- **按钮大小**：在设置页「键盘映射」中调整，仅影响显示，不改点击精度。
 
 ---
 

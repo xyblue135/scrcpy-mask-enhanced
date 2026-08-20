@@ -49,6 +49,7 @@ export default function ButtonObservation({
       : "border-primary hover:border-primary-hover");
 
   const maskArea = useAppSelector((state) => state.other.maskArea);
+  const mappingButtonScale = useAppSelector((state) => state.localConfig.mappingButtonScale);
   const [showSetting, setShowSetting] = useState(false);
   const mappingGuide = useMappingGuideState(showSetting);
 
@@ -60,8 +61,8 @@ export default function ButtonObservation({
   }, [originalSize, maskArea]);
 
   const buttonStyle = useMemo(
-    () => mappingButtonScaledPresetStyle(52, maskArea),
-    [maskArea],
+    () => mappingButtonScaledPresetStyle(52, maskArea, undefined, mappingButtonScale),
+    [maskArea, mappingButtonScale],
   );
 
   const maxRadiusShape = useMemo<MappingOverlayCircleShape | null>(() => {
