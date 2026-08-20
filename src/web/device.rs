@@ -124,7 +124,9 @@ async fn _control_device(
         )));
     }
     let main = device_list.len() == 0;
-    let audio = audio && main;
+    let active_scrcpy_preset = local_config.scrcpy_module.active_preset();
+    let video = active_scrcpy_preset.map_or(video, |preset| preset.video);
+    let audio = active_scrcpy_preset.map_or(audio, |preset| preset.audio) && main;
 
     // prepare for scrcpy app
     let scid = gen_scid();
@@ -211,7 +213,10 @@ async fn _control_device(
             // video shell args
             args.push(format!("video_codec={}", local_config.video_codec));
             if !local_config.video_encoder.trim().is_empty() {
-                args.push(format!("video_encoder={}", local_config.video_encoder.trim()));
+                args.push(format!(
+                    "video_encoder={}",
+                    local_config.video_encoder.trim()
+                ));
             }
 
             let mut codec_options = local_config.video_codec_options.trim().to_string();
@@ -251,6 +256,20 @@ async fn _control_device(
             if !matches!(local_config.audio_codec, AudioCodec::Raw) {
                 args.push(format!("audio_bit_rate={}", local_config.audio_bit_rate));
             }
+        }
+        if let Some(preset) = active_scrcpy_preset {
+            preset
+                .apply_server_parameters(&mut args)
+                .map_err(WebServerError::bad_request)?;
+            log::info!(
+                "[ScrcpyModule] applying preset '{}' with {} parameter(s)",
+                preset.name,
+                preset
+                    .parameters
+                    .iter()
+                    .filter(|parameter| parameter.enabled)
+                    .count()
+            );
         }
         socket_id.push("main_control".to_string());
         commands.push(ControllerCommand::ConnectMainControl(
@@ -850,21 +869,18 @@ async fn adb_screenshot(
     let _ = (&payload.id, &payload.display_id);
     let (tx, rx) = tokio::sync::oneshot::channel::<VideoSnapshotResult>();
 
-    state
-        .snapshot_tx
-        .send(tx)
-        .map_err(|e| WebServerError::internal_error(format!(
-            "failed to request current video frame: {e}"
-        )))?;
+    state.snapshot_tx.send(tx).map_err(|e| {
+        WebServerError::internal_error(format!("failed to request current video frame: {e}"))
+    })?;
 
     let image_bytes = tokio::time::timeout(Duration::from_secs(3), rx)
         .await
-        .map_err(|_| WebServerError::internal_error(
-            "timed out while capturing current LowCast video frame",
-        ))?
-        .map_err(|e| WebServerError::internal_error(format!(
-            "video snapshot request was cancelled: {e}"
-        )))?
+        .map_err(|_| {
+            WebServerError::internal_error("timed out while capturing current LowCast video frame")
+        })?
+        .map_err(|e| {
+            WebServerError::internal_error(format!("video snapshot request was cancelled: {e}"))
+        })?
         .map_err(WebServerError::bad_request)?;
 
     log::info!(

@@ -672,6 +672,27 @@ LowCast Enhanced 将设置重新分组：
 
 ---
 
+# scrcpy 参数预设模块
+
+设置页新增“关于 scrcpy / 参数预设”模块，用于把一组启动参数保存成可复用预设。
+
+内置的 Qualcomm H.265 低延迟示例等价于：
+
+```text
+scrcpy --video-codec=h265 --video-encoder=c2.qti.hevc.encoder.cq --video-bit-rate=5M --max-fps=60 --no-audio --mouse=uhid --video-buffer=0
+```
+
+其中：
+
+- `video_codec`、`video_encoder`、`video_bit_rate`、`max_fps`、`mouse` 会覆盖对应 scrcpy server 参数。
+- `--no-audio` 由预设中的音频开关控制。
+- `video_buffer=0` 属于官方桌面客户端参数，在 LowCast 中标记为 `Client Only`，只用于预览和记录；LowCast 自身采用 latest-frame-only 视频管线。
+- 可以新建、复制、删除预设，并逐项启用、禁用、新增或编辑参数。
+- 自定义 Server 参数会在保存时校验，禁止覆盖连接标识等关键传输参数，也禁止包含 shell 注入字符。
+- 参数在下一次连接或重新连接设备时生效。
+
+---
+
 # 原作者已有能力说明
 
 为了明确项目归属，以下能力属于 scrcpy-mask 原有设计，并非scrcpy-mask-enhanced-xyblue 从零实现：

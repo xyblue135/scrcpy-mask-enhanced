@@ -43,6 +43,7 @@ import {
   setPowerOffOnClose,
   setQualcommLowLatency,
   setScreenOffTimeout,
+  setScrcpyModule,
   setStayAwake,
   setTitlebarVisible,
   setVerticalPosition,
@@ -62,6 +63,7 @@ import { requestGet } from "../utils";
 import i18n, { languageOptions } from "../i18n";
 import { useMessageContext } from "../hooks";
 import { BilibiliFilled, CloudSyncOutlined, GithubFilled, InfoCircleOutlined, SyncOutlined } from "@ant-design/icons";
+import ScrcpyModuleModal from "./ScrcpyModuleModal";
 
 const videoCodecOptions = ["H264", "H265", "AV1"].map((v) => ({ value: v, label: v }));
 const audioCodecOptions = ["OPUS", "AAC", "FLAC", "RAW"].map((v) => ({ value: v, label: v }));
@@ -144,7 +146,11 @@ export default function Settings() {
       };
 
   const [customFpsMode, setCustomFpsMode] = useState(false);
+  const [scrcpyModuleOpen, setScrcpyModuleOpen] = useState(false);
   const fpsPresetValue = customFpsMode || !fpsPresetValues.includes(localConfig.videoMaxFps) ? "custom" : String(localConfig.videoMaxFps);
+  const activeScrcpyPreset = localConfig.scrcpyModule.presets.find(
+    (preset) => preset.id === localConfig.scrcpyModule.activePresetId,
+  );
 
   async function loadLocalConfig() {
     dispatch(setIsLoading(true));
@@ -277,6 +283,40 @@ export default function Settings() {
           </ItemBoxContainer>
         </Section>
 
+        <Section
+          title={isZh ? "关于 scrcpy / 参数预设" : "About scrcpy / Parameter Presets"}
+          subtitle={localConfig.scrcpyModule.enabled ? activeScrcpyPreset?.name : "OFF"}
+        >
+          <ItemBoxContainer>
+            <ItemBox label={isZh ? "启用参数模块" : "Enable preset module"}>
+              <Switch
+                checked={localConfig.scrcpyModule.enabled}
+                onChange={(enabled) =>
+                  dispatch(setScrcpyModule({ ...localConfig.scrcpyModule, enabled }))
+                }
+              />
+            </ItemBox>
+            <ItemBox label={isZh ? "当前预设" : "Active preset"}>
+              <Typography.Text>{activeScrcpyPreset?.name ?? "-"}</Typography.Text>
+            </ItemBox>
+            <ItemBox>
+              <Button type="primary" onClick={() => setScrcpyModuleOpen(true)}>
+                {isZh ? "打开 scrcpy 参数模块" : "Open scrcpy parameter module"}
+              </Button>
+            </ItemBox>
+          </ItemBoxContainer>
+          <Alert
+            className="mt-3"
+            type="info"
+            showIcon
+            message={
+              isZh
+                ? "启用后，所选预设会在下一次连接设备时覆盖对应的 scrcpy server 参数。"
+                : "When enabled, the selected preset overrides matching scrcpy server options on the next connection."
+            }
+          />
+        </Section>
+
         <Section title={ui.device}>
           <ItemBoxContainer>
             <ItemBox label={t("settings.stayAwake")}><Switch checked={localConfig.stayAwake} onChange={(v) => dispatch(setStayAwake(v))} /></ItemBox>
@@ -314,6 +354,12 @@ export default function Settings() {
           <Typography.Text>{t("settings.about.latestVersion")}: {updateInfo.latestVersion}</Typography.Text>
         </Flex>
       </section>
+      <ScrcpyModuleModal
+        open={scrcpyModuleOpen}
+        value={localConfig.scrcpyModule}
+        onClose={() => setScrcpyModuleOpen(false)}
+        onSave={(value) => dispatch(setScrcpyModule(value))}
+      />
     </div>
   );
 }

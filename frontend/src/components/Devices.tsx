@@ -543,6 +543,11 @@ function OtherDevices({
 
   const [isVideo, setIsVideo] = videoState;
   const [isAudio, setIsAudio] = audioState;
+  const scrcpyModule = useAppSelector((state) => state.localConfig.scrcpyModule);
+  const activeScrcpyPreset = scrcpyModule.presets.find(
+    (preset) => preset.id === scrcpyModule.activePresetId,
+  );
+  const presetActive = scrcpyModule.enabled && activeScrcpyPreset !== undefined;
 
   async function controlDevice(device: AdbDevice) {
     dispatch(setIsLoading(true));
@@ -575,17 +580,20 @@ function OtherDevices({
         <Flex vertical align="center" gap={4}>
           <Space size="small">
             <Checkbox
-              checked={isVideo}
+              checked={presetActive ? (activeScrcpyPreset?.video ?? isVideo) : isVideo}
+              disabled={presetActive}
               onChange={(e) => setIsVideo(e.target.checked)}
             >
               {t("devices.otherDevices.video")}
             </Checkbox>
             <Checkbox
-              checked={isAudio}
+              checked={presetActive ? (activeScrcpyPreset?.audio ?? isAudio) : isAudio}
+              disabled={presetActive}
               onChange={(e) => setIsAudio(e.target.checked)}
             >
               {t("devices.otherDevices.audio")}
             </Checkbox>
+            {presetActive && <Tag color="blue">scrcpy: {activeScrcpyPreset?.name}</Tag>}
           </Space>
         </Flex>
       ),

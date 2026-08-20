@@ -22,6 +22,52 @@ function updateLocalConfig(key: string, value: any, time = 500, showSuccessMessa
   debounceMap.set(key, timeout);
 }
 
+export type ScrcpyParameterScope = "server" | "clientOnly";
+
+export interface ScrcpyParameter {
+  id: string;
+  enabled: boolean;
+  key: string;
+  value: string;
+  scope: ScrcpyParameterScope;
+}
+
+export interface ScrcpyPreset {
+  id: string;
+  name: string;
+  video: boolean;
+  audio: boolean;
+  parameters: ScrcpyParameter[];
+}
+
+export interface ScrcpyModuleConfig {
+  enabled: boolean;
+  activePresetId: string;
+  presets: ScrcpyPreset[];
+}
+
+export function qualcommHevcLowLatencyPreset(): ScrcpyPreset {
+  return {
+    id: "qualcomm-hevc-low-latency",
+    name: "Qualcomm H.265 低延迟",
+    video: true,
+    audio: false,
+    parameters: [
+      { id: "video-codec", enabled: true, key: "video_codec", value: "h265", scope: "server" },
+      { id: "video-encoder", enabled: true, key: "video_encoder", value: "c2.qti.hevc.encoder.cq", scope: "server" },
+      { id: "video-bit-rate", enabled: true, key: "video_bit_rate", value: "5000000", scope: "server" },
+      { id: "max-fps", enabled: true, key: "max_fps", value: "60", scope: "server" },
+      { id: "mouse", enabled: true, key: "mouse", value: "uhid", scope: "server" },
+      { id: "video-buffer", enabled: true, key: "video_buffer", value: "0", scope: "clientOnly" },
+    ],
+  };
+}
+
+function defaultScrcpyModule(): ScrcpyModuleConfig {
+  const preset = qualcommHevcLowLatencyPreset();
+  return { enabled: false, activePresetId: preset.id, presets: [preset] };
+}
+
 export interface LocalConfigState {
   webPort: number;
   webBindAddr: string;
@@ -59,6 +105,7 @@ export interface LocalConfigState {
   audioBitRate: number;
   audioSource: string;
   audioDup: boolean;
+  scrcpyModule: ScrcpyModuleConfig;
   stayAwake: boolean;
   screenOffTimeout: number;
   powerOffOnClose: boolean;
@@ -101,6 +148,7 @@ const initialState: LocalConfigState = {
   audioBitRate: 128000,
   audioSource: "OUTPUT",
   audioDup: false,
+  scrcpyModule: defaultScrcpyModule(),
   stayAwake: false,
   screenOffTimeout: -1,
   powerOffOnClose: false,
@@ -156,6 +204,10 @@ const localConfigSlice = createSlice({
       updateLocalConfig("audio_source", action.payload);
     },
     setAudioDup: (state, action: PayloadAction<boolean>) => { state.audioDup = action.payload; updateLocalConfig("audio_dup", action.payload); },
+    setScrcpyModule: (state, action: PayloadAction<ScrcpyModuleConfig>) => {
+      state.scrcpyModule = action.payload;
+      updateLocalConfig("scrcpy_module", action.payload, 0);
+    },
     setStayAwake: (state, action: PayloadAction<boolean>) => { state.stayAwake = action.payload; updateLocalConfig("stay_awake", action.payload); },
     setScreenOffTimeout: (state, action: PayloadAction<number>) => { state.screenOffTimeout = action.payload; updateLocalConfig("screen_off_timeout", action.payload); },
     setPowerOffOnClose: (state, action: PayloadAction<boolean>) => { state.powerOffOnClose = action.payload; updateLocalConfig("power_off_on_close", action.payload); },
@@ -200,6 +252,7 @@ export const {
   setAudioBitRate,
   setAudioSource,
   setAudioDup,
+  setScrcpyModule,
   setStayAwake,
   setScreenOffTimeout,
   setPowerOffOnClose,

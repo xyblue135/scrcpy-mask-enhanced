@@ -14,6 +14,7 @@ use crate::{
     mask::mask_command::MaskCommand,
     scrcpy::{
         adb::Adb,
+        launch_options::ScrcpyModuleConfig,
         media::{AudioCodec, AudioSource, VideoCodec},
     },
     utils::{
@@ -99,6 +100,12 @@ async fn get_config_sections() -> Result<JsonResponse, WebServerError> {
             "id": "audio",
             "title": "音频",
             "keys": ["audio_codec", "audio_bit_rate", "audio_source", "audio_dup"]
+        },
+        {
+            "id": "scrcpy_module",
+            "title": "关于 scrcpy / 参数预设",
+            "keys": ["scrcpy_module"],
+            "note": "可保存多套启动预设。Server 参数会覆盖 LowCast 默认值；Client Only 参数仅用于兼容官方 scrcpy 命令预览。"
         },
         {
             "id": "device",
@@ -464,7 +471,10 @@ async fn update_config(
                 let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
                 state
                     .m_tx
-                    .send((MaskCommand::SetMappingEnabled { enabled: value }, oneshot_tx))
+                    .send((
+                        MaskCommand::SetMappingEnabled { enabled: value },
+                        oneshot_tx,
+                    ))
                     .map_err(|e| WebServerError::internal_error(e.to_string()))?;
                 oneshot_rx
                     .await
@@ -515,6 +525,24 @@ async fn update_config(
                 "web.config.clipboardSyncTypeError"
             )));
         }
+        "scrcpy_module" => {
+            let module: ScrcpyModuleConfig =
+                serde_json::from_value(payload.value).map_err(|error| {
+                    WebServerError::bad_request(format!("invalid scrcpy module config: {error}"))
+                })?;
+            module.validate().map_err(WebServerError::bad_request)?;
+            let preset_name = module
+                .presets
+                .iter()
+                .find(|preset| preset.id == module.active_preset_id)
+                .map(|preset| preset.name.clone())
+                .unwrap_or_else(|| "unknown".to_string());
+            LocalConfig::set_scrcpy_module(module);
+            return Ok(JsonResponse::success(
+                format!("scrcpy preset saved: {preset_name}"),
+                None,
+            ));
+        }
         "video_codec" => {
             if let Some(value) = payload.value.as_str() {
                 let codec = match value {
@@ -547,7 +575,9 @@ async fn update_config(
                     None,
                 ));
             }
-            return Err(WebServerError::bad_request("video_encoder must be a string"));
+            return Err(WebServerError::bad_request(
+                "video_encoder must be a string",
+            ));
         }
         "video_codec_options" => {
             if let Some(value) = payload.value.as_str() {

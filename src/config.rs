@@ -8,7 +8,10 @@ use std::{
 
 use crate::{
     DEFAULT_LANGUAGE,
-    scrcpy::media::{AudioCodec, AudioSource, VideoCodec},
+    scrcpy::{
+        launch_options::ScrcpyModuleConfig,
+        media::{AudioCodec, AudioSource, VideoCodec},
+    },
     utils::{relate_to_data_path, relate_to_root_path},
 };
 use once_cell::sync::Lazy;
@@ -91,6 +94,8 @@ pub struct LocalConfig {
     pub audio_bit_rate: u32,
     pub audio_source: AudioSource,
     pub audio_dup: bool,
+    // optional scrcpy launch preset module
+    pub scrcpy_module: ScrcpyModuleConfig,
     // device behavior
     pub stay_awake: bool,
     pub screen_off_timeout: i32,
@@ -120,9 +125,9 @@ impl Default for LocalConfig {
             video_encoder: "c2.qti.avc.encoder".to_string(), // LowCast/RMX3700 Qualcomm H.264 HW encoder
             video_codec_options: String::new(),
             qualcomm_low_latency: false, // experimental; enable for A/B testing
-            video_bit_rate: 12_000_000, // LowCast default: 12M
-            video_max_size: 0,          // default no limit
-            video_max_fps: 60,          // LowCast default: 60 FPS
+            video_bit_rate: 12_000_000,  // LowCast default: 12M
+            video_max_size: 0,           // default no limit
+            video_max_fps: 60,           // LowCast default: 60 FPS
             display_id: 0,
             new_display_enabled: false,
             new_display_use_main_size: true,
@@ -136,6 +141,7 @@ impl Default for LocalConfig {
             audio_bit_rate: 128_000,
             audio_source: AudioSource::Output,
             audio_dup: false,
+            scrcpy_module: ScrcpyModuleConfig::default(),
             stay_awake: false,
             screen_off_timeout: -1, // default keep device setting
             power_off_on_close: false,
@@ -155,7 +161,6 @@ macro_rules! define_setter {
         }
     };
 }
-
 
 fn sanitize_window_config(config: &mut LocalConfig) {
     if config.horizontal_mask_width < 64 {
@@ -222,6 +227,10 @@ impl LocalConfig {
         let mut config: LocalConfig = serde_json::from_str(&config_string)
             .map_err(|e| format!("{}: {}", t!("localConfig.serializeConfigError"), e))?;
         sanitize_window_config(&mut config);
+        if let Err(error) = config.scrcpy_module.validate() {
+            log::warn!("[LocalConfig] invalid scrcpy module config, using defaults: {error}");
+            config.scrcpy_module = ScrcpyModuleConfig::default();
+        }
         *CONFIG.write().unwrap() = config;
         Ok(())
     }
@@ -271,6 +280,7 @@ impl LocalConfig {
         (audio_bit_rate, u32),
         (audio_source, AudioSource),
         (audio_dup, bool),
+        (scrcpy_module, ScrcpyModuleConfig),
         (stay_awake, bool),
         (screen_off_timeout, i32),
         (power_off_on_close, bool),
