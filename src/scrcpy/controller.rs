@@ -168,24 +168,13 @@ impl Controller {
                                     .scrcpy_module
                                     .active_preset()
                                     .map(|preset| &preset.virtual_display);
-                                let display_enabled = preset_display
-                                    .map_or(config.new_display_enabled, |display| display.enabled);
-                                let start_app_enabled = preset_display.map_or(
-                                    config.new_display_start_app_enabled,
-                                    |display| display.start_app_enabled,
-                                );
-                                let package = preset_display.map_or(
-                                    config.new_display_start_app_package.as_str(),
-                                    |display| display.start_app_package.as_str(),
-                                );
-                                let force_stop = preset_display.map_or(
-                                    config.new_display_start_app_force_stop,
-                                    |display| display.start_app_force_stop,
-                                );
-                                if display_enabled && start_app_enabled {
-                                    let package = package.trim();
+                                if let Some(display) = preset_display
+                                    && display.enabled
+                                    && display.start_app_enabled
+                                {
+                                    let package = display.start_app_package.trim();
                                     if !package.is_empty() {
-                                        let name = if force_stop {
+                                        let name = if display.start_app_force_stop {
                                             format!("+{package}")
                                         } else {
                                             package.to_string()

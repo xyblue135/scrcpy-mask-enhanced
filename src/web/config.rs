@@ -63,54 +63,10 @@ async fn get_config_sections() -> Result<JsonResponse, WebServerError> {
             "keys": ["mapping_enabled", "active_mapping_file", "mapping_label_opacity"]
         },
         {
-            "id": "virtual_display",
-            "title": "虚拟屏幕",
-            "keys": [
-                "display_id", "new_display_enabled", "new_display_use_main_size",
-                "new_display_width", "new_display_height", "new_display_dpi",
-                "new_display_start_app_enabled", "new_display_start_app_package",
-                "new_display_start_app_force_stop"
-            ],
-            "note": "部分手机创建虚拟屏幕后无法从虚拟桌面正常进入应用。可启用“启动指定应用”，填写包名；LowCast 会在虚拟屏建立完成后直接通过 scrcpy 控制通道启动该应用。"
-        },
-        {
-            "id": "video",
-            "title": "视频 / 低延迟",
-            "keys": [
-                "video_codec", "video_encoder", "video_bit_rate", "video_max_fps",
-                "video_max_size", "video_codec_options", "qualcomm_low_latency"
-            ],
-            "controls": {
-                "video_max_fps": {
-                    "label": "帧率上限",
-                    "type": "select",
-                    "options": [
-                        {"value": 0, "label": "跟随设备（不限制）"},
-                        {"value": 30, "label": "30 FPS"},
-                        {"value": 60, "label": "60 FPS（推荐）"},
-                        {"value": 90, "label": "90 FPS"},
-                        {"value": 120, "label": "120 FPS"}
-                    ],
-                    "allow_custom": true,
-                    "note": "这是编码帧率上限，不会强制手机固定刷新率；修改后在下次重新建立投屏连接时生效。"
-                }
-            }
-        },
-        {
-            "id": "audio",
-            "title": "音频",
-            "keys": ["audio_codec", "audio_bit_rate", "audio_source", "audio_dup"]
-        },
-        {
             "id": "scrcpy_module",
-            "title": "关于 scrcpy / 参数预设",
+            "title": "Scrcpy 预设 / 完整参数调试中心",
             "keys": ["scrcpy_module"],
-            "note": "可保存多套启动预设。Server 参数会覆盖 LowCast 默认值；Client Only 参数仅用于兼容官方 scrcpy 命令预览。"
-        },
-        {
-            "id": "device",
-            "title": "设备行为",
-            "keys": ["stay_awake", "screen_off_timeout", "power_off_on_close"]
+            "note": "可保存多套参数、媒体通道与虚拟屏预设，也可粘贴 scrcpy 命令导入。关闭模块后不附加可选调试参数。"
         },
         {
             "id": "advanced",

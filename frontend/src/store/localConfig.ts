@@ -97,7 +97,7 @@ export function qualcommHevcLowLatencyPreset(): ScrcpyPreset {
 
 function defaultScrcpyModule(): ScrcpyModuleConfig {
   const preset = qualcommHevcLowLatencyPreset();
-  return { enabled: false, activePresetId: preset.id, presets: [preset] };
+  return { enabled: true, activePresetId: preset.id, presets: [preset] };
 }
 
 export interface LocalConfigState {

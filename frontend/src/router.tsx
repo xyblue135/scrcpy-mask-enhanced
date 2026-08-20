@@ -7,6 +7,7 @@ import NotFound from "./components/NotFound";
 const Welcome = lazy(() => import("./components/Welcome"));
 const Devices = lazy(() => import("./components/Devices"));
 const Mappings = lazy(() => import("./components/mappings/Mappings"));
+const ScrcpyPresets = lazy(() => import("./components/ScrcpyModuleModal"));
 const Settings = lazy(() => import("./components/Settings"));
 
 const router = createBrowserRouter([
@@ -35,6 +36,14 @@ const router = createBrowserRouter([
         element: (
           <LoadingWrapper>
             <Mappings />
+          </LoadingWrapper>
+        ),
+      },
+      {
+        path: "scrcpy",
+        element: (
+          <LoadingWrapper>
+            <ScrcpyPresets />
           </LoadingWrapper>
         ),
       },

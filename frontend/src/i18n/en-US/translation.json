@@ -9,6 +9,7 @@
   "sider": {
     "devices": "Devices",
     "mappings": "Mappings",
+    "scrcpyPresets": "Scrcpy Presets",
     "settings": "Settings"
   },
   "welcome": {

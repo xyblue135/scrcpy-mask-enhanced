@@ -652,29 +652,27 @@ LowCast Enhanced 将设置重新分组：
 
 ├─ 基础 / 窗口
 ├─ 键盘映射
-├─ 虚拟屏幕
-├─ 视频 / 低延迟
-├─ 音频
-├─ 设备行为
 └─ 连接 / 高级
+
+左侧独立页面
+
+└─ Scrcpy 预设 / 完整参数调试中心
+   ├─ 视频与音频通道
+   ├─ 虚拟屏幕与应用启动
+   ├─ scrcpy 4.0 Server 参数
+   ├─ Client Only 参数记录
+   └─ 可编辑命令导入 / 预览
 ```
 
-让：
-
-- 视频参数
-- Qualcomm 参数
-- 虚拟屏参数
-- 键位映射
-- 音频
-- Windows 行为
-
-拥有更明确的功能边界。
+- 设置页只保留通用窗口、键位映射和连接设置
+- 所有 scrcpy 视频、音频、设备行为与虚拟屏参数集中在预设页
+- 参数调试与日常设置拥有明确边界
 
 ---
 
 # scrcpy 参数预设模块
 
-设置页新增“关于 scrcpy / 完整参数调试中心”，用于把媒体通道、scrcpy 参数、虚拟屏幕和应用启动行为保存成可复用预设。
+左侧边栏新增独立的“Scrcpy 预设”页面，作为“关于 scrcpy / 完整参数调试中心”，用于把媒体通道、scrcpy 参数、虚拟屏幕和应用启动行为保存成可复用预设。设置页不再重复显示虚拟屏幕、视频、音频和设备行为参数。
 
 内置的 Qualcomm H.265 低延迟示例等价于：
 
@@ -687,7 +685,9 @@ scrcpy --video-codec=h265 --video-encoder=c2.qti.hevc.encoder.cq --video-bit-rat
 - `video_codec`、`video_encoder`、`video_bit_rate`、`max_fps` 会覆盖对应 scrcpy server 参数。
 - `--no-audio` 由预设中的音频开关控制。
 - `mouse=uhid` 与 `video_buffer=0` 属于官方桌面客户端参数，在 LowCast 中标记为 `Client Only`，只用于预览和记录；LowCast 使用自己的键鼠控制与 latest-frame-only 视频管线。
+- 参数模块默认启用；关闭后使用 scrcpy 默认值，不附加视频、音频、虚拟屏或设备行为等可选调试参数（LowCast 建立连接所需的 server 版本和 `scid` 仍由程序管理）。
 - 可以新建、复制、删除预设，并逐项启用、禁用、新增或编辑参数。
+- 命令预览可以直接编辑；粘贴别人的 `scrcpy ...` 命令后可解析到当前预设，支持 `--参数=值` 与 `--参数 值` 两种常见写法。
 - 参数目录以 scrcpy 4.0 server `Options.java` 为基线，分成视频、摄像头、音频、显示、设备、诊断和 Client Only 七组。
 - 每套预设独立保存虚拟屏开关、尺寸、DPI、Keep Active、内容销毁策略、系统装饰、启动包名和 Force Stop。
 - `scid`、控制通道、隧道方向和流元数据等 LowCast 协议参数由程序管理，不能在预设里覆盖。

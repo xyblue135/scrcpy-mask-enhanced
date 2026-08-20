@@ -24,7 +24,6 @@ use crate::{
         control_msg::ScrcpyControlMsg,
         controller::ControllerCommand,
         device_action,
-        media::AudioCodec,
     },
     utils::{VideoSnapshotResult, relate_to_root_path, share::ControlledDevice},
     web::{JsonResponse, WebServerError, ws::WebSocketNotification},
@@ -125,7 +124,7 @@ async fn _control_device(
     }
     let main = device_list.len() == 0;
     let active_scrcpy_preset = local_config.scrcpy_module.active_preset();
-    let video = active_scrcpy_preset.map_or(video, |preset| preset.video);
+    let video = active_scrcpy_preset.map_or(video, |preset| preset.video) && main;
     let audio = active_scrcpy_preset.map_or(audio, |preset| preset.audio) && main;
 
     // prepare for scrcpy app
@@ -162,42 +161,18 @@ async fn _control_device(
 
     args.push(SCRCPY_SERVER_VERSION.to_string());
     args.push(format!("scid={}", scid));
-    args.push(format!("video={}", video));
-    if video
-        && active_scrcpy_preset
-            .map_or(local_config.new_display_enabled, |preset| {
-                preset.virtual_display.enabled
-            })
-    {
-        if let Some(preset) = active_scrcpy_preset {
-            args.extend(preset.virtual_display.server_args());
-        } else if local_config.new_display_use_main_size {
-            args.push("new_display=".to_string());
-            args.push("keep_active=true".to_string());
-            args.push("vd_destroy_content=false".to_string());
-        } else {
-            args.push(format!(
-                "new_display={}x{}/{}",
-                local_config.new_display_width,
-                local_config.new_display_height,
-                local_config.new_display_dpi
-            ));
-            args.push("keep_active=true".to_string());
-            args.push("vd_destroy_content=false".to_string());
-        }
-    } else {
-        args.push(format!("display_id={}", local_config.display_id));
+    if !video {
+        args.push("video=false".to_string());
     }
-    args.push(format!("audio={}", audio));
-    args.push(format!("stay_awake={}", local_config.stay_awake));
-    args.push(format!(
-        "screen_off_timeout={}",
-        local_config.screen_off_timeout
-    ));
-    args.push(format!(
-        "power_off_on_close={}",
-        local_config.power_off_on_close
-    ));
+    if !audio {
+        args.push("audio=false".to_string());
+    }
+    if video
+        && let Some(preset) = active_scrcpy_preset
+        && preset.virtual_display.enabled
+    {
+        args.extend(preset.virtual_display.server_args());
+    }
 
     // create device
     let mut socket_id: Vec<String> = Vec::new();
@@ -211,51 +186,12 @@ async fn _control_device(
                 meta_flag = false;
             }
 
-            // video shell args
-            args.push(format!("video_codec={}", local_config.video_codec));
-            if !local_config.video_encoder.trim().is_empty() {
-                args.push(format!(
-                    "video_encoder={}",
-                    local_config.video_encoder.trim()
-                ));
-            }
-
-            let mut codec_options = local_config.video_codec_options.trim().to_string();
-            if local_config.qualcomm_low_latency
-                && !codec_options.contains("vendor.qti-ext-enc-low-latency.enable")
-            {
-                if !codec_options.is_empty() {
-                    codec_options.push(',');
-                }
-                codec_options.push_str("vendor.qti-ext-enc-low-latency.enable=1");
-            }
-            if !codec_options.is_empty() {
-                args.push(format!("video_codec_options={codec_options}"));
-            }
-
-            args.push(format!("video_bit_rate={}", local_config.video_bit_rate));
-            if local_config.video_max_size > 0 {
-                args.push(format!("max_size={}", local_config.video_max_size));
-            }
-            if local_config.video_max_fps > 0 {
-                args.push(format!("max_fps={}", local_config.video_max_fps));
-            }
         }
         if audio {
             socket_id.push("main_audio".to_string());
             commands.push(ControllerCommand::ConnectMainAudio(scid.clone(), meta_flag));
             if meta_flag {
                 meta_flag = false;
-            }
-
-            args.push(format!("audio_codec={}", local_config.audio_codec));
-            args.push(format!("audio_source={}", local_config.audio_source));
-            args.push(format!(
-                "audio_dup={}",
-                local_config.audio_source.is_playback() && local_config.audio_dup
-            ));
-            if !matches!(local_config.audio_codec, AudioCodec::Raw) {
-                args.push(format!("audio_bit_rate={}", local_config.audio_bit_rate));
             }
         }
         if let Some(preset) = active_scrcpy_preset {

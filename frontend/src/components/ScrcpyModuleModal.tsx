@@ -7,7 +7,6 @@ import {
   Flex,
   Input,
   InputNumber,
-  Modal,
   Popconfirm,
   Select,
   Space,
@@ -20,7 +19,7 @@ import { CopyOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import { useEffect, useMemo, useState } from "react";
 import {
   defaultScrcpyVirtualDisplay,
-  qualcommHevcLowLatencyPreset,
+  setScrcpyModule,
   type ScrcpyModuleConfig,
   type ScrcpyParameter,
   type ScrcpyPreset,
@@ -33,13 +32,8 @@ import {
   withCompleteScrcpyOptions,
   type ScrcpyOptionDefinition,
 } from "../scrcpyOptions";
-
-interface Props {
-  open: boolean;
-  value: ScrcpyModuleConfig;
-  onClose: () => void;
-  onSave: (value: ScrcpyModuleConfig) => void;
-}
+import { useAppDispatch, useAppSelector } from "../store/store";
+import { useMessageContext } from "../hooks";
 
 function cloneModule(value: ScrcpyModuleConfig): ScrcpyModuleConfig {
   return JSON.parse(JSON.stringify(value)) as ScrcpyModuleConfig;
@@ -86,6 +80,122 @@ function commandPreview(preset: ScrcpyPreset) {
   return `scrcpy ${args.join(" ")}`;
 }
 
+function commandTokens(command: string) {
+  const tokens: string[] = [];
+  const pattern = /"((?:\\.|[^"\\])*)"|'([^']*)'|([^\s]+)/g;
+  for (const match of command.matchAll(pattern)) {
+    tokens.push((match[1] ?? match[2] ?? match[3]).replaceAll('\\"', '"'));
+  }
+  return tokens;
+}
+
+function parseBoolean(value: string) {
+  return !["false", "0", "no", "off"].includes(value.toLowerCase());
+}
+
+function normalizeBitRate(key: string, value: string) {
+  if (key !== "video_bit_rate" && key !== "audio_bit_rate") return value;
+  const match = value.match(/^(\d+(?:\.\d+)?)([kmg])$/i);
+  if (!match) return value;
+  const multiplier = { k: 1_000, m: 1_000_000, g: 1_000_000_000 }[
+    match[2].toLowerCase() as "k" | "m" | "g"
+  ];
+  return String(Math.round(Number(match[1]) * multiplier));
+}
+
+function parseCommandIntoPreset(command: string, current: ScrcpyPreset): ScrcpyPreset {
+  const parsed = withCompleteScrcpyOptions({
+    ...current,
+    video: true,
+    audio: true,
+    virtualDisplay: defaultScrcpyVirtualDisplay(),
+    parameters: [],
+  });
+  const parameters = parsed.parameters.map((parameter) => ({ ...parameter, enabled: false }));
+  const tokens = commandTokens(command.trim());
+
+  for (let index = 0; index < tokens.length; index += 1) {
+    const rawToken = tokens[index];
+    if (!rawToken.startsWith("--")) continue;
+    const token = rawToken.slice(2);
+    const equalIndex = token.indexOf("=");
+    const rawKey = equalIndex >= 0 ? token.slice(0, equalIndex) : token;
+    const followingToken = tokens[index + 1];
+    const hasSeparateValue = equalIndex < 0 && followingToken !== undefined
+      && (!followingToken.startsWith("-") || /^-\d/.test(followingToken));
+    let value = equalIndex >= 0
+      ? token.slice(equalIndex + 1)
+      : hasSeparateValue
+        ? followingToken
+        : "true";
+    if (hasSeparateValue) index += 1;
+    const negated = rawKey.startsWith("no-");
+    const cliKey = negated ? rawKey.slice(3) : rawKey;
+    const key = cliKey.replaceAll("-", "_").toLowerCase();
+    if (negated) value = "false";
+
+    if (key === "video") {
+      parsed.video = parseBoolean(value);
+      continue;
+    }
+    if (key === "audio") {
+      parsed.audio = parseBoolean(value);
+      continue;
+    }
+    if (key === "new_display") {
+      parsed.virtualDisplay.enabled = parseBoolean(value);
+      if (value !== "true" && value !== "false" && value !== "") {
+        const size = value.match(/^(\d+)x(\d+)(?:\/(\d+))?$/);
+        if (!size) throw new Error(`无法解析虚拟屏尺寸：${value}`);
+        parsed.virtualDisplay.useMainSize = false;
+        parsed.virtualDisplay.width = Number(size[1]);
+        parsed.virtualDisplay.height = Number(size[2]);
+        if (size[3]) parsed.virtualDisplay.dpi = Number(size[3]);
+      }
+      continue;
+    }
+    if (key === "keep_active") {
+      parsed.virtualDisplay.keepActive = parseBoolean(value);
+      continue;
+    }
+    if (key === "vd_destroy_content") {
+      parsed.virtualDisplay.destroyContent = parseBoolean(value);
+      continue;
+    }
+    if (key === "vd_system_decorations") {
+      parsed.virtualDisplay.systemDecorations = parseBoolean(value);
+      continue;
+    }
+    if (key === "start_app") {
+      parsed.virtualDisplay.enabled = true;
+      parsed.virtualDisplay.startAppEnabled = true;
+      parsed.virtualDisplay.startAppForceStop = value.startsWith("+");
+      parsed.virtualDisplay.startAppPackage = value.replace(/^\+/, "");
+      continue;
+    }
+
+    const definition = SCRCPY_OPTION_BY_KEY.get(key);
+    const normalizedValue = normalizeBitRate(key, value);
+    const existing = parameters.find((parameter) => parameter.key === key);
+    if (existing) {
+      existing.enabled = true;
+      existing.value = normalizedValue;
+      existing.scope = definition?.scope ?? existing.scope;
+    } else {
+      parameters.push({
+        id: id("parameter"),
+        enabled: true,
+        key,
+        value: normalizedValue,
+        scope: definition?.scope ?? "clientOnly",
+      });
+    }
+  }
+
+  parsed.parameters = parameters;
+  return parsed;
+}
+
 function OfficialParameterRow({ parameter, definition, onChange }: {
   parameter: ScrcpyParameter;
   definition: ScrcpyOptionDefinition;
@@ -122,16 +232,27 @@ function OfficialParameterRow({ parameter, definition, onChange }: {
   );
 }
 
-export default function ScrcpyModuleModal({ open, value, onClose, onSave }: Props) {
+export default function ScrcpyModulePage() {
+  const dispatch = useAppDispatch();
+  const messageApi = useMessageContext();
+  const value = useAppSelector((state) => state.localConfig.scrcpyModule);
   const [draft, setDraft] = useState<ScrcpyModuleConfig>(() => normalizeModule(value));
+  const [commandDraft, setCommandDraft] = useState("");
 
   useEffect(() => {
-    if (open) setDraft(normalizeModule(value));
-  }, [open, value]);
+    setDraft(normalizeModule(value));
+  }, [value]);
 
   const activeIndex = Math.max(0, draft.presets.findIndex((preset) => preset.id === draft.activePresetId));
   const activePreset = draft.presets[activeIndex];
-  const preview = useMemo(() => (activePreset ? commandPreview(activePreset) : "scrcpy"), [activePreset]);
+  const generatedCommand = useMemo(
+    () => (draft.enabled && activePreset ? commandPreview(activePreset) : "scrcpy"),
+    [activePreset, draft.enabled],
+  );
+
+  useEffect(() => {
+    setCommandDraft(generatedCommand);
+  }, [generatedCommand]);
 
   function updateActive(update: (preset: ScrcpyPreset) => ScrcpyPreset) {
     setDraft((current) => ({
@@ -173,15 +294,6 @@ export default function ScrcpyModuleModal({ open, value, onClose, onSave }: Prop
     setDraft((current) => ({ ...current, activePresetId: presets[0].id, presets }));
   }
 
-  function loadQualcommPreset() {
-    const sample = withCompleteScrcpyOptions(qualcommHevcLowLatencyPreset());
-    updateActive((preset) => ({
-      ...sample,
-      id: preset.id,
-      parameters: sample.parameters.map((parameter) => ({ ...parameter, id: id("parameter") })),
-    }));
-  }
-
   function addParameter() {
     updateActive((preset) => ({
       ...preset,
@@ -200,9 +312,25 @@ export default function ScrcpyModuleModal({ open, value, onClose, onSave }: Prop
     updateActive((preset) => ({ ...preset, parameters: preset.parameters.filter((parameter) => parameter.id !== parameterId) }));
   }
 
+  function applyCommand() {
+    if (!activePreset) return;
+    try {
+      const parsed = parseCommandIntoPreset(commandDraft, activePreset);
+      setDraft((current) => ({
+        ...current,
+        enabled: true,
+        presets: current.presets.map((preset, index) => index === activeIndex ? parsed : preset),
+      }));
+      setCommandDraft(commandPreview(parsed));
+      messageApi?.success("命令已解析到当前预设");
+    } catch (error) {
+      messageApi?.error(error instanceof Error ? error.message : String(error));
+    }
+  }
+
   function save(enabled = draft.enabled) {
-    onSave({ ...draft, enabled });
-    onClose();
+    dispatch(setScrcpyModule({ ...draft, enabled }));
+    messageApi?.success(enabled ? "scrcpy 预设已保存并启用" : "scrcpy 预设已保存");
   }
 
   const customParameters = activePreset?.parameters.filter((parameter) => !SCRCPY_OPTION_BY_KEY.has(parameter.key)) ?? [];
@@ -225,24 +353,26 @@ export default function ScrcpyModuleModal({ open, value, onClose, onSave }: Prop
   });
 
   return (
-    <Modal
-      title="关于 scrcpy / 完整参数调试中心"
-      open={open}
-      onCancel={onClose}
-      width={1080}
-      destroyOnHidden
-      styles={{ body: { maxHeight: "68vh", overflowY: "auto", paddingRight: 8 } }}
-      footer={[
-        <Button key="cancel" onClick={onClose}>取消</Button>,
-        <Button key="save" onClick={() => save()}>保存</Button>,
-        <Button key="enable" type="primary" onClick={() => save(true)}>保存并启用此预设</Button>,
-      ]}
-    >
+    <div className="page-container">
+      <Flex justify="space-between" align="center" gap="middle" wrap className="mb-4">
+        <div>
+          <h2 className="title-with-line" style={{ marginBottom: 4 }}>Scrcpy 预设</h2>
+          <Typography.Text type="secondary">完整参数、虚拟屏与命令粘贴调试中心</Typography.Text>
+        </div>
+        <Space>
+          <Button onClick={() => setDraft(normalizeModule(value))}>放弃未保存修改</Button>
+          <Button onClick={() => save()}>保存</Button>
+          <Button type="primary" onClick={() => save(true)}>保存并启用当前预设</Button>
+        </Space>
+      </Flex>
       <Alert showIcon type="info" message="参数以 scrcpy 4.0 server Options.java 为基线。Server 参数真实应用；Client Only 仅用于记录官方 scrcpy.exe 参数。连接标识、传输元数据和控制通道由 LowCast 管理，避免调试时破坏协议。" />
 
       <Flex className="mt-4" gap="middle" align="center" wrap>
         <Typography.Text strong>启用参数模块</Typography.Text>
         <Switch checked={draft.enabled} onChange={(enabled) => setDraft((current) => ({ ...current, enabled }))} />
+        <Typography.Text type="secondary">
+          {draft.enabled ? "当前预设会在下次连接时应用" : "已关闭：使用 scrcpy 默认值，不附加可选调试参数"}
+        </Typography.Text>
         <Select style={{ minWidth: 280 }} value={draft.activePresetId} options={draft.presets.map((preset) => ({ value: preset.id, label: preset.name }))} onChange={(activePresetId) => setDraft((current) => ({ ...current, activePresetId }))} />
         <Button icon={<PlusOutlined />} onClick={addPreset}>新建</Button>
         <Button icon={<CopyOutlined />} onClick={duplicatePreset}>复制</Button>
@@ -258,7 +388,6 @@ export default function ScrcpyModuleModal({ open, value, onClose, onSave }: Prop
               <Input style={{ width: 300 }} addonBefore="名称" value={activePreset.name} onChange={(event) => updateActive((preset) => ({ ...preset, name: event.target.value }))} />
               <Space><Typography.Text>视频</Typography.Text><Switch checked={activePreset.video} onChange={(video) => updateActive((preset) => ({ ...preset, video }))} /></Space>
               <Space><Typography.Text>音频</Typography.Text><Switch checked={activePreset.audio} onChange={(audio) => updateActive((preset) => ({ ...preset, audio }))} /></Space>
-              <Button onClick={loadQualcommPreset}>载入 Qualcomm H.265 示例</Button>
             </Flex>
           </Card>
 
@@ -301,8 +430,18 @@ export default function ScrcpyModuleModal({ open, value, onClose, onSave }: Prop
             <Button block type="dashed" icon={<PlusOutlined />} onClick={addParameter}>添加自定义参数</Button>
           </Space>
 
-          <Divider orientation="left">命令预览</Divider>
-          <Typography.Paragraph copyable={{ text: preview }}><Typography.Text code>{preview}</Typography.Text></Typography.Paragraph>
+          <Divider orientation="left">命令编辑 / 预览</Divider>
+          <Input.TextArea
+            value={commandDraft}
+            autoSize={{ minRows: 3, maxRows: 8 }}
+            placeholder="可直接粘贴 scrcpy --video-codec=h265 ..."
+            onChange={(event) => setCommandDraft(event.target.value)}
+          />
+          <Flex className="mt-2" gap="small" wrap>
+            <Button type="primary" onClick={applyCommand}>解析命令到当前预设</Button>
+            <Button onClick={() => setCommandDraft(generatedCommand)}>恢复当前预设生成的命令</Button>
+            <Typography.Text copyable={{ text: commandDraft }}>复制当前命令</Typography.Text>
+          </Flex>
           <Space wrap>
             <Tag color="blue">Server 参数会真实应用</Tag>
             <Tag color="purple">虚拟屏与应用启动属于当前预设</Tag>
@@ -311,6 +450,6 @@ export default function ScrcpyModuleModal({ open, value, onClose, onSave }: Prop
           </Space>
         </>
       )}
-    </Modal>
+    </div>
   );
 }

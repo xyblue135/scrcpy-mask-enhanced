@@ -257,7 +257,7 @@ impl Default for ScrcpyModuleConfig {
     fn default() -> Self {
         let preset = ScrcpyPreset::qualcomm_hevc_low_latency();
         Self {
-            enabled: false,
+            enabled: true,
             active_preset_id: preset.id.clone(),
             presets: vec![preset],
         }

@@ -9,6 +9,7 @@
   "sider": {
     "devices": "Dispositivos",
     "mappings": "Mapeos",
+    "scrcpyPresets": "Preajustes Scrcpy",
     "settings": "Ajustes"
   },
   "welcome": {
