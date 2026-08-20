@@ -1,6 +1,0 @@
-com.xyblue.k100mapper:xml/accessibility_service_config = 0x7f040000
-com.xyblue.k100mapper:style/AppTheme = 0x7f030000
-com.xyblue.k100mapper:string/service_name = 0x7f020002
-com.xyblue.k100mapper:string/service_description = 0x7f020001
-com.xyblue.k100mapper:string/app_name = 0x7f020000
-com.xyblue.k100mapper:drawable/ic_launcher = 0x7f010000
