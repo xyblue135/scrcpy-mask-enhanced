@@ -16,3 +16,5 @@ CLAUDE.md
 /src.zip
 /*.patch
 /*.bak
+# LowCast: 运行时生成的用户配置，不进仓库（本地文件保留）
+/config.json
