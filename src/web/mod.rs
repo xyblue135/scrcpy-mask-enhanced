@@ -2,6 +2,7 @@ pub mod config;
 pub mod device;
 pub mod mapping;
 pub mod script;
+pub mod upload;
 pub mod ws;
 
 use axum::{
@@ -112,6 +113,7 @@ impl Server {
 
         let router = Router::new()
             .nest_service("/assets", hashed_assets)
+            .nest_service("/uploads", ServeDir::new(relate_to_root_path(["uploads"])))
             .fallback_service(html_shell)
             .nest(
                 "/api/device",
@@ -120,6 +122,7 @@ impl Server {
             .nest("/api/script", script::routers(m_tx.clone()))
             .nest("/api/mapping", mapping::routers(m_tx.clone()))
             .nest("/api/config", config::routers(m_tx.clone()))
+            .nest("/api/upload", upload::routers())
             .nest("/api/ws", ws::routers(cs_tx, ws_tx));
 
         #[cfg(debug_assertions)]

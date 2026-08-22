@@ -54,6 +54,8 @@ pub fn routers(
         .route("/adb_pair", post(adb_pair))
         .route("/adb_restart", post(adb_restart))
         .route("/adb_screenshot", post(adb_screenshot))
+        .route("/window_screenshot", post(window_screenshot))
+        .route("/adb_save_screenshot", post(adb_save_screenshot))
         .route("/adb_apps", post(adb_apps))
         .route("/adb_displays", post(adb_displays))
         .route("/adb_start_app", post(adb_start_app))
@@ -834,6 +836,318 @@ async fn adb_screenshot(
     );
 
     Ok((StatusCode::OK, headers, image_bytes))
+}
+
+/// 截取 scrcpy 主窗口画面并保存为 PNG 到本地 `screenshots/` 目录。
+/// 仅 Windows 支持（通过系统 GDI `BitBlt` 抓取窗口客户区）。
+async fn window_screenshot(
+    State(_state): State<AppStateDevice>,
+) -> Result<impl IntoResponse, WebServerError> {
+    #[cfg(windows)]
+    {
+        let save_dir = relate_to_root_path(["screenshots"]);
+        std::fs::create_dir_all(&save_dir).map_err(|e| {
+            WebServerError::internal_error(format!("failed to create screenshots dir: {e}"))
+        })?;
+
+        // 记录窗口截图（BitBlt）时刻的 PC 时间戳，用于延迟对比
+        let pc_ts_before = now_ms();
+        let png_bytes = capture_scrcpy_window_to_png().map_err(WebServerError::internal_error)?;
+        let pc_ts_after = now_ms();
+        log::info!(
+            "[WebServe] window screenshot captured: pc_ts_before={} pc_ts_after={}",
+            pc_ts_before,
+            pc_ts_after
+        );
+
+        let ts = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis())
+            .unwrap_or(0);
+        let filename = format!("window-{ts}.png");
+        let path = save_dir.join(&filename);
+        std::fs::write(&path, &png_bytes).map_err(|e| {
+            WebServerError::internal_error(format!("failed to write window screenshot: {e}"))
+        })?;
+
+        log::info!(
+            "[WebServe] window screenshot saved to {} ({} bytes)",
+            path.display(),
+            png_bytes.len()
+        );
+
+        // 返回 PNG 字节，PC 保存路径 + 时间戳放在 header
+        let mut headers = HeaderMap::new();
+        headers.insert("Content-Type", HeaderValue::from_static("image/png"));
+        headers.insert("Cache-Control", HeaderValue::from_static("no-cache"));
+        headers.insert(
+            "X-PC-Path",
+            HeaderValue::from_str(&path.display().to_string())
+                .map_err(|e| WebServerError::internal_error(e.to_string()))?,
+        );
+        headers.insert(
+            "X-PC-Ts-Before",
+            HeaderValue::from_str(&pc_ts_before.to_string())
+                .map_err(|e| WebServerError::internal_error(e.to_string()))?,
+        );
+
+        Ok((StatusCode::OK, headers, png_bytes))
+    }
+    #[cfg(not(windows))]
+    {
+        Err(WebServerError::internal_error(
+            "window screenshot is only supported on Windows",
+        ))
+    }
+}
+
+/// 用 Windows GDI `BitBlt` 抓取 "scrcpy-mask" 窗口客户区并编码为 PNG 字节。
+#[cfg(windows)]
+fn capture_scrcpy_window_to_png() -> Result<Vec<u8>, String> {
+    use std::ffi::OsStr;
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Foundation::{HWND, RECT};
+    use windows_sys::Win32::Graphics::Gdi::{
+        BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC,
+        GetDIBits, ReleaseDC, SelectObject, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS,
+        SRCCOPY,
+    };
+    use windows_sys::Win32::UI::WindowsAndMessaging::{FindWindowW, GetClientRect};
+
+    // 通过窗口标题查找窗口句柄
+    let wide: Vec<u16> = OsStr::new("scrcpy-mask")
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+    let hwnd: HWND = unsafe { FindWindowW(std::ptr::null(), wide.as_ptr()) };
+    if hwnd.is_null() {
+        return Err("scrcpy window not found".into());
+    }
+
+    let window_dc = unsafe { GetDC(hwnd) };
+    if window_dc.is_null() {
+        return Err("failed to get window DC".into());
+    }
+
+    let mut client_rect = RECT {
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
+    };
+    unsafe { GetClientRect(hwnd, &mut client_rect) };
+    let width = client_rect.right - client_rect.left;
+    let height = client_rect.bottom - client_rect.top;
+    if width <= 0 || height <= 0 {
+        unsafe { ReleaseDC(hwnd, window_dc) };
+        return Err("scrcpy window has empty client area".into());
+    }
+
+    let mem_dc = unsafe { CreateCompatibleDC(window_dc) };
+    if mem_dc.is_null() {
+        unsafe { ReleaseDC(hwnd, window_dc) };
+        return Err("failed to create memory DC".into());
+    }
+    let bitmap = unsafe { CreateCompatibleBitmap(window_dc, width, height) };
+    if bitmap.is_null() {
+        unsafe { DeleteDC(mem_dc) };
+        unsafe { ReleaseDC(hwnd, window_dc) };
+        return Err("failed to create compatible bitmap".into());
+    }
+
+    let old = unsafe { SelectObject(mem_dc, bitmap as _) };
+    unsafe {
+        BitBlt(
+            mem_dc,
+            0,
+            0,
+            width,
+            height,
+            window_dc,
+            0,
+            0,
+            SRCCOPY,
+        )
+    };
+
+    // 读取 DIB 像素 (BGRA)
+    let mut bmi: BITMAPINFO = unsafe { std::mem::zeroed() };
+    bmi.bmiHeader.biSize = std::mem::size_of::<BITMAPINFOHEADER>() as u32;
+    bmi.bmiHeader.biWidth = width;
+    bmi.bmiHeader.biHeight = -height; // top-down
+    bmi.bmiHeader.biPlanes = 1;
+    bmi.bmiHeader.biBitCount = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+
+    let mut pixel_data = vec![0u8; (width as usize) * (height as usize) * 4];
+    unsafe {
+        GetDIBits(
+            mem_dc,
+            bitmap,
+            0,
+            height as u32,
+            pixel_data.as_mut_ptr() as *mut _,
+            &mut bmi,
+            DIB_RGB_COLORS,
+        )
+    };
+
+    // 清理 GDI 资源
+    unsafe { SelectObject(mem_dc, old) };
+    unsafe { DeleteObject(bitmap as _) };
+    unsafe { DeleteDC(mem_dc) };
+    unsafe { ReleaseDC(hwnd, window_dc) };
+
+    // BGRA -> RGBA（png crate 需要 RGB 或 RGBA）
+    let mut rgba = Vec::with_capacity(width as usize * height as usize * 4);
+    for px in pixel_data.chunks_exact(4) {
+        rgba.push(px[2]); // R
+        rgba.push(px[1]); // G
+        rgba.push(px[0]); // B
+        rgba.push(px[3]); // A
+    }
+
+    // 用 png crate 编码
+    let mut out: Vec<u8> = Vec::new();
+    {
+        let mut encoder = png::Encoder::new(&mut out, width as u32, height as u32);
+        encoder.set_color(png::ColorType::Rgba);
+        encoder.set_depth(png::BitDepth::Eight);
+        let mut writer = encoder
+            .write_header()
+            .map_err(|e| format!("png header error: {e}"))?;
+        writer
+            .write_image_data(&rgba)
+            .map_err(|e| format!("png write error: {e}"))?;
+    }
+    Ok(out)
+}
+
+#[derive(Deserialize)]
+struct PostDataSaveScreenshot {
+    #[serde(default)]
+    id: Option<String>,
+}
+
+/// PC 当前系统时间的毫秒时间戳（UNIX epoch）。
+fn now_ms() -> u128 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0)
+}
+
+/// 通过 `adb shell date +%s%N` 读取手机端系统时间，返回毫秒时间戳。
+/// 输出形如 "1720000000123456789"（秒 + 纳秒），取前 13 位作为毫秒。
+fn adb_phone_time_ms(device_id: &str) -> Option<u128> {
+    let out = adb_shell_text(device_id, ["date", "+%s%N"]).ok()?;
+    let out = out.trim();
+    // 秒(10位) + 纳秒(9位) = 19 位；取前 13 位为毫秒
+    let chars: Vec<char> = out.chars().collect();
+    if chars.len() < 13 {
+        return None;
+    }
+    let ms_str: String = chars[..13].iter().collect();
+    ms_str.parse::<u128>().ok()
+}
+
+/// 在手机端执行 `adb shell screencap -p` 把当前屏幕截图保存到手机内部存储，
+/// 同时 `adb pull` 拉回 PC 返回 PNG 字节给前端展示（header 携带手机内路径）。
+/// 手机截图来源：手机系统自身截图（`screencap`），与 PC 端 scrcpy 窗口截图独立。
+async fn adb_save_screenshot(
+    State(_state): State<AppStateDevice>,
+    Json(payload): Json<PostDataSaveScreenshot>,
+) -> Result<impl IntoResponse, WebServerError> {
+    // 确定目标设备 id（优先用传入的，否则取当前主设备）
+    let device_id = if let Some(id) = &payload.id {
+        id.clone()
+    } else {
+        match ControlledDevice::get_main_device().await {
+            Some(d) => d.device_id,
+            None => {
+                return Err(WebServerError::bad_request(t!(
+                    "web.device.noDeviceControlled"
+                )))
+            }
+        }
+    };
+
+    // 手机内部保存目录
+    let dir = "/sdcard/Pictures/scrcpy-mask";
+    let _ = adb_shell_text(&device_id, ["mkdir", "-p", dir]);
+
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+    let filename = format!("shot-{ts}.png");
+    let path = format!("{dir}/{filename}");
+
+    // 0. 记录时间戳用于延迟估算：
+    //    - PC 端开始截图时刻
+    //    - 手机端截图前/后的系统时间（screencap 记录开始/结束时间）
+    let pc_ts_before = now_ms();
+    let phone_ts_before = adb_phone_time_ms(&device_id);
+    log::info!(
+        "[WebServe] phone screenshot begin: pc_ts={} phone_ts_before={:?}",
+        pc_ts_before,
+        phone_ts_before
+    );
+
+    // 1. 在手机端执行 screencap 截图保存到手机
+    let mut shell_out = Vec::<u8>::new();
+    Device::shell(&device_id, ["screencap", "-p", &path], &mut shell_out)
+        .map_err(|e| WebServerError::internal_error(format!("screencap failed: {e}")))?;
+
+    // 截图结束后的手机端时间
+    let phone_ts_after = adb_phone_time_ms(&device_id);
+    let pc_ts_after = now_ms();
+    log::info!(
+        "[WebServe] phone screenshot done: pc_ts_after={} phone_ts_after={:?}",
+        pc_ts_after,
+        phone_ts_after
+    );
+
+    // 2. 从手机 pull 回 PC 内存，得到 PNG 字节
+    let mut png_bytes = Vec::<u8>::new();
+    Device::pull(&device_id, path.clone(), &mut png_bytes)
+        .map_err(|e| WebServerError::internal_error(format!("pull failed: {e}")))?;
+
+    log::info!(
+        "[WebServe] phone screenshot saved to {path} ({} bytes)",
+        png_bytes.len()
+    );
+
+    // 3. 返回 PNG 字节，手机内路径 + 时间戳放在 header
+    let mut headers = HeaderMap::new();
+    headers.insert("Content-Type", HeaderValue::from_static("image/png"));
+    headers.insert("Cache-Control", HeaderValue::from_static("no-cache"));
+    headers.insert(
+        "X-Phone-Path",
+        HeaderValue::from_str(&path)
+            .map_err(|e| WebServerError::internal_error(e.to_string()))?,
+    );
+    if let Some(pb) = phone_ts_before {
+        headers.insert(
+            "X-Phone-Ts-Before",
+            HeaderValue::from_str(&pb.to_string())
+                .map_err(|e| WebServerError::internal_error(e.to_string()))?,
+        );
+    }
+    if let Some(pa) = phone_ts_after {
+        headers.insert(
+            "X-Phone-Ts-After",
+            HeaderValue::from_str(&pa.to_string())
+                .map_err(|e| WebServerError::internal_error(e.to_string()))?,
+        );
+    }
+    headers.insert(
+        "X-PC-Ts-Before",
+        HeaderValue::from_str(&pc_ts_before.to_string())
+            .map_err(|e| WebServerError::internal_error(e.to_string()))?,
+    );
+
+    Ok((StatusCode::OK, headers, png_bytes))
 }
 
 #[derive(Deserialize)]

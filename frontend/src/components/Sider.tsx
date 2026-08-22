@@ -1,7 +1,7 @@
 import { Flex, Menu, Layout } from "antd";
 import { useState } from "react";
 import logo from "../assets/128x128.png";
-import { CodeFilled, SettingFilled } from "@ant-design/icons";
+import { CameraOutlined, CodeFilled, SettingFilled } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import { IconFont } from "../hooks";
@@ -66,6 +66,11 @@ export default function Sider() {
             key: "/mappings",
             label: t("sider.mappings"),
             icon: <IconFont type="icon-keyboard" />,
+          },
+          {
+            key: "/latency-compare",
+            label: t("sider.latencyCompare"),
+            icon: <CameraOutlined />,
           },
           {
             key: "/scrcpy",

@@ -9,11 +9,31 @@
   "sider": {
     "devices": "Devices",
     "mappings": "Mappings",
+    "latencyCompare": "Latency Compare",
     "scrcpyPresets": "Scrcpy Presets",
     "settings": "Settings"
   },
   "welcome": {
     "main": "Welcome to Scrcpy Mask 👏🏻"
+  },
+  "latencyCompare": {
+    "title": "Latency Compare",
+    "desc": "Capture the current phone screen (saved to the phone's internal storage) and capture the PC streaming window (saved locally), then compare them to gauge relative latency. You can also upload phone screenshots here to inspect.",
+    "phoneCard": "Phone screenshot (saved on phone)",
+    "saveToPhone": "Capture & save to phone",
+    "phonePath": "Phone path: ",
+    "windowCard": "Capture streaming window (saved on PC)",
+    "captureWindow": "Capture streaming window",
+    "pcPath": "PC save path: ",
+    "uploadCard": "Upload image to inspect",
+    "uploadImage": "Upload phone screenshot",
+    "uploadedUrl": "Uploaded: ",
+    "uploadedTitle": "Uploaded image",
+    "noImage": "No screenshot yet. Click a button above to capture.",
+    "previewNotice": "This is a preview reference, not the instantaneous latency in the real environment.",
+    "captureBoth": "Capture both phone & window",
+    "measureTip": "Screenshots below are for reference only",
+    "measureTipDetail": "To accurately measure real streaming latency, use another phone to record the streaming window and the phone screen side by side. The game clock difference between the two screenshots is a rough reference, but their timestamp difference mainly reflects screenshot command latency, not the real streaming latency."
   },
   "devices": {
     "adbTools": {
@@ -106,7 +126,7 @@
       "delete": {
         "label": "Delete"
       },
-      "refreshBackground": "Refresh background",
+      "refreshBackground": "View phone screen or virtual display",
       "refreshBgFail": "Failed to refresh background image: {0}",
       "refreshSuccess": "Refresh background image successfully",
       "noMainDevice": "Main controlled device not found, please control the device on the devices page",
@@ -381,6 +401,16 @@
       "duplicateTitle": "Duplicate the config",
       "showGuides": "Guides",
       "showRandomRanges": "Random ranges",
+      "rotatePreview": "Rotate preview",
+      "hideIcons": "Hide icons",
+      "customResolution": "Custom template resolution",
+      "applyResolution": "Apply resolution",
+      "maskOverlay": "Mask overlay image",
+      "maskOverlayDesc": "Overlay an image (map/floating) on the mask window. Put the image under assets/overlay/ and enter a relative path (e.g. overlay/map.png).",
+      "overlayEnabled": "Enable overlay",
+      "overlayPath": "Image path",
+      "applyOverlay": "Apply overlay",
+      "overlayApplied": "Overlay image applied",
       "macroPreset": "Macro presets",
       "quickSwitchEnabled": "Enable preset switching (global)",
       "quickSwitchOn": "Preset switch",
@@ -393,7 +423,19 @@
       "boundSettingsHint": "The keys below are occupied by preset switching or macro presets. The mapping keys below cannot use these keys.",
       "boundPresetSwitch": "Preset switch bindings",
       "boundMacroPreset": "Macro preset bindings",
+      "configureNow": "Configure",
       "noBoundKeys": "No bound keys",
+      "boundKeysTitle": "Key locations",
+      "latencyPreview": "Latency Preview",
+      "saveToLocal": "Save to local",
+      "savedToLocal": "Saved to local",
+      "noBackground": "No screenshot. Refresh background first.",
+      "updatedAt": "Updated at",
+      "latencyTip": "This image is the current phone frame. Compare it with the actual window to gauge latency.",
+      "captureWindow": "Capture window",
+      "windowShotSuccess": "Window screenshot saved to local",
+      "windowShotFail": "Window capture failed: {{error}}",
+      "windowShotPath": "Saved to: ",
       "unbound": "Unbound",
       "quickSwitchUpdated": "Preset switching settings updated",
       "macroPresetUpdated": "Macro preset settings updated"

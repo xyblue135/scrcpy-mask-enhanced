@@ -9,11 +9,31 @@
   "sider": {
     "devices": "デバイス",
     "mappings": "マッピング",
+    "latencyCompare": "遅延比較",
     "scrcpyPresets": "Scrcpy プリセット",
     "settings": "設定"
   },
   "welcome": {
     "main": "Scrcpy Mask へようこそ 👏🏻"
+  },
+  "latencyCompare": {
+    "title": "遅延比較",
+    "desc": "現在の携帯画面を撮影（端末内ストレージに保存）し、PCの投写ウィンドウを撮影（ローカルに保存）して比較することで相対遅延を確認できます。携帯のスクリーンショットをここにアップロードして確認することもできます。",
+    "phoneCard": "携帯のスクリーンショット（端末に保存）",
+    "saveToPhone": "撮影して端末に保存",
+    "phonePath": "端末内パス：",
+    "windowCard": "投写ウィンドウを撮影（PCに保存）",
+    "captureWindow": "投写ウィンドウを撮影",
+    "pcPath": "PC保存パス：",
+    "uploadCard": "画像をアップロードして確認",
+    "uploadImage": "携帯スクリーンショットをアップロード",
+    "uploadedUrl": "アップロード済み：",
+    "uploadedTitle": "アップロードした画像",
+    "noImage": "まだ画像がありません。上のボタンを押してください。",
+    "previewNotice": "これはプレビュー参考であり、実際の瞬間的な遅延ではありません。",
+    "captureBoth": "携帯とウィンドウを同時に撮影",
+    "measureTip": "下のスクリーンショットは参考用です",
+    "measureTipDetail": "実際の投写遅延を正確に測定するには、別の端末で「投写ウィンドウ」と「携帯画面」の両方を同時に撮影して比較してください。2枚のスクリーンショットのゲーム時計の差は概算の参考ですが、タイムスタンプの差は主にスクリーンショット命令の時間であり、実際の投写遅延ではありません。"
   },
   "devices": {
     "adbTools": {
@@ -106,7 +126,7 @@
       "delete": {
         "label": "削除"
       },
-      "refreshBackground": "背景を更新",
+      "refreshBackground": "画面または仮想ディスプレイを表示",
       "refreshBgFail": "背景画像の更新に失敗しました: {0}",
       "refreshSuccess": "背景画像を更新しました",
       "noMainDevice": "制御中のメインデバイスが見つかりません。デバイスページでデバイスを制御してください",
@@ -365,7 +385,17 @@
       "size": "サイズ",
       "differentName": "新しい設定名は現在の設定名と同じにできません！",
       "duplicateTitle": "設定を複製",
-      "showGuides": "ガイド"
+      "showGuides": "ガイド",
+      "rotatePreview": "プレビューを回転",
+      "hideIcons": "アイコンを隠す",
+      "customResolution": "テンプレート解像度をカスタマイズ",
+      "applyResolution": "解像度を適用",
+      "maskOverlay": "マスクに画像を重ねる",
+      "maskOverlayDesc": "マスクウィンドウに画像（マップ/浮遊）を重ねます。assets/overlay/ に画像を置き、相対パス（例 overlay/map.png）を入力します。",
+      "overlayEnabled": "重ね表示を有効",
+      "overlayPath": "画像パス",
+      "applyOverlay": "適用",
+      "overlayApplied": "画像を適用しました"
     },
     "script": {
       "setting": {

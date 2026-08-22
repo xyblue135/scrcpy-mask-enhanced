@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use bevy::{
     math::CompassOctant,
     prelude::IntoScheduleConfigs,
@@ -74,7 +72,8 @@ impl Plugin for BasicPlugin {
         app.insert_resource(ClearColor(Color::NONE))
             .insert_resource(WinitSettings {
                 focused_mode: UpdateMode::Continuous,
-                unfocused_mode: UpdateMode::reactive_low_power(Duration::from_millis(100)),
+                // 投屏场景下鼠标移出窗口仍希望画面保持流畅，禁用失焦低功耗降帧
+                unfocused_mode: UpdateMode::Continuous,
             })
             .add_systems(Startup, setup_ui)
             .add_systems(
@@ -862,3 +861,5 @@ fn sync_pushpin_style(
         }
     }
 }
+
+

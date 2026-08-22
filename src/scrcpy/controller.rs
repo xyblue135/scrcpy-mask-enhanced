@@ -147,7 +147,8 @@ impl Controller {
                         let socket_id = "main_control".to_string();
 
                         if !ControlledDevice::is_scid_controlled(&scid).await {
-                            panic!("{}: {}", t!("scrcpy.deviceNotRecorded"), scid)
+                            log::error!("{}: {}", t!("scrcpy.deviceNotRecorded"), scid);
+                            continue;
                         }
 
                         let token = CancellationToken::new();
@@ -235,7 +236,8 @@ impl Controller {
                         let socket_id = "main_video".to_string();
 
                         if !ControlledDevice::is_scid_controlled(&scid).await {
-                            panic!("{}: {}", t!("scrcpy.deviceNotRecorded"), scid)
+                            log::error!("{}: {}", t!("scrcpy.deviceNotRecorded"), scid);
+                            continue;
                         }
 
                         let token = CancellationToken::new();
@@ -279,7 +281,8 @@ impl Controller {
                         let socket_id = "main_audio".to_string();
 
                         if !ControlledDevice::is_scid_controlled(&scid).await {
-                            panic!("{}: {}", t!("scrcpy.deviceNotRecorded"), scid)
+                            log::error!("{}: {}", t!("scrcpy.deviceNotRecorded"), scid);
+                            continue;
                         }
 
                         let token = CancellationToken::new();
@@ -322,7 +325,8 @@ impl Controller {
                         let socket_id = format!("sub_control_{}", scid);
 
                         if !ControlledDevice::is_scid_controlled(&scid).await {
-                            panic!("{}: {}", t!("scrcpy.deviceNotRecorded"), scid)
+                            log::error!("{}: {}", t!("scrcpy.deviceNotRecorded"), scid);
+                            continue;
                         }
 
                         let token = CancellationToken::new();

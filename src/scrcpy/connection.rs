@@ -236,12 +236,11 @@ impl ScrcpyConnection {
         let (watch_tx, watch_rx) = watch::channel::<(u32, u32)>((0, 0)); // share device size with writer
         if main {
             let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
-            m_tx.send((
+            let _ = m_tx.send((
                 MaskCommand::DeviceConnectionChange { connect: true },
                 oneshot_tx,
-            ))
-            .unwrap();
-            oneshot_rx.await.unwrap().unwrap();
+            ));
+            let _ = oneshot_rx.await;
         }
 
         tokio::select! {
@@ -252,12 +251,11 @@ impl ScrcpyConnection {
         log::info!("[Controller] {}", t!("scrcpy.controlConnectionClosed"));
         if main {
             let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
-            m_tx.send((
+            let _ = m_tx.send((
                 MaskCommand::DeviceConnectionChange { connect: false },
                 oneshot_tx,
-            ))
-            .unwrap();
-            oneshot_rx.await.unwrap().unwrap();
+            ));
+            let _ = oneshot_rx.await;
         }
     }
 
@@ -424,7 +422,7 @@ impl ScrcpyConnection {
         }
         v_tx.send(VideoMsg::Close);
         log::info!("[Controller] {}", t!("scrcpy.videoConnectionClosed"));
-        self.socket.shutdown().await.unwrap();
+        let _ = self.socket.shutdown().await;
     }
 
     async fn audio_handler(&mut self) -> Result<(), String> {
@@ -570,7 +568,7 @@ impl ScrcpyConnection {
             }
         }
         log::info!("[Controller] Audio connection closed");
-        self.socket.shutdown().await.unwrap();
+        let _ = self.socket.shutdown().await;
     }
 }
 

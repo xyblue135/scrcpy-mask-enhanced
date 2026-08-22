@@ -15,6 +15,7 @@ import {
   Input,
   InputNumber,
   Modal,
+  Pagination,
   Popconfirm,
   Select,
   Space,
@@ -54,6 +55,8 @@ import {
   SettingOutlined,
   SnippetsOutlined,
   KeyOutlined,
+  SwapOutlined,
+  EyeInvisibleOutlined,
 } from "@ant-design/icons";
 import IconButton from "../common/IconButton";
 import {
@@ -698,6 +701,14 @@ function Displayer({
     left: number;
     top: number;
   } | null>(null);
+  // 旋转预览：true 时交换宽高（横屏↔竖屏），键位坐标跟随旋转，仅影响编辑显示
+  const [rotated, setRotated] = useState(false);
+  // 隐藏映射按键图标：隐藏画布上的按键图标，便于查看背景
+  const [hideIcons, setHideIcons] = useState(false);
+  // 自定义模板分辨率弹窗
+  const [sizeEditOpen, setSizeEditOpen] = useState(false);
+  const [sizeW, setSizeW] = useState(0);
+  const [sizeH, setSizeH] = useState(0);
 
   const getMappingContainerScroll = useCallback(() => {
     const mappingContainer = document.getElementById("mappings-container");
@@ -762,15 +773,39 @@ function Displayer({
     };
   }, [updateMaskArea, updateOverlayViewportOrigin]);
 
-  const { ratioStyle, originalSize } = useMemo(() => {
+  const { ratioStyle, originalSize, displayMappings } = useMemo(() => {
+    // 使用映射模板自己的分辨率（original_size），每个模板可自定义
+    const width = state.current.original_size.width;
+    const height = state.current.original_size.height;
+
+    // 旋转预览：交换宽高，键位坐标跟随顺时针旋转
+    if (rotated) {
+      const displayMappings = state.current.mappings.map((m) =>
+        rotateMapping(m, height),
+      );
+      return {
+        originalSize: { width: height, height: width },
+        ratioStyle: {
+          width: "100%",
+          aspectRatio: `${height} / ${width}`,
+        },
+        displayMappings,
+      };
+    }
     return {
-      originalSize: state.current.original_size,
+      originalSize: { width, height },
       ratioStyle: {
         width: "100%",
-        aspectRatio: `${state.current.original_size.width} / ${state.current.original_size.height}`,
+        aspectRatio: `${width} / ${height}`,
       },
+      displayMappings: state.current.mappings,
     };
-  }, [state.current.original_size.width, state.current.original_size.height]);
+  }, [
+    state.current.original_size.width,
+    state.current.original_size.height,
+    rotated,
+    state.current.mappings,
+  ]);
 
   function updateMapping(
     index: number,
@@ -830,16 +865,27 @@ function Displayer({
   }, 100);
 
   return (
-    <div className="w-full">
+    <div className="mapping-editor w-full">
       <Flex justify="space-between">
         <CursorPos ref={cursorPosRef} />
-        <div className="color-text-secondary font-bold">
+        <Button
+          type="text"
+          size="small"
+          className="color-text-secondary font-bold"
+          onClick={() => {
+            setSizeW(state.current.original_size.width);
+            setSizeH(state.current.original_size.height);
+            setSizeEditOpen(true);
+          }}
+        >
           {`[${originalSize.width} x ${originalSize.height}]`}
-        </div>
+        </Button>
       </Flex>
       <div
         ref={displayerRef}
-        className="w-full border-text-quaternary border-solid border relative select-none"
+        className={`w-full border-text-quaternary border-solid border relative select-none ${
+          hideIcons ? "mapping-icons-hidden" : ""
+        }`}
         style={ratioStyle}
         onMouseMove={handleMouseMove}
       >
@@ -898,7 +944,7 @@ function Displayer({
           viewportOrigin={overlayViewportOrigin}
           viewportSize={{ width: maskArea.width, height: maskArea.height }}
         >
-          {state.current.mappings.map((mapping, index) => {
+          {displayMappings.map((mapping, index) => {
             const props: any = {
               originalSize,
               index,
@@ -926,9 +972,251 @@ function Displayer({
             return <div key={index}></div>;
           })}
         </MappingOverlayProvider>
+        <Button
+          size="small"
+          type={rotated ? "primary" : "default"}
+          icon={<SwapOutlined />}
+          onClick={() => setRotated((v) => !v)}
+          style={{ position: "absolute", right: 4, top: 4, zIndex: 50 }}
+        >
+          {t("mappings.home.rotatePreview")}
+        </Button>
+        <Button
+          size="small"
+          type={hideIcons ? "primary" : "default"}
+          icon={hideIcons ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+          onClick={() => setHideIcons((v) => !v)}
+          style={{ position: "absolute", right: 4, top: 32, zIndex: 50 }}
+        >
+          {t("mappings.home.hideIcons")}
+        </Button>
       </div>
+      <Modal
+        open={sizeEditOpen}
+        title={t("mappings.home.customResolution")}
+        okText={t("mappings.home.applyResolution")}
+        cancelText={t("mappings.common.cancel")}
+        onCancel={() => setSizeEditOpen(false)}
+        onOk={() => {
+          if (sizeW > 0 && sizeH > 0) {
+            setState((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    edited: true,
+                    current: {
+                      ...prev.current,
+                      original_size: { width: sizeW, height: sizeH },
+                    },
+                  }
+                : prev,
+            );
+          }
+          setSizeEditOpen(false);
+        }}
+      >
+        <Flex align="center" gap={8}>
+          <InputNumber
+            min={1}
+            value={sizeW}
+            onChange={(v) => setSizeW(v ?? 0)}
+            placeholder="W"
+            style={{ width: 120 }}
+          />
+          <span>x</span>
+          <InputNumber
+            min={1}
+            value={sizeH}
+            onChange={(v) => setSizeH(v ?? 0)}
+            placeholder="H"
+            style={{ width: 120 }}
+          />
+        </Flex>
+      </Modal>
     </div>
   );
+}
+
+// 按钮 DOM id 前缀映射（与各 Button 组件内部 id 命名保持一致）
+function mappingButtonDomPrefix(type: string): string {
+  switch (type) {
+    case "RepeatTap":
+      return "mapping-repeat-tap";
+    case "MultipleTap":
+      return "mapping-multiple-tap";
+    case "DirectionPad":
+    case "PadCastSpell":
+      return "mapping-direction-pad";
+    case "MouseCastSpell":
+      return "mapping-mouse-cast-spell";
+    case "Fps":
+      return "mapping-fps";
+    case "Wheel":
+      return "mapping-wheel";
+    default:
+      // SingleTap / Observation / Script / RawInput / Fire / CancelCast / Swipe
+      return "mapping-single-tap";
+  }
+}
+
+function pushKeys(
+  target: { key: string; type: string; index: number; label: string }[],
+  binds: string[] | undefined,
+  type: string,
+  index: number,
+  label: string,
+) {
+  if (Array.isArray(binds)) {
+    binds.forEach((k) => target.push({ key: k, type, index, label }));
+  }
+}
+
+// 提取单个映射的所有绑定条目（含方向按键、副键、取消键等）
+function collectMappingBindings(mapping: MappingType, index: number) {
+  const results: { key: string; type: string; index: number; label: string }[] = [];
+  const m = mapping as any;
+  const label = (m.note && m.note.trim() ? m.note : (mapping.type as string));
+  pushKeys(results, m.bind, mapping.type, index, label);
+  if (m.bind && typeof m.bind === "object" && m.bind.type === "Button") {
+    pushKeys(results, m.bind.up, mapping.type, index, `${label}·上`);
+    pushKeys(results, m.bind.down, mapping.type, index, `${label}·下`);
+    pushKeys(results, m.bind.left, mapping.type, index, `${label}·左`);
+    pushKeys(results, m.bind.right, mapping.type, index, `${label}·右`);
+  }
+  if (m.pad_bind && typeof m.pad_bind === "object" && m.pad_bind.type === "Button") {
+    pushKeys(results, m.pad_bind.up, mapping.type, index, `${label}·上`);
+    pushKeys(results, m.pad_bind.down, mapping.type, index, `${label}·下`);
+    pushKeys(results, m.pad_bind.left, mapping.type, index, `${label}·左`);
+    pushKeys(results, m.pad_bind.right, mapping.type, index, `${label}·右`);
+  }
+  pushKeys(results, m.cancel_bind, mapping.type, index, `${label}·取消`);
+  if (Array.isArray(m.up_boost_key)) {
+    pushKeys(results, m.up_boost_key, mapping.type, index, `${label}·加速`);
+  }
+  return results;
+}
+
+// 顺时针旋转 90°：原 (x, y) → (oH - y, x)
+function rotatePoint(x: number, y: number, oH: number) {
+  return { x: Math.round(oH - y), y: Math.round(x) };
+}
+
+// 深拷贝并旋转一个映射项的所有位置坐标（position / positions / items）
+function rotateMapping(mapping: MappingType, oH: number): MappingType {
+  const m: any = deepClone(mapping);
+  const rot = (p: any) =>
+    p && typeof p.x === "number" && typeof p.y === "number"
+      ? rotatePoint(p.x, p.y, oH)
+      : p;
+  if (m.position) m.position = rot(m.position);
+  if (Array.isArray(m.positions)) m.positions = m.positions.map(rot);
+  if (Array.isArray(m.items)) {
+    m.items = m.items.map((it: any) => ({ ...it, position: rot(it.position) }));
+  }
+  // MouseCastSpell / PadCastSpell 可能用 cast_points / positions 存多个点
+  if (Array.isArray(m.cast_points)) m.cast_points = m.cast_points.map(rot);
+  return m;
+}
+
+// 按键定位列表：列出所有绑定按键，点击后在画布上高亮对应按钮
+function KeyBindingList({
+  mappings,
+  onSelect,
+}: {
+  mappings: MappingType[];
+  onSelect: (elementId: string) => void;
+}) {
+  const { t } = useTranslation();
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+  const entries = useMemo(() => {
+    const all: { key: string; type: string; index: number; label: string; elementId: string }[] = [];
+    mappings.forEach((mapping, index) => {
+      if (isMacroScript(mapping)) return;
+      collectMappingBindings(mapping, index).forEach((e) => {
+        all.push({ ...e, elementId: `${mappingButtonDomPrefix(e.type)}-${e.index}` });
+      });
+    });
+    // 按按键名分组，相同按键聚合显示
+    const groups = new Map<string, typeof all>();
+    all.forEach((e) => {
+      if (!groups.has(e.key)) groups.set(e.key, []);
+      groups.get(e.key)!.push(e);
+    });
+    return Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [mappings]);
+
+  if (entries.length === 0) {
+    return (
+      <div className="p-3 color-text-secondary text-sm">
+        {t("mappings.home.noBoundKeys")}
+      </div>
+    );
+  }
+
+  // 每页 10 个按键分组
+  const start = (page - 1) * pageSize;
+  const pagedEntries = entries.slice(start, start + pageSize);
+
+  return (
+    <div className="p-3 flex flex-col gap-2">
+      <Typography.Title level={5} style={{ marginTop: 0 }}>
+        {t("mappings.home.boundKeysTitle")}
+      </Typography.Title>
+      <div className="flex flex-col gap-2 flex-grow-1">
+        {pagedEntries.map(([key, list]) => (
+          <div key={key} className="border border-text-quaternary rounded p-2">
+            <Tag color="blue">{list.length > 1 ? `${key} ×${list.length}` : key}</Tag>
+            <div className="flex flex-col gap-1 mt-1">
+              {list.map((e, i) => (
+                <button
+                  key={`${e.index}-${i}`}
+                  type="button"
+                  className="text-left text-sm px-2 py-1 rounded hover:bg-white/10 cursor-pointer color-text"
+                  onClick={() => onSelect(e.elementId)}
+                >
+                  <span className="color-text-secondary mr-1">
+                    {t(`mappings.${e.type.charAt(0).toLowerCase() + e.type.slice(1)}.name`)}
+                  </span>
+                  #{e.index}
+                  {e.label && <span className="ml-1 color-text-secondary">· {e.label}</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <Pagination
+        size="small"
+        current={page}
+        pageSize={pageSize}
+        total={entries.length}
+        showSizeChanger={false}
+        onChange={setPage}
+        style={{ marginTop: 8 }}
+      />
+    </div>
+  );
+}
+
+// 点击按键列表项：高亮画布上对应的按钮并滚动到可见位置
+function highlightMappingButton(elementId: string) {
+  document
+    .querySelectorAll(".mapping-highlight")
+    .forEach((el) => el.classList.remove("mapping-highlight"));
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  el.classList.add("mapping-highlight");
+  const container = document.getElementById("mappings-container");
+  if (container) {
+    const rect = el.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    container.scrollBy({
+      left: rect.left - containerRect.left - container.clientWidth / 2,
+      top: rect.top - containerRect.top - container.clientHeight / 2,
+      behavior: "smooth",
+    });
+  }
 }
 
 export default function Mappings() {
@@ -1033,7 +1321,7 @@ export default function Mappings() {
 
   async function updateGlobalToggle(key: string, value: boolean) {
     try {
-      await requestPost<{ config: any }>("/api/config/update", {
+      await requestPost<{ config: any }>("/api/config/update_config", {
         key,
         value,
       });
@@ -1094,7 +1382,7 @@ export default function Mappings() {
     dispatch(setIsLoading(true));
     try {
       // 保留当前已激活配置中的宏预设，合并到目标预设中，使宏预设不随预设切换而丢失
-      const currentRes = await requestGet<{ mapping_config: MappingConfig }>(
+      const currentRes = await requestPost<{ mapping_config: MappingConfig }>(
         "/api/mapping/read_mapping",
         { file: activeMappingFile },
       );
@@ -1104,7 +1392,7 @@ export default function Mappings() {
       const currentMacros = currentConfig.mappings.filter(isMacroScript);
 
       if (currentMacros.length > 0 && file !== activeMappingFile) {
-        const targetRes = await requestGet<{ mapping_config: MappingConfig }>(
+        const targetRes = await requestPost<{ mapping_config: MappingConfig }>(
           "/api/mapping/read_mapping",
           { file },
         );
@@ -1516,7 +1804,16 @@ export default function Mappings() {
                 showRandomRanges={showRandomRanges}
               />
             </Splitter.Panel>
-            <Splitter.Panel />
+            <Splitter.Panel
+              style={{ overflowY: "auto" }}
+              min="180px"
+              defaultSize="260px"
+            >
+              <KeyBindingList
+                mappings={editState.current.mappings}
+                onSelect={(id) => highlightMappingButton(id)}
+              />
+            </Splitter.Panel>
           </Splitter>
         )}
       </section>
@@ -1532,9 +1829,21 @@ export default function Mappings() {
             {t("mappings.home.boundSettingsHint")}
           </Typography.Text>
         </div>
-        <Typography.Title level={5}>
-          {t("mappings.home.boundPresetSwitch")}
-        </Typography.Title>
+        <Flex justify="space-between" align="center">
+          <Typography.Title level={5} style={{ marginBottom: 0 }}>
+            {t("mappings.home.boundPresetSwitch")}
+          </Typography.Title>
+          <Button
+            size="small"
+            icon={<SettingOutlined />}
+            onClick={() => {
+              setIsBoundSettingsOpen(false);
+              setIsManagerOpen(true);
+            }}
+          >
+            {t("mappings.home.configureNow")}
+          </Button>
+        </Flex>
         {mappingQuickSwitches.filter((qs) => qs.shortcut.length > 0).length === 0 ? (
           <Typography.Text type="secondary">
             {t("mappings.home.noBoundKeys")}
@@ -1551,9 +1860,21 @@ export default function Mappings() {
               ))}
           </ul>
         )}
-        <Typography.Title level={5}>
-          {t("mappings.home.boundMacroPreset")}
-        </Typography.Title>
+        <Flex justify="space-between" align="center" style={{ marginTop: 12 }}>
+          <Typography.Title level={5} style={{ marginBottom: 0 }}>
+            {t("mappings.home.boundMacroPreset")}
+          </Typography.Title>
+          <Button
+            size="small"
+            icon={<SettingOutlined />}
+            onClick={() => {
+              setIsBoundSettingsOpen(false);
+              setIsMacroManagerOpen(true);
+            }}
+          >
+            {t("mappings.home.configureNow")}
+          </Button>
+        </Flex>
         {(() => {
           const macros = (editState?.current.mappings ?? []).filter(isMacroScript);
           if (macros.length === 0) {

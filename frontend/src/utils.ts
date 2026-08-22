@@ -72,6 +72,18 @@ export async function requestPost<D = any>(
   });
 }
 
+// multipart/form-data 文件上传（用于上传观察图等）
+export async function requestUpload<D = any>(
+  url: string,
+  formData: FormData,
+): Promise<{ message: string; data: D }> {
+  return await handleRequest(() => {
+    return axios.post(url, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  });
+}
+
 export interface ControlledDevice {
   device_id: string;
   device_size: [number, number];

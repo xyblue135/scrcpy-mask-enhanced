@@ -452,7 +452,7 @@ export function DeviceBackground({ alpha }: { alpha?: number }) {
 
   return (
     <div
-      className="absolute w-full h-full bg-[length:100%_100%] bg-origin-content bg-no-repeat"
+      className="absolute w-full h-full bg-[length:100%_100%] bg-no-repeat"
       style={{
         backgroundImage: `url(${backgroundImage})`,
       }}

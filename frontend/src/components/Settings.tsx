@@ -20,7 +20,6 @@ import {
 import {
   forceSetLocalConfig,
   setAdbPath,
-  setAlwaysOnTop,
   setClipboardSync,
   setControllerPort,
   setHorizontalPosition,
@@ -149,7 +148,6 @@ export default function Settings() {
           <ItemBoxContainer>
             <ItemBox label={t("settings.language")}><Select className="w-sm" value={localConfig.language} options={languageOptions} onChange={(value) => dispatch(setLanguage(value))} /></ItemBox>
             <ItemBox label={t("settings.clipboardSync")}><Switch checked={localConfig.clipboardSync} onChange={(value) => dispatch(setClipboardSync(value))} /></ItemBox>
-            <ItemBox label={t("settings.alwaysOnTop")}><Switch checked={localConfig.alwaysOnTop} onChange={(value) => dispatch(setAlwaysOnTop(value))} /></ItemBox>
             <ItemBox label={t("settings.titlebarVisible")}><Switch checked={localConfig.titlebarVisible} onChange={(value) => dispatch(setTitlebarVisible(value))} /></ItemBox>
             <ItemBox label={t("settings.verticalMaskHeight")}><InputNumber className="w-sm" min={1} value={localConfig.verticalMaskHeight} onChange={(value) => value !== null && dispatch(setverticalMaskHeight(value))} /></ItemBox>
             <ItemBox label={t("settings.horizontalMaskWidth")}><InputNumber className="w-sm" min={1} value={localConfig.horizontalMaskWidth} onChange={(value) => value !== null && dispatch(sethorizontalMaskWidth(value))} /></ItemBox>

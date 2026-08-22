@@ -59,6 +59,41 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
+/* 按键定位列表高亮：选中映射按钮时的高亮样式 */
+.mapping-highlight {
+  outline: 3px solid #ffd700 !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 12px 3px rgba(255, 215, 0, 0.55) !important;
+  z-index: 999 !important;
+  animation: mapping-highlight-pulse 1.2s ease-in-out infinite;
+}
+
+/* 映射按钮在手机截图背景上默认保持清晰可见（无需 hover）：
+   给按钮加半透明深色底 + 文字阴影，提高按键名对比度 */
+.mapping-editor .rounded-full.absolute.box-border.border-solid.border-2 {
+  background-color: rgba(0, 0, 0, 0.35);
+}
+
+/* 隐藏映射按键图标：用于查看完整背景 */
+.mapping-icons-hidden .rounded-full.absolute.box-border.border-solid.border-2 {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+
+.mapping-editor .rounded-full.absolute.box-border.border-solid.border-2 .text-2\.5 {
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 0 6px rgba(0, 0, 0, 0.7);
+}
+
+@keyframes mapping-highlight-pulse {
+  0%,
+  100% {
+    outline-color: #ffd700;
+  }
+  50% {
+    outline-color: #ff8c00;
+  }
+}
+
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;

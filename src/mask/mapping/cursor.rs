@@ -32,6 +32,13 @@ pub enum CursorState {
 #[derive(Resource)]
 pub struct CursorPosition(pub Vec2);
 
+/// 记录窗口上一次的聚焦状态，用于检测"从失焦切回"的瞬间，
+/// 避免切回窗口时把失焦期间累积的鼠标位移一次性应用，导致光标跳变/不跟手。
+#[derive(Resource, Default)]
+struct CursorFocusState {
+    prev_focused: bool,
+}
+
 #[derive(Resource, Default)]
 pub struct NormalCursorCapture {
     owners: HashSet<String>,
@@ -89,6 +96,7 @@ impl Plugin for CursorPlugins {
     fn build(&self, app: &mut App) {
         app.insert_resource(CursorPosition((0., 0.).into()))
             .insert_resource(NormalCursorCapture::default())
+            .insert_resource(CursorFocusState::default())
             .insert_state(CursorState::Normal)
             .insert_resource(IgnoreFirstMotion(false))
             .insert_resource(ActiveCursorFpsConfig::default())
@@ -313,7 +321,13 @@ fn handle_cursor_normal(
     viewport: Res<VideoViewport>,
     mut normal_capture: ResMut<NormalCursorCapture>,
     mask_size: Res<MaskSize>,
+    mut focus_state: ResMut<CursorFocusState>,
 ) {
+    // 检测窗口是否刚从失焦切回：此时 cursor_position() 可能尚未恢复，
+    // 如果沿用失焦期间累积的相对位移，会导致光标跳变/短暂不跟手。
+    let just_refocused = window.focused && !focus_state.prev_focused;
+    focus_state.prev_focused = window.focused;
+
     let mut new_pos = cursor_pos.0;
     if normal_capture.grabbed {
         if normal_capture.skip_next_nonzero_motion && accumulated_motion.delta != Vec2::ZERO {
@@ -328,6 +342,10 @@ fn handle_cursor_normal(
             pos - Vec2::new(0., titlebar_state.offset()) - viewport.offset,
             mask_size.0,
         );
+    } else if just_refocused {
+        // 刚切回窗口但光标绝对位置暂不可用：保持当前虚拟位置，跳过相对位移累积，
+        // 等下一帧 cursor_position() 恢复后自然对齐到真实鼠标位置。
+        new_pos = clamped_virtual_cursor_pos(new_pos, mask_size.0);
     } else {
         new_pos += accumulated_motion.delta;
     }

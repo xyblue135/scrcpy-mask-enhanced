@@ -9,11 +9,31 @@
   "sider": {
     "devices": "Dispositivos",
     "mappings": "Mapeamentos",
+    "latencyCompare": "Comparar latência",
     "scrcpyPresets": "Predefinições Scrcpy",
     "settings": "Configurações"
   },
   "welcome": {
     "main": "Boas-vindas ao Scrcpy Mask 👏🏻"
+  },
+  "latencyCompare": {
+    "title": "Comparar latência",
+    "desc": "Capture a tela atual do telefone (salva no armazenamento interno) e capture a janela de transmissão do PC (salva localmente) e compare-as para medir a latência relativa. Você também pode enviar capturas do telefone aqui.",
+    "phoneCard": "Captura do telefone (salva no telefone)",
+    "saveToPhone": "Capturar e salvar no telefone",
+    "phonePath": "Caminho no telefone: ",
+    "windowCard": "Capturar janela de transmissão (salva no PC)",
+    "captureWindow": "Capturar janela de transmissão",
+    "pcPath": "Caminho salvo no PC: ",
+    "uploadCard": "Enviar imagem para inspecionar",
+    "uploadImage": "Enviar captura do telefone",
+    "uploadedUrl": "Enviado: ",
+    "uploadedTitle": "Imagem enviada",
+    "noImage": "Sem captura ainda. Clique em um botão acima.",
+    "previewNotice": "Esta é uma referência de visualização, não a latência instantânea real.",
+    "captureBoth": "Capturar telefone e janela",
+    "measureTip": "As capturas abaixo são apenas para referência",
+    "measureTipDetail": "Para medir com precisão a latência real da transmissão, use outro telefone para gravar a janela de transmissão e a tela do telefone simultaneamente. A diferença do relógio do jogo entre as duas capturas é uma referência aproximada, mas a diferença de carimbo de tempo reflete principalmente a latência do comando de captura, não a latência real."
   },
   "devices": {
     "adbTools": {
@@ -106,7 +126,7 @@
       "delete": {
         "label": "Excluir"
       },
-      "refreshBackground": "Atualizar fundo",
+      "refreshBackground": "Ver tela ou tela virtual",
       "refreshBgFail": "Falha ao atualizar imagem de fundo: {0}",
       "refreshSuccess": "Imagem de fundo atualizada com sucesso",
       "noMainDevice": "Dispositivo principal controlado não encontrado; controle o dispositivo na página de dispositivos",
@@ -365,7 +385,17 @@
       "size": "Tamanho",
       "differentName": "O nome da nova configuração não pode ser igual ao da configuração atual!",
       "duplicateTitle": "Duplicar a configuração",
-      "showGuides": "Guias"
+      "showGuides": "Guias",
+      "rotatePreview": "Girar visualização",
+      "hideIcons": "Ocultar ícones",
+      "customResolution": "Resolução de modelo personalizada",
+      "applyResolution": "Aplicar resolução",
+      "maskOverlay": "Sobrepor imagem",
+      "maskOverlayDesc": "Sobreponha uma imagem (mapa/flutuante) na janela de máscara. Coloque a imagem em assets/overlay/ e insira um caminho relativo (ex.: overlay/map.png).",
+      "overlayEnabled": "Ativar sobreposição",
+      "overlayPath": "Caminho da imagem",
+      "applyOverlay": "Aplicar",
+      "overlayApplied": "Imagem sobreposta aplicada"
     },
     "script": {
       "setting": {

@@ -31,7 +31,7 @@ adb_client = { version = "3.2.2", default-features = false }
 rand = "0.9"
 dirs = "6.0.0"
 tracing-appender = "0.2"
-axum = { version = "0.8.4", features = ["macros", "ws"] }
+axum = { version = "0.8.4", features = ["macros", "ws", "multipart"] }
 opener = "0.8.2"
 tower = "0.5"
 tower-http = { version = "0.6", features = ["fs", "cors", "set-header"] }
@@ -59,6 +59,13 @@ png = "0.18"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 muda = "0.17"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.60", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_UI_WindowsAndMessaging",
+] }
 
 [profile.dev.package.objc2]
 debug-assertions = false

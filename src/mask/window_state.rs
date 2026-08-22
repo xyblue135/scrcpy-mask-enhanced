@@ -12,7 +12,6 @@ struct WindowedSnapshot {
     size: Vec2,
     titlebar_visible: bool,
     resizable: bool,
-    maximized: bool,
 }
 
 /// 普通“窗口最大化”状态：仍然是 Windowed 模式，因此 Windows 任务栏会保留。
@@ -95,7 +94,6 @@ fn enter_fullscreen(
         size: window.size(),
         titlebar_visible: titlebar_state.visible,
         resizable: window.resizable,
-        maximized: maximize_state.active,
     });
 
     // 先离开普通最大化，再进入 F11 无边框全屏，避免两种窗口状态互相打架。
@@ -141,15 +139,13 @@ pub fn apply_pending_window_restore(
         return;
     }
 
+    // 退出 F11 全屏后统一回到普通窗口（Windowed），不再恢复"最大化"状态，
+    // 使 F11 的行为始终是：进入全屏 <-> 退出回普通窗口，避免"时而是全屏时而是最大化"的困惑。
     if let Some(snapshot) = state.snapshot.take() {
-        maximize_state.active = snapshot.maximized;
-        if snapshot.maximized {
-            window.set_maximized(true);
-        } else {
-            window.resolution.set(snapshot.size.x, snapshot.size.y);
-            if let Some(position) = snapshot.position {
-                window.position = WindowPosition::At(position);
-            }
+        maximize_state.active = false;
+        window.resolution.set(snapshot.size.x, snapshot.size.y);
+        if let Some(position) = snapshot.position {
+            window.position = WindowPosition::At(position);
         }
     }
 
