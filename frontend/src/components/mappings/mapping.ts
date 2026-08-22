@@ -27,7 +27,8 @@ export type MappingType =
   | FpsConfig
   | FireConfig
   | RawInputConfig
-  | ScriptConfig;
+  | ScriptConfig
+  | WheelConfig;
 
 export type Position = {
   x: number;
@@ -550,6 +551,43 @@ export function newScript(position: Position): ScriptConfig {
   };
 }
 
+export interface WheelConfig {
+  id: string;
+  bind: ButtonBinding;
+  note: string;
+  pointer_id: number;
+  position: Position;
+  center: Position;
+  radius: number;
+  count: number;
+  enable_randomization: boolean;
+  initial_duration: number;
+  random_offset_x: number;
+  random_offset_y: number;
+  type: "Wheel";
+}
+
+export function newWheel(position: Position): WheelConfig {
+  return {
+    id: newMappingId(),
+    bind: [],
+    note: "",
+    pointer_id: 3,
+    position,
+    center: {
+      x: position.x,
+      y: position.y,
+    },
+    radius: 300,
+    count: 8,
+    enable_randomization: false,
+    initial_duration: 0,
+    random_offset_x: default_random_offset,
+    random_offset_y: default_random_offset,
+    type: "Wheel",
+  };
+}
+
 export type MappingUpdater<T> = (updater: T | ((pre: T) => T)) => void;
 
 function withDefaultRandomOffset(value?: number): number {
@@ -729,6 +767,17 @@ export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
               id,
             };
           }
+        case "Wheel":
+          return {
+            ...mapping,
+            id,
+            radius: mapping.radius ?? 300,
+            count: mapping.count ?? 8,
+            enable_randomization: mapping.enable_randomization ?? false,
+            initial_duration: mapping.initial_duration ?? 0,
+            random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
+            random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
+          };
         default:
           return {
             ...mapping,

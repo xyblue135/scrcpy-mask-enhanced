@@ -95,6 +95,10 @@ pub struct LocalConfig {
     pub mapping_enabled: bool,
     pub active_mapping_file: String,
     pub mapping_quick_switches: Vec<MappingQuickSwitch>,
+    /// 全局预设切换开关：关闭时忽略所有 quick switch 快捷键。
+    pub quick_switch_enabled: bool,
+    /// 全局宏预设开关：关闭时宏预设绑定不被执行（也用于前端是否显示）。
+    pub macro_preset_enabled: bool,
     pub mapping_label_opacity: f32,
     // 键盘映射按钮的显示大小倍数（仅影响可视化按钮大小，adb 点击仍为按钮中心）
     pub mapping_button_scale: f32,
@@ -149,6 +153,8 @@ impl Default for LocalConfig {
             mapping_enabled: true,
             active_mapping_file: "default.json".to_string(),
             mapping_quick_switches: Vec::new(),
+            quick_switch_enabled: true,
+            macro_preset_enabled: true,
             mapping_label_opacity: 0.3,
             mapping_button_scale: 1.0,
             language: DEFAULT_LANGUAGE.to_string(),
@@ -301,6 +307,14 @@ impl LocalConfig {
         CONFIG.read().unwrap().mapping_quick_switches.clone()
     }
 
+    pub fn get_quick_switch_enabled() -> bool {
+        CONFIG.read().unwrap().quick_switch_enabled
+    }
+
+    pub fn get_macro_preset_enabled() -> bool {
+        CONFIG.read().unwrap().macro_preset_enabled
+    }
+
     define_setter!(
         (web_port, u16),
         (web_bind_addr, Ipv4Addr),
@@ -316,6 +330,8 @@ impl LocalConfig {
         (mapping_enabled, bool),
         (active_mapping_file, String),
         (mapping_quick_switches, Vec<MappingQuickSwitch>),
+        (quick_switch_enabled, bool),
+        (macro_preset_enabled, bool),
         (mapping_label_opacity, f32),
         (mapping_button_scale, f32),
         (language, String),

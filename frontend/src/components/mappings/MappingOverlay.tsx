@@ -49,19 +49,21 @@ function overlayColor(tone: MappingOverlayTone) {
 
 type MappingOverlayProviderProps = PropsWithChildren<{
   showAllGuides: boolean;
+  showRandomRanges: boolean;
   viewportOrigin: { left: number; top: number } | null;
   viewportSize: { width: number; height: number };
 }>;
 
 export function MappingOverlayProvider({
   showAllGuides,
+  showRandomRanges,
   viewportOrigin,
   viewportSize,
   children,
 }: MappingOverlayProviderProps) {
   return (
     <MappingOverlayContext.Provider
-      value={{ showAllGuides, viewportOrigin, viewportSize }}
+      value={{ showAllGuides, showRandomRanges, viewportOrigin, viewportSize }}
     >
       {children}
     </MappingOverlayContext.Provider>

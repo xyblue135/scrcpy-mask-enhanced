@@ -277,6 +277,20 @@
       },
       "name": "方向轮盘施法"
     },
+    "wheel": {
+      "setting": {
+        "title": "映射配置 - 轮盘专用按钮",
+        "center": "轮盘中心",
+        "setCenter": "居中",
+        "radius": "轮盘半径",
+        "count": "分格数量",
+        "enableRandomization": "随机化",
+        "editLabel": "高级编辑",
+        "edit": "编辑",
+        "back": "返回"
+      },
+      "name": "轮盘专用按钮"
+    },
     "cancelCast": {
       "setting": {
         "title": "映射配置 - 取消施法"
@@ -365,7 +379,24 @@
       "size": "尺寸",
       "differentName": "新配置名不能与当前文件名相同！",
       "duplicateTitle": "复制配置",
-      "showGuides": "辅助范围"
+      "showGuides": "辅助范围",
+      "showRandomRanges": "随机范围",
+      "macroPreset": "宏预设",
+      "quickSwitchEnabled": "开启预设切换（全局）",
+      "quickSwitchOn": "预设切换",
+      "quickSwitchOff": "关",
+      "macroPresetEnabled": "开启宏预设（全局）",
+      "macroPresetOn": "宏预设",
+      "macroPresetOff": "关",
+      "boundSettings": "已绑定设置",
+      "boundSettingsTitle": "已绑定设置",
+      "boundSettingsHint": "以下按键已被预设切换或宏预设占用，下方的按键映射配置将无法使用这些按键。",
+      "boundPresetSwitch": "预设切换绑定",
+      "boundMacroPreset": "宏预设绑定",
+      "noBoundKeys": "暂无绑定按键",
+      "unbound": "未绑定",
+      "quickSwitchUpdated": "预设切换设置已更新",
+      "macroPresetUpdated": "宏预设设置已更新"
     },
     "script": {
       "setting": {

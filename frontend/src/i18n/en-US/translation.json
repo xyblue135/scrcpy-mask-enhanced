@@ -277,6 +277,20 @@
       },
       "name": "PadCastSpell"
     },
+    "wheel": {
+      "setting": {
+        "title": "Mapping Configuration - Wheel",
+        "center": "Wheel center",
+        "setCenter": "Center",
+        "radius": "Wheel radius",
+        "count": "Sector count",
+        "enableRandomization": "Randomization",
+        "editLabel": "Advanced editing",
+        "edit": "Edit",
+        "back": "Back"
+      },
+      "name": "Wheel"
+    },
     "cancelCast": {
       "setting": {
         "title": "Mapping Configuration - CancelCast"
@@ -365,7 +379,24 @@
       "size": "Size",
       "differentName": "The new config name cannot be the same as the current config!",
       "duplicateTitle": "Duplicate the config",
-      "showGuides": "Guides"
+      "showGuides": "Guides",
+      "showRandomRanges": "Random ranges",
+      "macroPreset": "Macro presets",
+      "quickSwitchEnabled": "Enable preset switching (global)",
+      "quickSwitchOn": "Preset switch",
+      "quickSwitchOff": "Off",
+      "macroPresetEnabled": "Enable macro presets (global)",
+      "macroPresetOn": "Macro presets",
+      "macroPresetOff": "Off",
+      "boundSettings": "Bound settings",
+      "boundSettingsTitle": "Bound settings",
+      "boundSettingsHint": "The keys below are occupied by preset switching or macro presets. The mapping keys below cannot use these keys.",
+      "boundPresetSwitch": "Preset switch bindings",
+      "boundMacroPreset": "Macro preset bindings",
+      "noBoundKeys": "No bound keys",
+      "unbound": "Unbound",
+      "quickSwitchUpdated": "Preset switching settings updated",
+      "macroPresetUpdated": "Macro preset settings updated"
     },
     "script": {
       "setting": {

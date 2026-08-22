@@ -565,6 +565,8 @@ async fn get_mapping_list(
             "mapping_list": mapping_files,
             "active_mapping": file,
             "mapping_quick_switches": quick_switches,
+            "quick_switch_enabled": LocalConfig::get_quick_switch_enabled(),
+            "macro_preset_enabled": LocalConfig::get_macro_preset_enabled(),
         })),
     ))
 }
@@ -878,6 +880,13 @@ async fn migrate_mapping(
             }
             MappingType::Script(m) => {
                 m.position *= scale;
+            }
+            MappingType::Wheel(m) => {
+                m.position *= scale;
+                m.center *= scale;
+                m.radius *= scale.y;
+                m.random_offset_x *= scale.x;
+                m.random_offset_y *= scale.y;
             }
         });
 

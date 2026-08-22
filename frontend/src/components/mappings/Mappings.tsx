@@ -21,7 +21,9 @@ import {
   Splitter,
   Switch,
   Table,
+  Tag,
   Tooltip,
+  Typography,
   type TableProps,
 } from "antd";
 import {
@@ -51,6 +53,7 @@ import {
   SaveOutlined,
   SettingOutlined,
   SnippetsOutlined,
+  KeyOutlined,
 } from "@ant-design/icons";
 import IconButton from "../common/IconButton";
 import {
@@ -71,6 +74,7 @@ import ButtonDirectionPad from "./ButtonDirectionPad";
 import ButtonMouseCastSpell from "./ButtonMouseCastSpell";
 import { CursorPos, DeviceBackground, RefreshImageButton } from "./Common";
 import ButtonPadCastSpell from "./ButtonPadCastSpell";
+import ButtonWheel from "./ButtonWheel";
 import ButtonCancelCast from "./ButtonCancelCast";
 import ButtonObservation from "./ButtonObservation";
 import ButtonFps from "./ButtonFps";
@@ -83,6 +87,7 @@ import ButtonScript from "./ButtonScript";
 import MacroPresetModal, { isMacroScript, syncMacroScripts } from "./MacroPresetModal";
 import { MappingOverlayProvider } from "./MappingOverlay";
 import { EVENT_CODE_TO_KEY_CODE } from "./keyCode";
+import { setReservedKeys } from "./reservedKeys";
 
 type MappingQuickSwitch = {
   file: string;
@@ -574,6 +579,7 @@ const buttonTypes = [
   "Fire",
   "RawInput",
   "Script",
+  "Wheel",
 ];
 
 const mappingButtonMap = {
@@ -590,6 +596,7 @@ const mappingButtonMap = {
   Fire: ButtonFire,
   RawInput: ButtonRawInput,
   Script: ButtonScript,
+  Wheel: ButtonWheel,
 };
 
 const mappingConstructorMap: any = Object.fromEntries(
@@ -673,10 +680,12 @@ function Displayer({
   state,
   setState,
   showAllMappingGuides,
+  showRandomRanges,
 }: {
   state: EditState;
   setState: React.Dispatch<React.SetStateAction<EditState | null>>;
   showAllMappingGuides: boolean;
+  showRandomRanges: boolean;
 }) {
   const dispatch = useAppDispatch();
   const maskArea = useAppSelector((state) => state.other.maskArea);
@@ -885,6 +894,7 @@ function Displayer({
         </Dropdown>
         <MappingOverlayProvider
           showAllGuides={showAllMappingGuides}
+          showRandomRanges={showRandomRanges}
           viewportOrigin={overlayViewportOrigin}
           viewportSize={{ width: maskArea.width, height: maskArea.height }}
         >
@@ -935,9 +945,13 @@ export default function Mappings() {
   const [editState, setEditState] = useState<EditState | null>(null);
   const [mappingList, setMappingList] = useState<string[]>([]);
   const [mappingQuickSwitches, setMappingQuickSwitches] = useState<MappingQuickSwitch[]>([]);
+  const [quickSwitchEnabled, setQuickSwitchEnabled] = useState(true);
+  const [macroPresetEnabled, setMacroPresetEnabled] = useState(true);
   const [showAllMappingGuides, setShowAllMappingGuides] = useState(false);
+  const [showRandomRanges, setShowRandomRanges] = useState(false);
   const [positionUnlocked, setPositionUnlocked] = useState(false);
   const [isMacroManagerOpen, setIsMacroManagerOpen] = useState(false);
+  const [isBoundSettingsOpen, setIsBoundSettingsOpen] = useState(false);
   const [validationDiagnostics, setValidationDiagnostics] = useState<
     MappingDiagnostic[]
   >([]);
@@ -967,6 +981,25 @@ export default function Mappings() {
     }
   }, [activeMappingFile]);
 
+  // 收集被占用按键：预设切换快捷键 + 宏预设绑定的按键。
+  // 关闭对应全局开关时不再占用，允许下方按键使用。
+  useEffect(() => {
+    const reserved = new Set<string>();
+    if (quickSwitchEnabled) {
+      mappingQuickSwitches.forEach((qs) => {
+        qs.shortcut.forEach((k) => reserved.add(k));
+      });
+    }
+    if (macroPresetEnabled) {
+      (editState?.current.mappings ?? [])
+        .filter(isMacroScript)
+        .forEach((m) => {
+          m.bind.forEach((k) => reserved.add(k));
+        });
+    }
+    setReservedKeys(reserved);
+  }, [mappingQuickSwitches, editState, quickSwitchEnabled, macroPresetEnabled]);
+
   async function loadMappingList(silent: boolean = false) {
     if (!silent) dispatch(setIsLoading(true));
     try {
@@ -974,9 +1007,13 @@ export default function Mappings() {
         mapping_list: string[];
         active_mapping: string;
         mapping_quick_switches: MappingQuickSwitch[];
+        quick_switch_enabled: boolean;
+        macro_preset_enabled: boolean;
       }>("/api/mapping/get_mapping_list");
       setMappingList(res.data.mapping_list);
       setMappingQuickSwitches(res.data.mapping_quick_switches ?? []);
+      setQuickSwitchEnabled(res.data.quick_switch_enabled ?? true);
+      setMacroPresetEnabled(res.data.macro_preset_enabled ?? true);
       if (activeMappingFile !== res.data.active_mapping)
         dispatch(setActiveMappingFile(res.data.active_mapping));
 
@@ -992,6 +1029,22 @@ export default function Mappings() {
       if (!silent) messageApi?.error(error);
     }
     if (!silent) dispatch(setIsLoading(false));
+  }
+
+  async function updateGlobalToggle(key: string, value: boolean) {
+    try {
+      await requestPost<{ config: any }>("/api/config/update", {
+        key,
+        value,
+      });
+      if (key === "quick_switch_enabled") setQuickSwitchEnabled(value);
+      if (key === "macro_preset_enabled") setMacroPresetEnabled(value);
+      messageApi?.success(
+        t(key === "quick_switch_enabled" ? "mappings.home.quickSwitchUpdated" : "mappings.home.macroPresetUpdated"),
+      );
+    } catch (error: any) {
+      messageApi?.error(error);
+    }
   }
 
   async function changeDisplayedMapping(file: string) {
@@ -1023,8 +1076,59 @@ export default function Mappings() {
   }
 
   async function changeActiveMapping(file: string) {
+    if (!macroPresetEnabled) {
+      // 宏预设关闭：直接切换，不合并宏预设，也不受切换影响
+      dispatch(setIsLoading(true));
+      try {
+        const res = await requestPost("/api/mapping/change_active_mapping", {
+          file,
+        });
+        dispatch(setActiveMappingFile(file));
+        messageApi?.success(res.message);
+      } catch (error: any) {
+        messageApi?.error(error);
+      }
+      dispatch(setIsLoading(false));
+      return;
+    }
     dispatch(setIsLoading(true));
     try {
+      // 保留当前已激活配置中的宏预设，合并到目标预设中，使宏预设不随预设切换而丢失
+      const currentRes = await requestGet<{ mapping_config: MappingConfig }>(
+        "/api/mapping/read_mapping",
+        { file: activeMappingFile },
+      );
+      const currentConfig = normalizeMappingConfig(
+        currentRes.data.mapping_config,
+      );
+      const currentMacros = currentConfig.mappings.filter(isMacroScript);
+
+      if (currentMacros.length > 0 && file !== activeMappingFile) {
+        const targetRes = await requestGet<{ mapping_config: MappingConfig }>(
+          "/api/mapping/read_mapping",
+          { file },
+        );
+        const targetConfig = normalizeMappingConfig(
+          targetRes.data.mapping_config,
+        );
+        const targetMacroIds = new Set(
+          targetConfig.mappings.filter(isMacroScript).map((m) => m.id),
+        );
+        const mergedMacros = currentMacros.filter(
+          (m) => !targetMacroIds.has(m.id),
+        );
+        if (mergedMacros.length > 0) {
+          const merged = syncMacroScripts({
+            ...targetConfig,
+            mappings: [...targetConfig.mappings, ...mergedMacros],
+          });
+          await requestPost("/api/mapping/update_mapping", {
+            file,
+            config: merged,
+          });
+        }
+      }
+
       const res = await requestPost("/api/mapping/change_active_mapping", {
         file,
       });
@@ -1354,7 +1458,29 @@ export default function Mappings() {
               disabled={!editState}
               onClick={() => setIsMacroManagerOpen(true)}
             >
-              宏预设
+              {t("mappings.home.macroPreset")}
+            </Button>
+            <Tooltip title={t("mappings.home.quickSwitchEnabled")}>
+              <Switch
+                checked={quickSwitchEnabled}
+                onChange={(v) => updateGlobalToggle("quick_switch_enabled", v)}
+                checkedChildren={t("mappings.home.quickSwitchOn")}
+                unCheckedChildren={t("mappings.home.quickSwitchOff")}
+              />
+            </Tooltip>
+            <Tooltip title={t("mappings.home.macroPresetEnabled")}>
+              <Switch
+                checked={macroPresetEnabled}
+                onChange={(v) => updateGlobalToggle("macro_preset_enabled", v)}
+                checkedChildren={t("mappings.home.macroPresetOn")}
+                unCheckedChildren={t("mappings.home.macroPresetOff")}
+              />
+            </Tooltip>
+            <Button
+              icon={<KeyOutlined />}
+              onClick={() => setIsBoundSettingsOpen(true)}
+            >
+              {t("mappings.home.boundSettings")}
             </Button>
             <Button
               type={showAllMappingGuides ? "primary" : "default"}
@@ -1362,6 +1488,13 @@ export default function Mappings() {
               onClick={() => setShowAllMappingGuides((value) => !value)}
             >
               {t("mappings.home.showGuides")}
+            </Button>
+            <Button
+              type={showRandomRanges ? "primary" : "default"}
+              icon={<EyeOutlined />}
+              onClick={() => setShowRandomRanges((value) => !value)}
+            >
+              {t("mappings.home.showRandomRanges")}
             </Button>
             <RefreshImageButton />
           </Space>
@@ -1380,6 +1513,7 @@ export default function Mappings() {
                 state={editState}
                 setState={setEditState}
                 showAllMappingGuides={showAllMappingGuides}
+                showRandomRanges={showRandomRanges}
               />
             </Splitter.Panel>
             <Splitter.Panel />
@@ -1387,6 +1521,60 @@ export default function Mappings() {
         )}
       </section>
       </Flex>
+      <Modal
+        open={isBoundSettingsOpen}
+        onCancel={() => setIsBoundSettingsOpen(false)}
+        footer={null}
+        title={t("mappings.home.boundSettingsTitle")}
+      >
+        <div className="mb-2">
+          <Typography.Text type="secondary">
+            {t("mappings.home.boundSettingsHint")}
+          </Typography.Text>
+        </div>
+        <Typography.Title level={5}>
+          {t("mappings.home.boundPresetSwitch")}
+        </Typography.Title>
+        {mappingQuickSwitches.filter((qs) => qs.shortcut.length > 0).length === 0 ? (
+          <Typography.Text type="secondary">
+            {t("mappings.home.noBoundKeys")}
+          </Typography.Text>
+        ) : (
+          <ul className="list-none m-0 p-0">
+            {mappingQuickSwitches
+              .filter((qs) => qs.shortcut.length > 0)
+              .map((qs) => (
+                <li key={qs.file} className="mb-1">
+                  <Tag color="blue">{qs.shortcut.join("+")}</Tag>
+                  <Typography.Text>{qs.file}</Typography.Text>
+                </li>
+              ))}
+          </ul>
+        )}
+        <Typography.Title level={5}>
+          {t("mappings.home.boundMacroPreset")}
+        </Typography.Title>
+        {(() => {
+          const macros = (editState?.current.mappings ?? []).filter(isMacroScript);
+          if (macros.length === 0) {
+            return (
+              <Typography.Text type="secondary">
+                {t("mappings.home.noBoundKeys")}
+              </Typography.Text>
+            );
+          }
+          return (
+            <ul className="list-none m-0 p-0">
+              {macros.map((m) => (
+                <li key={m.id} className="mb-1">
+                  <Tag color="green">{m.bind.length > 0 ? m.bind.join("+") : t("mappings.home.unbound")}</Tag>
+                  <Typography.Text ellipsis>{m.note}</Typography.Text>
+                </li>
+              ))}
+            </ul>
+          );
+        })()}
+      </Modal>
     </>
   );
 }

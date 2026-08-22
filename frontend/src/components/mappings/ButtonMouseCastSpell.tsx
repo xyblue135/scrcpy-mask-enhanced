@@ -15,6 +15,7 @@ import {
 import {
   clientPositionToMappingPosition,
   mappingButtonDragFactory,
+  mappingButtonPosition,
   mappingButtonScaledPresetStyle,
   mappingButtonTransformStyle,
 } from "./tools";
@@ -42,7 +43,10 @@ import {
   MappingOverlayPathGroup,
   type MappingOverlayPathGroupShape,
 } from "./MappingOverlay";
-import { useMappingGuideState } from "./MappingOverlayContext";
+import {
+  useMappingGuideState,
+  useMappingRandomRangeVisible,
+} from "./MappingOverlayContext";
 
 function projectedCastRadii(
   radius: number,
@@ -142,6 +146,19 @@ export default function ButtonMouseCastSpell({
       radius: config.drag_radius * scale.y,
     };
   }, [config.drag_radius, config.position, scale]);
+
+  const showRandomRange = useMappingRandomRangeVisible(false);
+
+  const randomRangeShape = useMemo<MappingOverlayCircleShape | null>(() => {
+    const radius = Math.max(config.random_offset_x, config.random_offset_y);
+    if (!showRandomRange || radius <= 0) return null;
+    const center = mappingButtonPosition(config.position.x, config.position.y, scale);
+    return {
+      centerX: center.x,
+      centerY: center.y,
+      radius: Math.max(radius * Math.max(scale.x, scale.y), 6),
+    };
+  }, [showRandomRange, config.random_offset_x, config.random_offset_y, config.position, scale]);
 
   const castProjectionShape = useMemo<MappingOverlayPathGroupShape | null>(() => {
     if (
@@ -243,6 +260,11 @@ export default function ButtonMouseCastSpell({
         shape={dragRadiusShape}
         visible={mappingGuide.visible}
         tone="drag"
+      />
+      <MappingOverlayCircle
+        shape={randomRangeShape ?? { centerX: 0, centerY: 0, radius: 0 }}
+        visible={randomRangeShape !== null}
+        tone="boundary"
       />
       <Flex
         id={id}

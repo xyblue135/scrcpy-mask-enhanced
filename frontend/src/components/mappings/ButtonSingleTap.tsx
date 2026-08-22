@@ -3,6 +3,7 @@ import type { MappingUpdater, SingleTapConfig } from "./mapping";
 import { Flex, InputNumber, Switch, Tooltip, Typography } from "antd";
 import {
   mappingButtonDragFactory,
+  mappingButtonPosition,
   mappingButtonScaledPresetStyle,
   mappingButtonTransformStyle,
 } from "./tools";
@@ -18,6 +19,11 @@ import {
   SettingScriptHooks,
 } from "./Common";
 import { useTranslation } from "react-i18next";
+import {
+  MappingOverlayCircle,
+  type MappingOverlayCircleShape,
+} from "./MappingOverlay";
+import { useMappingRandomRangeVisible } from "./MappingOverlayContext";
 
 export default function ButtonSingleTap({
   index,
@@ -88,6 +94,19 @@ export default function ButtonSingleTap({
     setShowSetting(true);
   };
 
+  const showRandomRange = useMappingRandomRangeVisible(false);
+
+  const randomRangeShape = useMemo<MappingOverlayCircleShape | null>(() => {
+    const radius = Math.max(config.random_offset_x, config.random_offset_y);
+    if (!showRandomRange || radius <= 0) return null;
+    const center = mappingButtonPosition(config.position.x, config.position.y, scale);
+    return {
+      centerX: center.x,
+      centerY: center.y,
+      radius: Math.max(radius * Math.max(scale.x, scale.y), 6),
+    };
+  }, [showRandomRange, config.random_offset_x, config.random_offset_y, config.position, scale]);
+
   return (
     <>
       <SettingModal open={showSetting} onClose={() => setShowSetting(false)}>
@@ -104,6 +123,11 @@ export default function ButtonSingleTap({
           }}
         />
       </SettingModal>
+      <MappingOverlayCircle
+        shape={randomRangeShape ?? { centerX: 0, centerY: 0, radius: 0 }}
+        visible={randomRangeShape !== null}
+        tone="boundary"
+      />
       <Flex
         id={id}
         style={buttonStyle}

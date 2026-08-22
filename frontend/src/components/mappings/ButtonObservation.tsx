@@ -3,6 +3,7 @@ import type { MappingUpdater, ObservationConfig } from "./mapping";
 import { Flex, InputNumber, Space, Tooltip, Typography } from "antd";
 import {
   mappingButtonDragFactory,
+  mappingButtonPosition,
   mappingButtonScaledPresetStyle,
   mappingButtonTransformStyle,
 } from "./tools";
@@ -23,7 +24,10 @@ import {
   MappingOverlayCircle,
   type MappingOverlayCircleShape,
 } from "./MappingOverlay";
-import { useMappingGuideState } from "./MappingOverlayContext";
+import {
+  useMappingGuideState,
+  useMappingRandomRangeVisible,
+} from "./MappingOverlayContext";
 
 export default function ButtonObservation({
   index,
@@ -76,6 +80,19 @@ export default function ButtonObservation({
       radius: config.max_radius * scale.y,
     };
   }, [config.max_radius, config.position, scale]);
+
+  const showRandomRange = useMappingRandomRangeVisible(false);
+
+  const randomRangeShape = useMemo<MappingOverlayCircleShape | null>(() => {
+    const radius = Math.max(config.random_offset_x, config.random_offset_y);
+    if (!showRandomRange || radius <= 0) return null;
+    const center = mappingButtonPosition(config.position.x, config.position.y, scale);
+    return {
+      centerX: center.x,
+      centerY: center.y,
+      radius: Math.max(radius * Math.max(scale.x, scale.y), 6),
+    };
+  }, [showRandomRange, config.random_offset_x, config.random_offset_y, config.position, scale]);
 
   useEffect(() => {
     const element = document.getElementById(id);
@@ -135,6 +152,11 @@ export default function ButtonObservation({
           tone="observation"
         />
       )}
+      <MappingOverlayCircle
+        shape={randomRangeShape ?? { centerX: 0, centerY: 0, radius: 0 }}
+        visible={randomRangeShape !== null}
+        tone="boundary"
+      />
       <Flex
         id={id}
         style={buttonStyle}

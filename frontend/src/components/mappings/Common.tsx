@@ -31,6 +31,7 @@ import IconButton from "../common/IconButton";
 
 import type { ButtonBinding, MappingScriptHooks } from "./mapping";
 import { EVENT_CODE_TO_KEY_CODE, KEY_NAMES } from "./keyCode";
+import { isKeyReserved } from "./reservedKeys";
 import { debounce } from "../../utils";
 import { useTranslation } from "react-i18next";
 import { ItemBox } from "../common/ItemBox";
@@ -247,9 +248,12 @@ function mappingButtonBindFactory(
     e.preventDefault();
     if (!pressedKeys.has(e.code)) {
       if (e.code in EVENT_CODE_TO_KEY_CODE) {
-        pressedKeys.add(
-          EVENT_CODE_TO_KEY_CODE[e.code as keyof typeof EVENT_CODE_TO_KEY_CODE]
-        );
+        const key =
+          EVENT_CODE_TO_KEY_CODE[e.code as keyof typeof EVENT_CODE_TO_KEY_CODE];
+        if (isKeyReserved(key)) {
+          return;
+        }
+        pressedKeys.add(key);
         onBindChange([...pressedKeys]);
       } else {
         console.warn("Unknow keycode: ", e.code);
@@ -277,6 +281,9 @@ function mappingButtonBindFactory(
       e.button >= 0 && e.button < MOUSE_BUTTONS.length
         ? MOUSE_BUTTONS[e.button]
         : `M-Other-${e.button}`;
+    if (isKeyReserved(key)) {
+      return;
+    }
     pressedKeys.add(key);
     onBindChange([...pressedKeys]);
   };

@@ -16,6 +16,7 @@ import {
 import {
   clientPositionToMappingPosition,
   mappingButtonDragFactory,
+  mappingButtonPosition,
   mappingButtonScaledPresetStyle,
   mappingButtonTransformStyle,
 } from "./tools";
@@ -35,6 +36,11 @@ import {
 import { useTranslation } from "react-i18next";
 import { RollbackOutlined } from "@ant-design/icons";
 import { useMessageContext } from "../../hooks";
+import {
+  MappingOverlayCircle,
+  type MappingOverlayCircleShape,
+} from "./MappingOverlay";
+import { useMappingRandomRangeVisible } from "./MappingOverlayContext";
 
 export default function ButtonMultipleTap({
   index,
@@ -108,6 +114,20 @@ export default function ButtonMultipleTap({
     setShowSetting(true);
   };
 
+  const showRandomRange = useMappingRandomRangeVisible(false);
+
+  const randomRangeShape = useMemo<MappingOverlayCircleShape | null>(() => {
+    const radius = Math.max(config.random_offset_x, config.random_offset_y);
+    const position = config.items[0]?.position;
+    if (!showRandomRange || radius <= 0 || !position) return null;
+    const center = mappingButtonPosition(position.x, position.y, scale);
+    return {
+      centerX: center.x,
+      centerY: center.y,
+      radius: Math.max(radius * Math.max(scale.x, scale.y), 6),
+    };
+  }, [showRandomRange, config.random_offset_x, config.random_offset_y, config.items, scale]);
+
   return (
     <>
       <SettingModal open={showSetting} onClose={() => setShowSetting(false)}>
@@ -127,6 +147,11 @@ export default function ButtonMultipleTap({
           onIsEditingChange={(v) => setIsEditingPos(v)}
         />
       </SettingModal>
+      <MappingOverlayCircle
+        shape={randomRangeShape ?? { centerX: 0, centerY: 0, radius: 0 }}
+        visible={randomRangeShape !== null}
+        tone="boundary"
+      />
       <Flex
         id={id}
         style={buttonStyle}

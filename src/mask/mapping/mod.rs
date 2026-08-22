@@ -15,6 +15,7 @@ pub mod serde_float;
 pub mod swipe;
 pub mod tap;
 pub mod utils;
+pub mod wheel;
 
 use bevy::prelude::*;
 use bevy_ineffable::prelude::*;
@@ -95,6 +96,7 @@ impl Plugin for MappingPlugins {
                     observation::init_observation,
                     raw_input::raw_input_init,
                     script::script_init,
+                    wheel::wheel_init,
                 ),
             )
             // normal mapping mode
@@ -124,12 +126,22 @@ impl Plugin for MappingPlugins {
                     cast_spell::handle_cancel_cast,
                     cast_spell::handle_pad_cast_spell,
                     cast_spell::handle_pad_cast_spell_trigger,
+                    wheel::handle_wheel,
+                    wheel::handle_wheel_trigger,
+                    wheel::handle_wheel_focus_lost,
                     observation::handle_observation,
                     observation::handle_observation_trigger,
                     observation::handle_observation_focus_lost,
                     fire::handle_fps,
                     // raw input won't work in fps mode
                     raw_input::handle_raw_input.run_if(not(in_state(CursorState::Fps))),
+                )
+                    .in_set(CursorFrameSet::HandleMappings)
+                    .run_if(in_state(MappingState::Normal)),
+            )
+            .add_systems(
+                Update,
+                (
                     // fire only works in fps mode
                     (fire::handle_fire, fire::handle_fire_trigger)
                         .run_if(in_state(CursorState::Fps)),
@@ -172,6 +184,7 @@ impl Plugin for MappingPlugins {
                     fire::cleanup_fire_on_stop,
                     fire::cleanup_fps_on_stop,
                     script::cleanup_script_on_stop,
+                    wheel::cleanup_wheel_on_stop,
                     cleanup_cursor_capture_on_stop,
                 )
                     .chain(),
@@ -189,6 +202,7 @@ impl Plugin for MappingPlugins {
                     fire::cleanup_fire_on_stop,
                     fire::cleanup_fps_on_stop,
                     script::cleanup_script_on_stop,
+                    wheel::cleanup_wheel_on_stop,
                     cleanup_cursor_capture_on_stop,
                 )
                     .chain(),

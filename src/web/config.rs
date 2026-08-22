@@ -18,7 +18,7 @@ use crate::{
         media::{AudioCodec, AudioSource, VideoCodec},
     },
     utils::{
-        IDENTIFIER, check_for_update, get_mask_scale_factor, mask_win_move_helper,
+        check_for_update, get_mask_scale_factor, mask_win_move_helper,
         share::{ControlledDevice, UpdateInfo},
     },
     web::{JsonResponse, WebServerError},
@@ -485,6 +485,30 @@ async fn update_config(
             return Err(WebServerError::bad_request(t!(
                 "web.config.clipboardSyncTypeError"
             )));
+        }
+        "quick_switch_enabled" => {
+            if let Some(value) = payload.value.as_bool() {
+                LocalConfig::set_quick_switch_enabled(value);
+                return Ok(JsonResponse::success(
+                    format!("quick switch enabled set to {value}"),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(
+                "quick_switch_enabled must be a boolean",
+            ));
+        }
+        "macro_preset_enabled" => {
+            if let Some(value) = payload.value.as_bool() {
+                LocalConfig::set_macro_preset_enabled(value);
+                return Ok(JsonResponse::success(
+                    format!("macro preset enabled set to {value}"),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(
+                "macro_preset_enabled must be a boolean",
+            ));
         }
         "scrcpy_module" => {
             let module: ScrcpyModuleConfig =

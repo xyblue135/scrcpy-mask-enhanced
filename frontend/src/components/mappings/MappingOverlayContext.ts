@@ -8,6 +8,7 @@ import {
 
 export type MappingOverlayContextValue = {
   showAllGuides: boolean;
+  showRandomRanges: boolean;
   viewportOrigin: { left: number; top: number } | null;
   viewportSize: { width: number; height: number };
 };
@@ -15,6 +16,7 @@ export type MappingOverlayContextValue = {
 export const MappingOverlayContext =
   createContext<MappingOverlayContextValue>({
     showAllGuides: false,
+    showRandomRanges: false,
     viewportOrigin: null,
     viewportSize: { width: 0, height: 0 },
   });
@@ -22,6 +24,12 @@ export const MappingOverlayContext =
 export function useMappingGuideVisible(localVisible: boolean) {
   const { showAllGuides } = useContext(MappingOverlayContext);
   return showAllGuides || localVisible;
+}
+
+/** Global visibility switch for the random-range observation circles. */
+export function useMappingRandomRangeVisible(localVisible: boolean) {
+  const { showRandomRanges } = useContext(MappingOverlayContext);
+  return showRandomRanges || localVisible;
 }
 
 export function useMappingGuideState(active: boolean) {

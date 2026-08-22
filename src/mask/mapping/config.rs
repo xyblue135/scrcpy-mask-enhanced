@@ -38,6 +38,7 @@ use crate::{
             BindMappingMultipleTap, BindMappingRepeatTap, BindMappingSingleTap, MappingMultipleTap,
             MappingRepeatTap, MappingSingleTap,
         },
+        wheel::{BindMappingWheel, MappingWheel},
         utils::Size,
     },
     utils::{is_safe_file_name, relate_to_data_path},
@@ -80,6 +81,8 @@ seq!(N in 1..=32 {
             RawInput~N,
             #[ineffable(continuous)]
             Script~N,
+            #[ineffable(continuous)]
+            Wheel~N,
         )*
     }
 
@@ -94,6 +97,7 @@ seq!(N in 1..=32 {
                     MappingAction::Observation~N => self.clone()._observation~N(),
                     MappingAction::Fire~N => self.clone()._fire~N(),
                     MappingAction::Script~N => self.clone()._script~N(),
+                    MappingAction::Wheel~N => self.clone()._wheel~N(),
                 )*
                 _ => panic!("ineff_continuous called on non-continuous variant"),
             }
@@ -210,7 +214,8 @@ impl_mapping_related! {
     Fps,
     Fire,
     RawInput,
-    Script
+    Script,
+    Wheel
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -356,6 +361,7 @@ impl BindMappingConfig {
                     BindMappingType::Fire(m) => (m.bind.to_string(), m.position.into()),
                     BindMappingType::RawInput(m) => (m.bind.to_string(), m.position.into()),
                     BindMappingType::Script(m) => (m.bind.to_string(), m.position.into()),
+                    BindMappingType::Wheel(m) => (m.bind.to_string(), m.position.into()),
                 };
                 (mapping, binding, pos, size)
             })
@@ -682,6 +688,7 @@ fn collect_mapping_specific_diagnostics(
                 &mapping.released_script,
             );
         }
+        MappingType::Wheel(_) => {}
     }
 }
 

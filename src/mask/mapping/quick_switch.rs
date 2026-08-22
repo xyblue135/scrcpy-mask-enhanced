@@ -25,6 +25,10 @@ pub fn handle_mapping_quick_switch(
     mut ineffable: IneffableCommands,
     mut active_mapping: ResMut<ActiveMappingConfig>,
 ) {
+    if !LocalConfig::get_quick_switch_enabled() {
+        return;
+    }
+
     if keys.get_just_pressed().next().is_none() {
         return;
     }
