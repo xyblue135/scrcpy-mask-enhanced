@@ -59,6 +59,12 @@ CONFIGURE_ARGS=(
 
 if [[ "$TARGET_OS" == "windows-x64" ]]; then
     CONFIGURE_ARGS+=("--toolchain=msvc")
+    # 启用 D3D11VA 硬件解码（h264/hevc），降低 CPU 占用并削减解码延迟尖峰
+    CONFIGURE_ARGS+=("--enable-d3d11va")
+    CONFIGURE_ARGS+=("--enable-hwaccel=h264_d3d11va")
+    CONFIGURE_ARGS+=("--enable-hwaccel=h264_d3d11va2")
+    CONFIGURE_ARGS+=("--enable-hwaccel=hevc_d3d11va")
+    CONFIGURE_ARGS+=("--enable-hwaccel=hevc_d3d11va2")
 fi
 
 if command -v nproc >/dev/null 2>&1; then

@@ -94,6 +94,7 @@ struct LatestVideoFrameInner {
 
 impl LatestVideoFrame {
     pub fn send(&self, mut msg: VideoMsg) {
+        let _t = crate::perf::timed("slot.send");
         if let Some(trace) = msg.trace_mut() {
             trace.queued_at = Some(std::time::Instant::now());
         }
@@ -105,6 +106,7 @@ impl LatestVideoFrame {
     }
 
     pub fn take(&self) -> Option<VideoMsg> {
+        let _t = crate::perf::timed("slot.take");
         let msg = self.inner.slot.lock().unwrap().take();
         if msg.as_ref().is_some_and(VideoMsg::is_video_frame) {
             self.inner.delivered_frames.fetch_add(1, Ordering::Relaxed);
@@ -123,8 +125,10 @@ impl LatestVideoFrame {
     pub fn take_buffer(&self, size: usize) -> Vec<u8> {
         let mut buffers = self.inner.buffers.lock().unwrap();
         let Some(index) = buffers.iter().position(|buffer| buffer.capacity() >= size) else {
+            crate::perf::incr("slot.buffer_miss");
             return vec![0; size];
         };
+        crate::perf::incr("slot.buffer_hit");
         let mut buffer = buffers.swap_remove(index);
         if buffer.len() != size {
             buffer.resize(size, 0);

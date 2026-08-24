@@ -13,7 +13,7 @@ use bevy::{
         system::{Commands, Local, Res, ResMut, Single},
     },
     math::Vec2,
-    prelude::{ButtonInput, IntoScheduleConfigs, MouseButton, Resource, SystemSet},
+    prelude::{ButtonInput, First, IntoScheduleConfigs, Last, MouseButton, Resource, SystemSet},
     time::{Time, Timer, TimerMode},
     window::{Window, WindowMoved, WindowPosition, WindowResized},
 };
@@ -59,6 +59,9 @@ impl Plugin for MaskPlugins {
             .init_resource::<MaskMaximizeState>()
             .init_resource::<VideoViewport>()
             .init_resource::<VideoAttributes>()
+            .init_resource::<FrameDiag>()
+            .add_systems(First, frame_start)
+            .add_systems(Last, record_update_sched)
             .configure_sets(
                 Update,
                 (MaskFrameSet::Resize, CursorFrameSet::UpdatePosition).chain(),
@@ -67,6 +70,7 @@ impl Plugin for MaskPlugins {
             .add_systems(
                 Update,
                 (
+                    record_frame_time,
                     handle_fullscreen_hotkey,
                     apply_pending_window_restore,
                     sync_mask_size.in_set(MaskFrameSet::Resize),
@@ -82,6 +86,41 @@ impl Plugin for MaskPlugins {
                 ),
             );
     }
+}
+
+/// Update 调度诊断：`First` 记起点，`Last` 算主循环耗时，供 `ui.frame_time` 拆分尖峰来源。
+#[derive(Resource, Default)]
+struct FrameDiag {
+    start: Option<std::time::Instant>,
+    /// 上一帧主循环（First→Last）耗时（纳秒）。
+    app_sched_nanos: u128,
+}
+
+/// `First` 调度起点：记录主循环开始时间。
+fn frame_start(mut diag: ResMut<FrameDiag>) {
+    diag.start = Some(std::time::Instant::now());
+}
+
+/// `Last` 调度终点：记录本帧主循环耗时（探针 `ui.app_sched`）。
+/// 主循环（First→Last）覆盖 PreUpdate/Update/PostUpdate 等全部主世界调度，
+/// 不含渲染世界的 Present 等待。
+fn record_update_sched(mut diag: ResMut<FrameDiag>) {
+    if let Some(start) = diag.start.take() {
+        diag.app_sched_nanos = start.elapsed().as_nanos();
+    }
+    crate::perf::record("ui.app_sched", diag.app_sched_nanos);
+}
+
+/// 记录 Bevy 每帧耗时（探针 `ui.frame_time`）：avg≈帧耗时，count≈每秒 UI 帧数。
+/// 同时拆出 `ui.app_sched`（主循环）与 `ui.present_wait`（渲染提交 + Present 等待）：
+/// 尖峰落在 present_wait → 改 PresentMode；落在 app_sched → 查 Update 系统。
+fn record_frame_time(time: Res<Time>, diag: Res<FrameDiag>) {
+    let frame_nanos = time.delta().as_nanos();
+    crate::perf::record("ui.frame_time", frame_nanos);
+    crate::perf::record(
+        "ui.present_wait",
+        frame_nanos.saturating_sub(diag.app_sched_nanos),
+    );
 }
 
 fn init_mask_size(mut commands: Commands, window: Single<&Window>) {

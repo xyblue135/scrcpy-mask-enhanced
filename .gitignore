@@ -18,3 +18,7 @@ CLAUDE.md
 /*.bak
 # LowCast: 运行时生成的用户配置，不进仓库（本地文件保留）
 /config.json
+# 性能监控：运行时数据与自测产物，不进仓库
+/perf.jsonl
+/perf_monitor/perf.jsonl
+/mock_perf.jsonl

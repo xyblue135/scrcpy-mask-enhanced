@@ -81,6 +81,10 @@ impl ControlMsgHelper {
         size: Vec2,
         pos: Vec2,
     ) {
+        // 画面尺寸任一维度 <=0（尚未就绪/已复位）时跳过注入，避免下游缩放除零
+        if size.x <= 0.0 || size.y <= 0.0 {
+            return;
+        }
         if let Err(e) = cs_tx.send(ScrcpyControlMsg::InjectTouchEvent {
             action,
             pointer_id,

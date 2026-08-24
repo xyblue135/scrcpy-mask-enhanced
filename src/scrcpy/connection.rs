@@ -33,10 +33,10 @@ use crate::{
         },
         control_msg::{ScrcpyControlMsg, ScrcpyDeviceMsg},
         media::{
-            AudioCodec, AudioDecoder, SC_CODEC_ID_AAC, SC_CODEC_ID_AV1, SC_CODEC_ID_FLAC,
-            SC_CODEC_ID_H264, SC_CODEC_ID_H265, SC_CODEC_ID_OPUS, SC_CODEC_ID_RAW, VideoCodec,
-            VideoDecoder, VideoFrameTrace, VideoMsg, YuvColorInfo, YuvMatrix, YuvPlaneLayout,
-            YuvRange, read_media_packet,
+            AudioCodec, AudioDecoder, MediaPacket, SC_CODEC_ID_AAC, SC_CODEC_ID_AV1,
+            SC_CODEC_ID_FLAC, SC_CODEC_ID_H264, SC_CODEC_ID_H265, SC_CODEC_ID_OPUS,
+            SC_CODEC_ID_RAW, VideoCodec, VideoDecoder, VideoFrameTrace, VideoMsg, YuvColorInfo,
+            YuvMatrix, YuvPlaneLayout, YuvRange, read_media_packet,
         },
     },
     utils::{LatestVideoFrame, share::ControlledDevice},
@@ -112,8 +112,11 @@ impl ScrcpyConnection {
                                         let (device_w, device_h) = watch_rx.borrow_and_update().clone();
                                         let (old_x, old_y) = (*x, *y);
                                         let (old_w, old_h) = (*w, *h);
-                                        *x = old_x * device_w as i32 / old_w as i32;
-                                        *y = old_y * device_h as i32 / old_h as i32;
+                                        // 防御：旧尺寸为 0 时不缩放，避免除零崩溃
+                                        if old_w > 0 && old_h > 0 {
+                                            *x = old_x * device_w as i32 / old_w as i32;
+                                            *y = old_y * device_h as i32 / old_h as i32;
+                                        }
                                         *w = device_w as u16;
                                         *h = device_h as u16;
                                     }
@@ -129,8 +132,11 @@ impl ScrcpyConnection {
                                         let (device_w, device_h) = watch_rx.borrow_and_update().clone();
                                         let (old_x, old_y) = (*x, *y);
                                         let (old_w, old_h) = (*w, *h);
-                                        *x = old_x * device_w as i32 / old_w as i32;
-                                        *y = old_y * device_h as i32 / old_h as i32;
+                                        // 防御：旧尺寸为 0 时不缩放，避免除零崩溃
+                                        if old_w > 0 && old_h > 0 {
+                                            *x = old_x * device_w as i32 / old_w as i32;
+                                            *y = old_y * device_h as i32 / old_h as i32;
+                                        }
                                         *w = device_w as u16;
                                         *h = device_h as u16;
                                     }
@@ -309,20 +315,21 @@ impl ScrcpyConnection {
             }
         };
 
-        let mut video_decoder = match VideoDecoder::new(codec_id, width, height) {
-            Ok(video_decoder) => video_decoder,
-            Err(e) => {
-                log::error!("[Controller] {}", e);
-                return;
-            }
-        };
+        // 解码与网络读取解耦：网络线程只负责读包并投递到有界队列，
+        // 解码在独立线程进行，避免软解偶发耗时（如关键帧）阻塞 socket 读取，
+        // 否则 TCP 积压会导致服务端丢帧、帧到达更不均匀。
+        let (packet_tx, packet_rx) = crossbeam_channel::bounded::<MediaPacket>(3);
 
-        // read video packets
-        let mut frame_sequence = 0u64;
+        let dec_v_tx = v_tx.clone();
+        let dec_thread = std::thread::Builder::new()
+            .name("video-decoder".to_string())
+            .spawn(move || video_decode_loop(codec_id, width, height, packet_rx, dec_v_tx))
+            .expect("failed to spawn video decoder thread");
+
+        // read video packets（网络线程）
         loop {
             match read_media_packet(&mut self.socket).await {
                 Ok(media_packet) => {
-                    let socket_received_at = media_packet.received_at();
                     if let Some(session) = media_packet.session() {
                         log::info!(
                             "[Controller] Video session: {}x{}, client_resize={}",
@@ -332,56 +339,7 @@ impl ScrcpyConnection {
                         );
                         continue;
                     }
-
-                    let packet = if video_decoder.must_merge_config {
-                        video_decoder.packet_merger.merge(media_packet)
-                    } else if media_packet.is_config() {
-                        None
-                    } else {
-                        Some(media_packet.into_ffmpeg_packet())
-                    };
-
-                    let Some(packet) = packet else {
-                        continue;
-                    };
-
-                    frame_sequence = frame_sequence.wrapping_add(1);
-                    let packet_pts = packet.pts();
-                    let mut decode_submitted_at = Instant::now();
-
-                    let submitted = match video_decoder.decoder.send_packet(&packet) {
-                        Ok(()) => true,
-                        Err(e) if is_ffmpeg_again(e) => {
-                            if !drain_video_decoder(&mut video_decoder, &v_tx) {
-                                break;
-                            }
-                            decode_submitted_at = Instant::now();
-                            match video_decoder.decoder.send_packet(&packet) {
-                                Ok(()) => true,
-                                Err(e) => {
-                                    log::warn!("[Controller] Failed to send video packet: {}", e);
-                                    false
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            log::warn!("[Controller] Failed to send video packet: {}", e);
-                            false
-                        }
-                    };
-
-                    if !submitted {
-                        continue;
-                    }
-
-                    video_decoder.track_packet(VideoFrameTrace::new(
-                        frame_sequence,
-                        packet_pts,
-                        socket_received_at,
-                        decode_submitted_at,
-                    ));
-
-                    if !drain_video_decoder(&mut video_decoder, &v_tx) {
+                    if packet_tx.send(media_packet).is_err() {
                         break;
                     }
                 }
@@ -391,6 +349,8 @@ impl ScrcpyConnection {
                 }
             }
         }
+        drop(packet_tx);
+        let _ = dec_thread.join();
     }
 
     pub async fn handle_video(
@@ -480,6 +440,7 @@ impl ScrcpyConnection {
                         let sample = i16::from_le_bytes([sample[0], sample[1]]);
                         sample as f32 / 32768.0
                     });
+                    let _t = crate::perf::timed("audio.queue_push");
                     let stats = audio_queue.push_samples(samples);
                     audio_queue.finish_push(input_frames, stats);
                 }
@@ -519,6 +480,7 @@ impl ScrcpyConnection {
                     let Some(audio_decoder) = decoder.as_mut() else {
                         continue;
                     };
+                    let _t = crate::perf::timed("audio.decode");
                     let packet = media_packet.into_ffmpeg_packet();
                     match audio_decoder.decoder.send_packet(&packet) {
                         Ok(()) => {}
@@ -572,11 +534,98 @@ impl ScrcpyConnection {
     }
 }
 
+/// 解码线程主循环：从有界队列取媒体包，解码后送入共享槽。
+/// 与网络读取线程解耦，软解耗时不再阻塞 socket 读取。
+fn video_decode_loop(
+    codec_id: VideoCodec,
+    width: u32,
+    height: u32,
+    packet_rx: crossbeam_channel::Receiver<MediaPacket>,
+    v_tx: LatestVideoFrame,
+) {
+    let mut video_decoder = match VideoDecoder::new(codec_id, width, height) {
+        Ok(video_decoder) => video_decoder,
+        Err(e) => {
+            log::error!("[Controller] {}", e);
+            return;
+        }
+    };
+
+    let mut frame_sequence = 0u64;
+    while let Ok(media_packet) = packet_rx.recv() {
+        let socket_received_at = media_packet.received_at();
+
+        let packet = {
+            let _t = crate::perf::timed("video.packet_merge");
+            if video_decoder.must_merge_config {
+                video_decoder.packet_merger.merge(media_packet)
+            } else if media_packet.is_config() {
+                None
+            } else {
+                Some(media_packet.into_ffmpeg_packet())
+            }
+        };
+
+        let Some(packet) = packet else {
+            continue;
+        };
+
+        frame_sequence = frame_sequence.wrapping_add(1);
+        let packet_pts = packet.pts();
+        let mut decode_submitted_at = Instant::now();
+
+        let submitted = {
+            let _t = crate::perf::timed("video.decode_submit");
+            match video_decoder.decoder.send_packet(&packet) {
+                Ok(()) => true,
+                Err(e) if is_ffmpeg_again(e) => {
+                    if !drain_video_decoder(&mut video_decoder, &v_tx) {
+                        return;
+                    }
+                    decode_submitted_at = Instant::now();
+                    match video_decoder.decoder.send_packet(&packet) {
+                        Ok(()) => true,
+                        Err(e) => {
+                            log::warn!("[Controller] Failed to send video packet: {}", e);
+                            false
+                        }
+                    }
+                }
+                Err(e) => {
+                    log::warn!("[Controller] Failed to send video packet: {}", e);
+                    false
+                }
+            }
+        };
+
+        if !submitted {
+            continue;
+        }
+
+        video_decoder.track_packet(VideoFrameTrace::new(
+            frame_sequence,
+            packet_pts,
+            socket_received_at,
+            decode_submitted_at,
+        ));
+
+        if !drain_video_decoder(&mut video_decoder, &v_tx) {
+            return;
+        }
+    }
+}
+
 fn drain_video_decoder(video_decoder: &mut VideoDecoder, v_tx: &LatestVideoFrame) -> bool {
     loop {
         let mut decoded = frame::Video::empty();
+        let _t = crate::perf::timed("video.decode_receive");
         match video_decoder.decoder.receive_frame(&mut decoded) {
             Ok(()) => {
+                // D3D11VA 硬件解码输出为 GPU 纹理帧，先下载为 CPU 软件帧（NV12）
+                let Some(decoded) = video_decoder.finalize_frame(decoded) else {
+                    continue;
+                };
+
                 let mut trace = video_decoder.take_trace(decoded.pts());
                 if let Some(trace) = trace.as_mut() {
                     trace.decode_output_at = Some(Instant::now());
@@ -597,6 +646,7 @@ fn drain_video_decoder(video_decoder: &mut VideoDecoder, v_tx: &LatestVideoFrame
                 let color = map_yuv_color_info(&decoded, format_changed);
                 let planes = YuvPlaneLayout::new(video_decoder.width, video_decoder.height);
 
+                let _t_copy = crate::perf::timed("video.plane_copy");
                 match decoded.format() {
                     Pixel::YUV420P => {
                         let y_size = (planes.y_width * planes.y_height) as usize;
@@ -753,14 +803,18 @@ fn drain_audio_decoder(
                     apply_audio_compensation(resampler, compensation);
                 }
 
-                let samples = match resample_audio_frame(resampler, &decoded) {
-                    Ok(samples) => samples,
-                    Err(e) => {
-                        log::warn!("[Controller] Failed to resample audio frame: {}", e);
-                        continue;
+                let samples = {
+                    let _t = crate::perf::timed("audio.resample");
+                    match resample_audio_frame(resampler, &decoded) {
+                        Ok(samples) => samples,
+                        Err(e) => {
+                            log::warn!("[Controller] Failed to resample audio frame: {}", e);
+                            continue;
+                        }
                     }
                 };
 
+                let _t_push = crate::perf::timed("audio.queue_push");
                 let stats = audio_queue.push_samples(samples);
                 if let Some(compensation) = audio_queue.finish_push(input_frames, stats) {
                     apply_audio_compensation(resampler, compensation);

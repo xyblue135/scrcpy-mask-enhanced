@@ -373,6 +373,7 @@ pub fn handle_video_msg(
                 mut trace,
             } => {
                 viewport.source_size = Vec2::new(width as f32, height as f32);
+                let _t = crate::perf::timed("ui.update_textures");
                 video_attr.update_yuv420p(
                     Yuv420pFrame {
                         y,
@@ -401,6 +402,7 @@ pub fn handle_video_msg(
                 mut trace,
             } => {
                 viewport.source_size = Vec2::new(width as f32, height as f32);
+                let _t = crate::perf::timed("ui.update_textures");
                 video_attr.update_nv12(
                     Nv12Frame {
                         y,

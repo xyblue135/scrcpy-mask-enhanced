@@ -85,7 +85,7 @@ fn main() {
                     has_shadow: false,
                     transparent: true, // for windows: https://github.com/bevyengine/bevy/issues/7544
                     decorations: false,
-                    present_mode: PresentMode::AutoNoVsync, // LowCast: prefer Immediate/Mailbox over VSync
+                    present_mode: PresentMode::Immediate, // LowCast: 显式 Immediate，present 完全不阻塞（可能有撕裂）
                     resizable: true,
                     visible: false,
                     focused: false,

@@ -13,6 +13,8 @@ const SC_PACKET_FLAG_CONFIG: u64 = 1u64 << 62;
 const SC_PACKET_FLAG_KEY_FRAME: u64 = 1u64 << 61;
 const SC_PACKET_PTS_MASK: u64 = SC_PACKET_FLAG_KEY_FRAME - 1;
 const MAX_MEDIA_PACKET_SIZE: usize = 64 * 1024 * 1024;
+/// 数据读取细分：首个数据块大小，作为「等待数据到达(延迟)」与「持续传输(带宽)」的分界。
+const FIRST_CHUNK_BYTES: usize = 64 * 1024;
 const SC_PACKET_TIME_BASE: Rational = Rational(1, 1_000_000);
 const SC_AUDIO_SAMPLE_RATE: i32 = 48_000;
 
@@ -114,12 +116,17 @@ impl MediaPacket {
 }
 
 pub async fn read_media_packet(socket: &mut TcpStream) -> std::result::Result<MediaPacket, String> {
+    // 记录读取一包媒体数据的墙钟时间（含网络等待，总量）。
+    let _t = crate::perf::timed("net.read_packet");
     // read header
     let mut header: [u8; 12] = [0; 12];
-    socket
-        .read_exact(&mut header)
-        .await
-        .map_err(|e| format!("{}: {}", t!("scrcpy.failedToReadFrameHeader"), e))?;
+    {
+        let _t_header = crate::perf::timed("net.read_header");
+        socket
+            .read_exact(&mut header)
+            .await
+            .map_err(|e| format!("{}: {}", t!("scrcpy.failedToReadFrameHeader"), e))?;
+    }
 
     let pts_flags = u64::from_be_bytes(header[0..8].try_into().unwrap());
     let len = u32::from_be_bytes(header[8..12].try_into().unwrap()) as usize;
@@ -146,12 +153,28 @@ pub async fn read_media_packet(socket: &mut TcpStream) -> std::result::Result<Me
         ));
     }
 
-    // read data
+    // read data（细分：first=首块等待/延迟，body=持续传输/带宽，bytes=吞吐量）
     let mut packet_data = vec![0u8; len];
-    socket
-        .read_exact(&mut packet_data)
-        .await
-        .map_err(|e| format!("{}: {}", t!("scrcpy.failedToReadFrameHeader"), e))?;
+    {
+        let _t_data = crate::perf::timed("net.read_data");
+        let first = len.min(FIRST_CHUNK_BYTES);
+        {
+            let _t_first = crate::perf::timed("net.read_data.first");
+            socket
+                .read_exact(&mut packet_data[..first])
+                .await
+                .map_err(|e| format!("{}: {}", t!("scrcpy.failedToReadFrameHeader"), e))?;
+        }
+        crate::perf::add_value("net.read_data.bytes", first as u64);
+        if len > first {
+            let _t_body = crate::perf::timed("net.read_data.body");
+            socket
+                .read_exact(&mut packet_data[first..])
+                .await
+                .map_err(|e| format!("{}: {}", t!("scrcpy.failedToReadFrameHeader"), e))?;
+            crate::perf::add_value("net.read_data.bytes", (len - first) as u64);
+        }
+    }
 
     let is_config = (pts_flags & SC_PACKET_FLAG_CONFIG) != 0;
     let pts = if is_config {
@@ -367,24 +390,13 @@ pub struct VideoDecoder {
     pub must_merge_config: bool,
     pub packet_merger: PacketMerger,
     pending_traces: VecDeque<VideoFrameTrace>,
+    /// 是否启用 D3D11VA 硬件解码（解码输出为 GPU 纹理帧，需下载到 CPU 后使用）
+    hw_decode: bool,
 }
 
 impl VideoDecoder {
     pub fn new(codec_id: VideoCodec, width: u32, height: u32) -> std::result::Result<Self, String> {
-        let codec = decoder::find(codec_id.into())
-            .ok_or_else(|| format!("FFmpeg decoder not found: {codec_id}"))?;
-        let mut codec_context = codec::Context::new_with_codec(codec);
-        let flags = unsafe {
-            let raw_flags = (*codec_context.as_mut_ptr()).flags;
-            let flags = codec::Flags::from_bits(raw_flags as std::ffi::c_uint)
-                .unwrap_or(codec::Flags::empty());
-            flags | codec::Flags::LOW_DELAY
-        };
-        codec_context.set_flags(flags);
-        let video_decoder = codec_context
-            .decoder()
-            .video()
-            .map_err(|e| format!("Failed to open FFmpeg decoder: {e}"))?;
+        let (video_decoder, hw_decode) = open_video_decoder(codec_id)?;
 
         Ok(Self {
             decoder: video_decoder,
@@ -395,7 +407,30 @@ impl VideoDecoder {
             packet_merger: PacketMerger::new(),
             pixel_format: None,
             pending_traces: VecDeque::with_capacity(16),
+            hw_decode,
         })
+    }
+
+    /// 若解码输出为 D3D11VA 硬件纹理帧，将其下载为 CPU 软件帧（NV12）；
+    /// 软解或其他格式则原样返回。
+    pub fn finalize_frame(&self, decoded: frame::Video) -> Option<frame::Video> {
+        if !self.hw_decode || !matches!(decoded.format(), Pixel::D3D11 | Pixel::D3D11VA_VLD) {
+            return Some(decoded);
+        }
+
+        let mut sw = frame::Video::empty();
+        let ret = {
+            let _t = crate::perf::timed("video.hw_transfer");
+            unsafe { ffi::av_hwframe_transfer_data(sw.as_mut_ptr(), decoded.as_ptr(), 0) }
+        };
+        if ret < 0 {
+            log::warn!(
+                "[Controller] Failed to download D3D11VA frame: {}",
+                ffmpeg_next::Error::from(ret)
+            );
+            return None;
+        }
+        Some(sw)
     }
 
     pub fn track_packet(&mut self, trace: VideoFrameTrace) {
@@ -431,6 +466,78 @@ impl VideoDecoder {
         } else {
             Ok(false)
         }
+    }
+}
+
+fn set_low_delay_flag(codec_context: &mut codec::Context) {
+    let flags = unsafe {
+        let raw_flags = (*codec_context.as_mut_ptr()).flags;
+        let flags = codec::Flags::from_bits(raw_flags as std::ffi::c_uint)
+            .unwrap_or(codec::Flags::empty());
+        flags | codec::Flags::LOW_DELAY
+    };
+    codec_context.set_flags(flags);
+}
+
+/// 打开视频解码器：优先尝试 D3D11VA 硬件解码（Windows + H.264/HEVC），
+/// 任一环节失败则回退到软件解码。返回 (解码器, 是否启用硬解)。
+fn open_video_decoder(
+    codec_id: VideoCodec,
+) -> std::result::Result<(decoder::Video, bool), String> {
+    let codec = decoder::find(codec_id.into())
+        .ok_or_else(|| format!("FFmpeg decoder not found: {codec_id}"))?;
+
+    #[cfg(target_os = "windows")]
+    if matches!(codec_id, VideoCodec::H264 | VideoCodec::H265) {
+        if let Some(mut hw_device_ctx) = create_d3d11va_device_ctx() {
+            let mut codec_context = codec::Context::new_with_codec(codec);
+            set_low_delay_flag(&mut codec_context);
+            unsafe {
+                (*codec_context.as_mut_ptr()).hw_device_ctx = ffi::av_buffer_ref(hw_device_ctx);
+                ffi::av_buffer_unref(&mut hw_device_ctx);
+            }
+            match codec_context.decoder().video() {
+                Ok(video_decoder) => {
+                    log::info!("[Controller] D3D11VA hardware decode enabled for {codec_id}");
+                    return Ok((video_decoder, true));
+                }
+                Err(e) => {
+                    log::warn!(
+                        "[Controller] D3D11VA decoder open failed ({e}), fallback to software decode"
+                    );
+                }
+            }
+        } else {
+            log::warn!("[Controller] D3D11VA hwdevice init failed, fallback to software decode");
+        }
+    }
+
+    let mut codec_context = codec::Context::new_with_codec(codec);
+    set_low_delay_flag(&mut codec_context);
+    let video_decoder = codec_context
+        .decoder()
+        .video()
+        .map_err(|e| format!("Failed to open FFmpeg decoder: {e}"))?;
+    Ok((video_decoder, false))
+}
+
+/// 创建 D3D11VA 硬件设备上下文（返回的引用由调用方负责释放）。
+#[cfg(target_os = "windows")]
+fn create_d3d11va_device_ctx() -> Option<*mut ffi::AVBufferRef> {
+    let mut hw_device_ctx = std::ptr::null_mut();
+    let ret = unsafe {
+        ffi::av_hwdevice_ctx_create(
+            &mut hw_device_ctx,
+            ffi::AVHWDeviceType::AV_HWDEVICE_TYPE_D3D11VA,
+            std::ptr::null(),
+            std::ptr::null_mut(),
+            0,
+        )
+    };
+    if ret < 0 {
+        None
+    } else {
+        Some(hw_device_ctx)
     }
 }
 

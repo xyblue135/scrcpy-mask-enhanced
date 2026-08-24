@@ -213,6 +213,7 @@ async fn handle_send(
     loop {
         match ws_rx.recv().await {
             Ok(msg) => {
+                let _t = crate::perf::timed("ws.send");
                 if sender.send(msg.into()).await.is_err() {
                     break;
                 }
@@ -238,6 +239,7 @@ async fn handle_recv(
     while let Some(Ok(msg)) = receiver.next().await {
         match msg {
             Message::Text(t) => {
+                let _t = crate::perf::timed("ws.recv");
                 let msg: WebSocketMsg = match serde_json::from_str(&t) {
                     Ok(m) => m,
                     Err(e) => {
