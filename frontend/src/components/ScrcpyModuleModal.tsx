@@ -366,6 +366,21 @@ export default function ScrcpyModulePage() {
         </Space>
       </Flex>
       <Alert showIcon type="info" message="参数以 scrcpy 4.0 server Options.java 为基线。Server 参数真实应用；Client Only 仅用于记录官方 scrcpy.exe 参数。连接标识、传输元数据和控制通道由 LowCast 管理，避免调试时破坏协议。" />
+      <Alert
+        showIcon
+        type="warning"
+        message="低延迟使用建议"
+        description={
+          <div style={{ whiteSpace: "pre-line" }}>
+            {`· 强烈建议使用 USB3.0 及以上接口进行数据传输，传输带宽直接决定码率上限与延迟表现。
+· 强烈建议使用高刷新率，高刷新率可以显著降低延迟。
+· 作者 xyblue135 使用的手机是红米 Redmi K100 Pro Max，配置了指定编码器低延迟 H.265 格式。
+· 在性能足够的情况下不建议使用虚拟屏幕（小米等厂商限制虚拟屏幕最大刷新率为 60fps，高刷需要 root 权限）。
+· 可以视情况降低分辨率来使用，例如改为 1600*900 分辨率。`}
+          </div>
+        }
+        style={{ marginBottom: 12 }}
+      />
 
       <Flex className="mt-4" gap="middle" align="center" wrap>
         <Typography.Text strong>启用参数模块</Typography.Text>

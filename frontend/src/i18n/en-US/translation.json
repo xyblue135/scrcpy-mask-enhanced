@@ -33,7 +33,9 @@
     "previewNotice": "This is a preview reference, not the instantaneous latency in the real environment.",
     "captureBoth": "Capture both phone & window",
     "measureTip": "Screenshots below are for reference only",
-    "measureTipDetail": "To accurately measure real streaming latency, use another phone to record the streaming window and the phone screen side by side. The game clock difference between the two screenshots is a rough reference, but their timestamp difference mainly reflects screenshot command latency, not the real streaming latency."
+    "measureTipDetail": "To accurately measure real streaming latency, use another phone to record the streaming window and the phone screen side by side. The game clock difference between the two screenshots is a rough reference, but their timestamp difference mainly reflects screenshot command latency, not the real streaming latency.",
+    "perfMonitorGuideTitle": "Want more detailed latency data? Use perf_monitor",
+    "perfMonitorGuideDetail": "The screenshot comparison above only gives a rough sense of overall latency. The main program writes per-stage probe timings (network read, video decode, UI render, audio decode, etc.) to perf.jsonl in the data directory every second.\nTo view detailed probe latency curves, configure perf_monitor yourself:\n1. Run python monitor.py inside the project perf_monitor directory (zero third-party deps, stdlib only);\n2. It listens on 127.0.0.1:8765 by default and opens a browser page automatically;\n3. While the main program runs, the page shows avg / p95 / max timings, FPS and dropped-frame stats in real time.\nOptions: --dir to set the perf.jsonl directory, --port to change the port, --host to change the listen address, --no-browser to skip opening the browser."
   },
   "devices": {
     "adbTools": {
@@ -405,6 +407,9 @@
       "hideIcons": "Hide icons",
       "customResolution": "Custom template resolution",
       "applyResolution": "Apply resolution",
+      "resolutionMustMatch": "Set the resolution manually; it MUST match your phone's screen resolution (no longer auto-synced from the device)",
+      "resolutionMismatchWarning": "A mismatched resolution will cause buttons to be misaligned!",
+      "resolutionMismatchDetail": "The custom resolution changes the coordinate basis for button positions. If it differs from the phone's actual resolution, buttons will be offset from where you placed them after streaming, causing mis-taps. Confirm the phone's current resolution before changing it (see the main device size on the Devices page).",
       "maskOverlay": "Mask overlay image",
       "maskOverlayDesc": "Overlay an image (map/floating) on the mask window. Put the image under assets/overlay/ and enter a relative path (e.g. overlay/map.png).",
       "overlayEnabled": "Enable overlay",

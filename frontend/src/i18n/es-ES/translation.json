@@ -33,7 +33,9 @@
     "previewNotice": "Esta es una referencia de vista previa, no la latencia instantánea real.",
     "captureBoth": "Capturar teléfono y ventana",
     "measureTip": "Las capturas siguientes son solo de referencia",
-    "measureTipDetail": "Para medir con precisión la latencia real de la transmisión, use otro teléfono para grabar la ventana de transmisión y la pantalla del teléfono simultáneamente. La diferencia del reloj del juego entre las dos capturas es una referencia aproximada, pero su diferencia de marca de tiempo refleja principalmente la latencia del comando de captura, no la latencia real."
+    "measureTipDetail": "Para medir con precisión la latencia real de la transmisión, use otro teléfono para grabar la ventana de transmisión y la pantalla del teléfono simultáneamente. La diferencia del reloj del juego entre las dos capturas es una referencia aproximada, pero su diferencia de marca de tiempo refleja principalmente la latencia del comando de captura, no la latencia real.",
+    "perfMonitorGuideTitle": "¿Quieres datos de latencia más detallados? Usa perf_monitor",
+    "perfMonitorGuideDetail": "La comparación de capturas anterior solo da una idea aproximada de la latencia general. El programa principal escribe mediciones por etapa (lectura de red, decodificación de video, renderizado de UI, decodificación de audio, etc.) en perf.jsonl en el directorio de datos cada segundo.\nPara ver curvas detalladas de latencia, configura perf_monitor tú mismo:\n1. Ejecuta python monitor.py en el directorio perf_monitor del proyecto (cero dependencias, solo biblioteca estándar);\n2. Por defecto escucha en 127.0.0.1:8765 y abre el navegador automáticamente;\n3. Mientras el programa principal se ejecuta, la página muestra avg / p95 / max de cada sonda, FPS y estadísticas de fotogramas perdidos en tiempo real.\nOpciones: --dir para el directorio de perf.jsonl, --port para el puerto, --host para la dirección, --no-browser para no abrir el navegador."
   },
   "devices": {
     "adbTools": {
@@ -390,6 +392,9 @@
       "hideIcons": "Ocultar iconos",
       "customResolution": "Resolución de plantilla personalizada",
       "applyResolution": "Aplicar resolución",
+      "resolutionMustMatch": "Configure la resolución manualmente; DEBE coincidir con la resolución de pantalla del teléfono (ya no se sincroniza automáticamente con el dispositivo)",
+      "resolutionMismatchWarning": "¡Una resolución diferente hará que los botones queden desalineados!",
+      "resolutionMismatchDetail": "La resolución personalizada cambia la base de conversión de coordenadas de los botones. Si difiere de la resolución real del teléfono, los botones se desplazarán de donde los colocó tras la transmisión, provocando toques incorrectos. Antes de cambiar, confirme la resolución actual del teléfono (consulte el tamaño del dispositivo principal en la página Dispositivos).",
       "maskOverlay": "Superponer imagen",
       "maskOverlayDesc": "Superponga una imagen (mapa/flotante) en la ventana de máscara. Coloque la imagen en assets/overlay/ e ingrese una ruta relativa (p. ej. overlay/map.png).",
       "overlayEnabled": "Habilitar superposición",

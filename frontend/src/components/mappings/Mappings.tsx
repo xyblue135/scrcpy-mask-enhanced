@@ -8,6 +8,7 @@ import {
 import * as MappingConstructor from "./mapping";
 
 import {
+  Alert,
   Badge,
   Button,
   Dropdown,
@@ -866,8 +867,26 @@ function Displayer({
 
   return (
     <div className="mapping-editor w-full">
-      <Flex justify="space-between">
-        <CursorPos ref={cursorPosRef} />
+      <Flex justify="space-between" align="center" gap={8} wrap>
+        <Flex gap={8} align="center" wrap>
+          <CursorPos ref={cursorPosRef} />
+          <Button
+            size="small"
+            type={rotated ? "primary" : "default"}
+            icon={<SwapOutlined />}
+            onClick={() => setRotated((v) => !v)}
+          >
+            {t("mappings.home.rotatePreview")}
+          </Button>
+          <Button
+            size="small"
+            type={hideIcons ? "primary" : "default"}
+            icon={hideIcons ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+            onClick={() => setHideIcons((v) => !v)}
+          >
+            {t("mappings.home.hideIcons")}
+          </Button>
+        </Flex>
         <Button
           type="text"
           size="small"
@@ -972,24 +991,6 @@ function Displayer({
             return <div key={index}></div>;
           })}
         </MappingOverlayProvider>
-        <Button
-          size="small"
-          type={rotated ? "primary" : "default"}
-          icon={<SwapOutlined />}
-          onClick={() => setRotated((v) => !v)}
-          style={{ position: "absolute", right: 4, top: 4, zIndex: 50 }}
-        >
-          {t("mappings.home.rotatePreview")}
-        </Button>
-        <Button
-          size="small"
-          type={hideIcons ? "primary" : "default"}
-          icon={hideIcons ? <EyeInvisibleOutlined /> : <EyeOutlined />}
-          onClick={() => setHideIcons((v) => !v)}
-          style={{ position: "absolute", right: 4, top: 32, zIndex: 50 }}
-        >
-          {t("mappings.home.hideIcons")}
-        </Button>
       </div>
       <Modal
         open={sizeEditOpen}
@@ -1015,6 +1016,20 @@ function Displayer({
           setSizeEditOpen(false);
         }}
       >
+        {/* 显著提示：分辨率必须与手机一致，不一致会错位 */}
+        <Alert
+          type="warning"
+          showIcon
+          message={t("mappings.home.resolutionMustMatch")}
+          style={{ marginBottom: 12 }}
+        />
+        <Alert
+          type="error"
+          showIcon
+          message={t("mappings.home.resolutionMismatchWarning")}
+          description={t("mappings.home.resolutionMismatchDetail")}
+          style={{ marginBottom: 12 }}
+        />
         <Flex align="center" gap={8}>
           <InputNumber
             min={1}

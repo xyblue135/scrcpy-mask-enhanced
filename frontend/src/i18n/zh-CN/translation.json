@@ -33,7 +33,9 @@
     "previewNotice": "此为预览参考，并非实际环境中的瞬间延迟。",
     "captureBoth": "同时截取手机与窗口",
     "measureTip": "下方截图仅供参考",
-    "measureTipDetail": "要准确测量真实投屏延迟，请用另一台手机拍摄「投屏窗口」和「手机屏幕」两个画面同时对比。两张截图的游戏时钟差可作粗略参考，但它们的时间戳差异主要反映截图指令耗时，并非真实投屏延迟。"
+    "measureTipDetail": "要准确测量真实投屏延迟，请用另一台手机拍摄「投屏窗口」和「手机屏幕」两个画面同时对比。两张截图的游戏时钟差可作粗略参考，但它们的时间戳差异主要反映截图指令耗时，并非真实投屏延迟。",
+    "perfMonitorGuideTitle": "想查看更详细的延迟探针数据？请使用 perf_monitor",
+    "perfMonitorGuideDetail": "上方截图对比只能粗略感知整体延迟。主程序每秒会把各环节耗时探针（网络读取、视频解码、UI 渲染、音频解码等）写入数据目录下的 perf.jsonl。\n如需查看详细探针延迟曲线，请自行配置 perf_monitor：\n1. 在项目 perf_monitor 目录下执行 python monitor.py（零第三方依赖，仅标准库）；\n2. 脚本默认监听 127.0.0.1:8765 并自动打开浏览器页面；\n3. 主程序运行期间页面实时展示各探针 avg / p95 / max 耗时曲线、帧率与丢帧统计。\n可选参数：--dir 指定 perf.jsonl 所在目录，--port 修改端口，--host 修改监听地址，--no-browser 不自动打开浏览器。"
   },
   "devices": {
     "adbTools": {
@@ -405,6 +407,9 @@
       "hideIcons": "隐藏图标",
       "customResolution": "自定义模板分辨率",
       "applyResolution": "应用分辨率",
+      "resolutionMustMatch": "分辨率需手动设置，且必须与手机屏幕分辨率一致（不再自动同步手机分辨率）",
+      "resolutionMismatchWarning": "分辨率不一致会导致按键位置错位！",
+      "resolutionMismatchDetail": "自定义分辨率会改变键位坐标的换算基准，如果与手机实际分辨率不一致，投屏后按键会偏离摆放位置，导致点击错位。修改前请先确认手机的当前分辨率（可在「设备」页查看主设备尺寸）。",
       "maskOverlay": "蒙版叠加图片",
       "maskOverlayDesc": "在蒙版窗口上叠加一张图片（地图/悬浮图）。图片放在程序 assets/overlay/ 目录下，填相对路径（如 overlay/map.png）。",
       "overlayEnabled": "启用叠加",

@@ -208,6 +208,19 @@ export default function LatencyCompare() {
         style={{ marginBottom: 16 }}
       />
 
+      {/* 详细探针延迟引导：截图对比只能感知整体延迟，细分延迟需自配 perf_monitor */}
+      <Alert
+        type="info"
+        showIcon
+        message={t("latencyCompare.perfMonitorGuideTitle")}
+        description={
+          <div style={{ whiteSpace: "pre-line" }}>
+            {t("latencyCompare.perfMonitorGuideDetail")}
+          </div>
+        }
+        style={{ marginBottom: 16 }}
+      />
+
       {/* 左右结构：左=手机，右=窗口 */}
       <Flex gap={16} wrap>
         {/* 左栏：手机截图 */}
