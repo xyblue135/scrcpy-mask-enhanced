@@ -3,36 +3,52 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-. "$SCRIPT_DIR/ffmpeg-env.sh"
+OUTPUT_DIR="$PROJECT_DIR/assets/platform-tools"
 
-if [[ "$SCRCPY_MASK_OS" != "linux-x64" ]]; then
-    echo "scripts/package-linux.sh only supports linux-x64" >&2
+# 从PATH查找adb
+ADB_BIN="$(command -v adb || true)"
+if [[ -z "$ADB_BIN" ]]; then
+    echo "ERROR: adb 未在PATH中找到，请安装 Android SDK Platform‑Tools" >&2
     exit 1
 fi
 
-"$SCRIPT_DIR/prepare-adb.sh"
-(cd "$PROJECT_DIR/frontend" && pnpm build)
-(cd "$PROJECT_DIR" && cargo build --release)
+# 解析符号链接拿到真实路径
+resolve_path() {
+    local path="$1"
+    while [[ -L "$path" ]]; do
+        local target
+        target="$(readlink "$path")"
+        if [[ "$target" == /* ]]; then
+            path="$target"
+        else
+            path="$(dirname "$path")/$target"
+        fi
+    done
+    local dir
+    dir="$(cd "$(dirname "$path")" && pwd -P)"
+    printf '%s/%s\n' "$dir" "$(basename "$path")"
+}
 
-BUNDLE_DIR="$PROJECT_DIR/target/release/tmp"
-ASSETS_DIR="$PROJECT_DIR/assets"
-BUILD_TARGET="$PROJECT_DIR/target/release/scrcpy-mask"
-OUTPUT_ZIP="$PROJECT_DIR/target/release/scrcpy-mask-$SCRCPY_MASK_OS.zip"
+ADB_BIN="$(resolve_path "$ADB_BIN")"
+ADB_DIR="$(dirname "$ADB_BIN")"
 
-rm -rf "$BUNDLE_DIR"
-mkdir -p "$BUNDLE_DIR"
-cp -R "$ASSETS_DIR" "$BUNDLE_DIR/"
-cp "$BUILD_TARGET" "$BUNDLE_DIR"
+echo "检测到adb: $ADB_BIN"
+echo "adb目录: $ADB_DIR"
 
-cat > "$BUNDLE_DIR/run.sh" <<'EOF'
-#!/usr/bin/env bash
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-"$SCRIPT_DIR/scrcpy-mask" "$@"
-EOF
-chmod +x "$BUNDLE_DIR/run.sh"
+rm -rf "$OUTPUT_DIR"
+mkdir -p "$OUTPUT_DIR"
 
-rm -f "$OUTPUT_ZIP"
-(cd "$BUNDLE_DIR" && zip -r "$OUTPUT_ZIP" ./*)
-rm -rf "$BUNDLE_DIR"
+cp "$ADB_BIN" "$OUTPUT_DIR/adb"
+chmod +x "$OUTPUT_DIR/adb"
 
-echo "Zip created: $OUTPUT_ZIP"
+# 可选文件，不存在直接跳过
+for file in NOTICE.txt source.properties; do
+    if [[ -f "$ADB_DIR/$file" ]]; then
+        cp "$ADB_DIR/$file" "$OUTPUT_DIR/"
+        echo "复制可选文件: $file"
+    else
+        echo "跳过可选文件: $file (本机未找到)"
+    fi
+done
+
+echo -e "\n✅ 完成，已打包adb：$ADB_BIN"
