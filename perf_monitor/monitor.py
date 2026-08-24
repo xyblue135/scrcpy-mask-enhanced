@@ -37,8 +37,8 @@ APP_IDENTIFIER = "com.akichase.scrcpy-mask"
 
 
 def default_data_dir() -> Path:
-    """默认读取主程序写在 perf_monitor/ 目录（本脚本同目录）下的 perf.jsonl。"""
-    return Path(__file__).resolve().parent
+    """默认读取主程序写在用户数据目录 data/（脚本同级上一层的 data/）下的 perf.jsonl。"""
+    return Path(__file__).resolve().parent.parent / "data"
 
 
 class PerfStore:

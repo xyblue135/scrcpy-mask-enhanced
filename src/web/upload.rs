@@ -7,9 +7,9 @@ use axum::{
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use crate::utils::relate_to_root_path;
+use crate::utils::relate_to_data_path;
 
-/// 上传目录（相对项目根目录）
+/// 上传目录（相对用户数据目录 data/）
 const UPLOAD_DIR: &str = "uploads";
 /// 可通过 URL 访问的静态前缀
 const UPLOAD_URL_PREFIX: &str = "/uploads";
@@ -31,7 +31,7 @@ async fn upload_file(
     State(_state): State<AppStateUpload>,
     mut multipart: Multipart,
 ) -> Result<axum::Json<serde_json::Value>, (StatusCode, String)> {
-    let save_dir = relate_to_root_path([UPLOAD_DIR]);
+    let save_dir = relate_to_data_path([UPLOAD_DIR]);
     std::fs::create_dir_all(&save_dir)
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("mkdir failed: {e}")))?;
 

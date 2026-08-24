@@ -25,7 +25,7 @@ use crate::{
         controller::ControllerCommand,
         device_action,
     },
-    utils::{VideoSnapshotResult, relate_to_root_path, share::ControlledDevice},
+    utils::{VideoSnapshotResult, relate_to_data_path, relate_to_root_path, share::ControlledDevice},
     web::{JsonResponse, WebServerError, ws::WebSocketNotification},
 };
 
@@ -845,7 +845,7 @@ async fn window_screenshot(
 ) -> Result<impl IntoResponse, WebServerError> {
     #[cfg(windows)]
     {
-        let save_dir = relate_to_root_path(["screenshots"]);
+        let save_dir = relate_to_data_path(["screenshots"]);
         std::fs::create_dir_all(&save_dir).map_err(|e| {
             WebServerError::internal_error(format!("failed to create screenshots dir: {e}"))
         })?;

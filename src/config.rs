@@ -12,7 +12,7 @@ use crate::{
         launch_options::ScrcpyModuleConfig,
         media::{AudioCodec, AudioSource, VideoCodec},
     },
-    utils::relate_to_root_path,
+    utils::{IDENTIFIER, relate_to_data_path, relate_to_root_path},
 };
 use once_cell::sync::Lazy;
 use paste::paste;
@@ -20,21 +20,61 @@ use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 use serde_json::to_string_pretty;
 
-// 旧版本把配置放在系统数据目录（Windows 上是 C 盘 AppData）。
-// 这里保留旧路径用于首次启动自动迁移到程序（源码）同级目录。
+// 最早版本把配置放在系统数据目录（Windows 上是 C 盘 AppData）。
+// 这里保留旧路径用于首次启动自动迁移到 data/ 目录。
 fn old_config_path() -> PathBuf {
     if let Some(data_dir) = dirs::data_dir() {
-        data_dir
-            .join("com.akichase.scrcpy-mask")
-            .join("config.json")
+        data_dir.join(IDENTIFIER).join("config.json")
     } else {
         relate_to_root_path(["config.json"])
     }
 }
 
-// 配置目录：用于“打开配置目录”按钮，指向程序（源码）同级目录。
+fn config_path() -> PathBuf {
+    relate_to_data_path(["config.json"])
+}
+
+/// 把旧版本存放在系统数据目录（C 盘 AppData）的键位映射预设
+/// 迁移到 data/mapping/。跨盘无法 rename，这里逐文件复制。
+fn migrate_legacy_mapping() {
+    let new_dir = relate_to_data_path(["mapping"]);
+    if new_dir.exists() {
+        return;
+    }
+    let Some(data_dir) = dirs::data_dir() else {
+        return;
+    };
+    let old_dir = data_dir.join(IDENTIFIER).join("mapping");
+    if !old_dir.is_dir() {
+        return;
+    }
+    let Ok(entries) = std::fs::read_dir(&old_dir) else {
+        return;
+    };
+    let mut moved = 0usize;
+    for entry in entries.flatten() {
+        let Ok(name) = entry.file_name().into_string() else {
+            continue;
+        };
+        if !crate::utils::is_safe_file_name(&name) {
+            continue;
+        }
+        let dest = new_dir.join(&name);
+        if !dest.exists() && std::fs::copy(entry.path(), &dest).is_ok() {
+            moved += 1;
+        }
+    }
+    if moved > 0 {
+        log::info!(
+            "[LocalConfig] 已迁移 {moved} 个映射预设到 {}",
+            new_dir.display()
+        );
+    }
+}
+
+// 配置目录：用于“打开配置目录”按钮，指向用户数据目录 data/。
 pub fn get_config_dir() -> PathBuf {
-    relate_to_root_path(["config.json"])
+    config_path()
         .parent()
         .map(|p| p.to_path_buf())
         .unwrap_or_else(|| PathBuf::from("."))
@@ -240,8 +280,8 @@ impl LocalConfig {
         let config_json = to_string_pretty(&Self::get())
             .map_err(|e| format!("{}: {}", t!("localConfig.serializeConfigError"), e))?;
 
-        // 配置文件保存在程序（源码）同级目录，而不是系统 AppData（C 盘）。
-        let path = relate_to_root_path(["config.json"]);
+        // 配置保存在用户数据目录 data/（程序同级），而不是系统 AppData（C 盘）。
+        let path = config_path();
         if let Some(parent) = path.parent() {
             create_dir_all(parent)
                 .map_err(|e| format!("{}: {}", t!("localConfig.createConfigDirError"), e))?;
@@ -254,22 +294,31 @@ impl LocalConfig {
     }
 
     pub fn load() -> Result<(), String> {
-        // 配置文件保存在程序（源码）同级目录，而不是系统 AppData（C 盘）。
-        let path = relate_to_root_path(["config.json"]);
-        // 首次启动：若新位置没有配置，但旧位置（C 盘 AppData）存在，则自动迁移。
+        let path = config_path();
+        // 首次启动：data/ 下没有配置时，依次尝试从旧位置迁移：
+        // 1) 程序同级的 config.json（上一版布局）
+        // 2) 系统数据目录（C 盘 AppData，更早版本）
         if !path.exists() {
-            let old = old_config_path();
-            if old.exists() && old != path {
-                if let Some(parent) = path.parent() {
-                    let _ = create_dir_all(parent);
-                }
-                if let Err(e) = std::fs::copy(&old, &path) {
-                    log::warn!("[LocalConfig] 迁移旧配置失败: {e}");
-                } else {
-                    log::info!("[LocalConfig] 已从旧位置迁移配置到 {}", path.display());
+            if let Some(parent) = path.parent() {
+                let _ = create_dir_all(parent);
+            }
+            for old in [relate_to_root_path(["config.json"]), old_config_path()] {
+                if old.exists() && old != path {
+                    if let Err(e) = std::fs::copy(&old, &path) {
+                        log::warn!("[LocalConfig] 迁移旧配置失败: {e}");
+                    } else {
+                        log::info!(
+                            "[LocalConfig] 已从旧位置 {} 迁移配置到 {}",
+                            old.display(),
+                            path.display()
+                        );
+                        break;
+                    }
                 }
             }
         }
+        // 键位映射预设同样从旧位置（C 盘 AppData）迁移到 data/mapping/。
+        migrate_legacy_mapping();
 
         if !path.exists() {
             // 没有任何配置时回到默认，保证首次启动可用。

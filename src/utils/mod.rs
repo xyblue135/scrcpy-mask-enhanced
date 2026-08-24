@@ -28,16 +28,18 @@ use crate::{
 pub const IDENTIFIER: &str = "com.akichase.scrcpy-mask";
 const VIDEO_BUFFER_POOL_LIMIT: usize = 12;
 
+/// 用户数据统一放在程序根目录下的 `data/` 子目录（config.json、mapping/、日志等）。
+/// 发布包里该目录不存在，首次运行自动创建，保证新用户从空白配置开始。
 pub fn relate_to_data_path<P>(segments: P) -> PathBuf
 where
     P: IntoIterator,
     P::Item: AsRef<Path>,
 {
-    segments
-        .into_iter()
-        .fold(dirs::data_dir().unwrap().join(IDENTIFIER), |acc, seg| {
-            acc.join(seg)
-        })
+    let mut path = get_base_root().join("data");
+    for seg in segments {
+        path = path.join(seg);
+    }
+    path
 }
 
 pub fn relate_to_root_path<P>(segments: P) -> PathBuf

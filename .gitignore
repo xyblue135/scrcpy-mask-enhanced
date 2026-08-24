@@ -25,3 +25,5 @@ CLAUDE.md
 # LowCast: 运行时自动生成的窗口截图与上传文件，不进仓库
 /screenshots/
 /uploads/
+# 用户数据目录（config.json、mapping/、日志、perf.jsonl 等运行时生成）
+/data/

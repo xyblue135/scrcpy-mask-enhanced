@@ -24,7 +24,7 @@ use tower_http::{
 use crate::{
     mask::mask_command::MaskCommand,
     scrcpy::{control_msg::ScrcpyControlMsg, controller::ControllerCommand},
-    utils::{VideoSnapshotResult, relate_to_root_path},
+    utils::{VideoSnapshotResult, relate_to_data_path, relate_to_root_path},
     web::ws::WebSocketNotification,
 };
 
@@ -113,7 +113,7 @@ impl Server {
 
         let router = Router::new()
             .nest_service("/assets", hashed_assets)
-            .nest_service("/uploads", ServeDir::new(relate_to_root_path(["uploads"])))
+            .nest_service("/uploads", ServeDir::new(relate_to_data_path(["uploads"])))
             .fallback_service(html_shell)
             .nest(
                 "/api/device",

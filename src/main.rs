@@ -24,7 +24,7 @@ use scrcpy_mask::{
     utils::{
         ChannelReceiverM, ChannelReceiverV, ChannelReceiverVideoSnapshot, ChannelSenderCS,
         ChannelSenderD, ChannelSenderWS, LatestVideoFrame, VideoSnapshotResult, check_for_update,
-        relate_to_data_path, relate_to_root_path, share::ControlledDevice,
+        relate_to_data_path, share::ControlledDevice,
     },
     web::{self, ws::WebSocketNotification},
 };
@@ -34,7 +34,11 @@ use tracing_appender::non_blocking::WorkerGuard;
 static LOG_GUARD: OnceLock<WorkerGuard> = OnceLock::new();
 
 fn log_custom_layer(_app: &mut App) -> Option<BoxedLayer> {
-    let file = File::create(relate_to_data_path(["app.log"])).unwrap_or_else(|e| {
+    let log_path = relate_to_data_path(["app.log"]);
+    if let Some(parent) = log_path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    let file = File::create(log_path).unwrap_or_else(|e| {
         panic!("Failed to create log file: {}", e);
     });
     let (non_blocking, guard) = tracing_appender::non_blocking(file);
@@ -201,8 +205,8 @@ fn perf_flush_system(runtime: ResMut<TokioTasksRuntime>, v_channel: Res<ChannelR
     runtime.spawn_background_task(move |_ctx| async move {
         use std::time::Duration;
         perf::register_all();
-        // 探针数据写到 perf_monitor 目录（与监控程序同目录），不占用系统 AppData。
-        let file = relate_to_root_path(["perf_monitor", "perf.jsonl"]);
+        // 探针数据写到用户数据目录 data/（与配置、日志同目录），不占用系统 AppData。
+        let file = relate_to_data_path(["perf.jsonl"]);
         if let Some(parent) = file.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
