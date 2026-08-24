@@ -37,8 +37,10 @@ APP_IDENTIFIER = "com.akichase.scrcpy-mask"
 
 
 def default_data_dir() -> Path:
-    """默认读取主程序写在用户数据目录 data/（脚本同级上一层的 data/）下的 perf.jsonl。"""
-    return Path(__file__).resolve().parent.parent / "data"
+    """默认读取主程序（release 构建）写在 target/release/data/ 下的 perf.jsonl。"""
+    return Path(
+        r"D:\0_desktop\2_Frequently_Used_Folders\scrcpy-mask-enhanced\scrcpy-mask-enhanced\target\release\data"
+    )
 
 
 class PerfStore:
