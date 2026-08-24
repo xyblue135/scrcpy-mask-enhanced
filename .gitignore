@@ -22,3 +22,6 @@ CLAUDE.md
 /perf.jsonl
 /perf_monitor/perf.jsonl
 /mock_perf.jsonl
+# LowCast: 运行时自动生成的窗口截图与上传文件，不进仓库
+/screenshots/
+/uploads/
