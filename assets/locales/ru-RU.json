@@ -198,6 +198,7 @@
     "failedToPushFile": "Не удалось отправить файл",
     "failedToPullFile": "Не удалось получить файл '%{file}' с устройства",
     "reverseFailed": "Не удалось перенаправить '%{remote}' на '%{local}'",
+    "reverseRemoveFailed": "Не удалось удалить reverse '%{remote}'",
     "forwardFailed": "Не удалось пробросить '{}' на '{}'",
     "adbShellCommandFailed": "Не удалось выполнить команду adb shell",
     "missingWidth": "Отсутствует ширина",

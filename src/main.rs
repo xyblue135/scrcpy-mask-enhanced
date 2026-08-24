@@ -14,7 +14,9 @@ use scrcpy_mask::{
     config::LocalConfig,
     is_available_language,
     mask::{MaskPlugins, mask_command::MaskCommand},
+    perf,
     scrcpy::{
+        adb,
         control_msg::ScrcpyControlMsg,
         controller::{self, ControllerCommand},
     },
@@ -22,7 +24,7 @@ use scrcpy_mask::{
     utils::{
         ChannelReceiverM, ChannelReceiverV, ChannelReceiverVideoSnapshot, ChannelSenderCS,
         ChannelSenderD, ChannelSenderWS, LatestVideoFrame, VideoSnapshotResult, check_for_update,
-        relate_to_data_path,
+        relate_to_data_path, relate_to_root_path, share::ControlledDevice,
     },
     web::{self, ws::WebSocketNotification},
 };
@@ -101,7 +103,12 @@ fn main() {
     )
     .add_plugins(TokioTasksPlugin::default())
     .add_plugins(MaskPlugins)
-    .add_systems(Startup, (start_servers, check_for_update_system));
+    .add_systems(Startup, (start_servers, check_for_update_system))
+    // ChannelReceiverV 由 start_servers 通过 Commands 延迟插入，
+    // 因此 perf_flush_system 必须放到 PostStartup（Startup 结束后资源才就绪），
+    // 否则会在 Startup 内与 start_servers 并行执行而读到不存在的资源。
+    .add_systems(PostStartup, perf_flush_system)
+    .add_systems(Update, on_app_exit);
 
     #[cfg(target_os = "macos")]
     {
@@ -169,6 +176,50 @@ fn check_for_update_system(runtime: ResMut<TokioTasksRuntime>) {
     runtime.spawn_background_task(move |_ctx| async move {
         if let Err(e) = check_for_update().await {
             log::error!("{}", e);
+        }
+    });
+}
+
+/// 程序退出时，移除本会话创建的所有 adb reverse 隧道（温和清理：不杀 adb 服务端）。
+/// 避免 adb server 上残留 `localabstract:scrcpy_*` 转发，导致设备端连接和端口一直占用。
+fn on_app_exit(mut exit_events: MessageReader<AppExit>) {
+    if exit_events.read().next().is_none() {
+        return;
+    }
+    for device in ControlledDevice::get_device_list_blocking() {
+        let remote = format!("localabstract:scrcpy_{}", device.scid);
+        if let Err(e) = adb::Device::reverse_remove(&device.device_id, &remote) {
+            log::warn!("[Adb] 移除反向隧道 {} 失败: {}", remote, e);
+        }
+    }
+}
+
+/// 每秒把性能探针快照 + 视频帧统计写入 perf.jsonl，供 perf_monitor 读取。
+fn perf_flush_system(runtime: ResMut<TokioTasksRuntime>, v_channel: Res<ChannelReceiverV>) {
+    // ChannelReceiverV 内部是 Arc，克隆只是引用计数 +1，可安全 move 进 'static 后台任务。
+    let v_frame = v_channel.0.clone();
+    runtime.spawn_background_task(move |_ctx| async move {
+        use std::time::Duration;
+        perf::register_all();
+        // 探针数据写到 perf_monitor 目录（与监控程序同目录），不占用系统 AppData。
+        let file = relate_to_root_path(["perf_monitor", "perf.jsonl"]);
+        if let Some(parent) = file.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let mut interval = tokio::time::interval(Duration::from_secs(1));
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        let mut prev_delivered = 0u64;
+        let mut prev_dropped = 0u64;
+        loop {
+            interval.tick().await;
+            let delivered = v_frame.delivered_frames();
+            let dropped = v_frame.dropped_frames();
+            let fps = (delivered.saturating_sub(prev_delivered)) as f64;
+            let delivered_delta = delivered.saturating_sub(prev_delivered);
+            let dropped_delta = dropped.saturating_sub(prev_dropped);
+            perf::flush_to_file(&file, fps, delivered_delta, dropped_delta);
+            prev_delivered = delivered;
+            prev_dropped = dropped;
         }
     });
 }

@@ -79,6 +79,18 @@ impl Device {
             })
     }
 
+    /// 移除本程序为该设备创建的 adb reverse 隧道（退出清理用，不动 adb 服务端）。
+    pub fn reverse_remove(id: &str, remote: &str) -> Result<(), String> {
+        let mut device = Device::new_server_device(id);
+        device.reverse_remove(remote.to_string()).map_err(|e| {
+            format!(
+                "{}: {}",
+                t!("adb.reverseRemoveFailed", remote => remote),
+                e
+            )
+        })
+    }
+
     pub fn shell_process<S>(id: &str, shell_args: S) -> JoinHandle<Result<(), String>>
     where
         S: IntoIterator,

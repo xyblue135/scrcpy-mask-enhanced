@@ -198,6 +198,7 @@
     "failedToPushFile": "No se pudo enviar el archivo",
     "failedToPullFile": "No se pudo extraer el archivo '%{file}' del dispositivo",
     "reverseFailed": "No se pudo hacer reverse de '%{remote}' a '%{local}'",
+    "reverseRemoveFailed": "No se pudo eliminar el reverse '%{remote}'",
     "forwardFailed": "No se pudo hacer forward de '{}' a '{}'",
     "adbShellCommandFailed": "No se pudo ejecutar el comando adb shell",
     "missingWidth": "Falta la anchura",

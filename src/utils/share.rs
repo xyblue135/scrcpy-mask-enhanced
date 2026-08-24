@@ -65,6 +65,11 @@ impl ControlledDevice {
         let device_list = CONTROLLED_DEVICES.blocking_read();
         device_list.iter().find(|device| device.main).cloned()
     }
+
+    pub fn get_device_list_blocking() -> Vec<ScrcpyDevice> {
+        let device_list = CONTROLLED_DEVICES.blocking_read();
+        device_list.clone()
+    }
 }
 
 #[derive(Clone, Serialize)]

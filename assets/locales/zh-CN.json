@@ -198,6 +198,7 @@
     "failedToPushFile": "文件推送失败",
     "failedToPullFile": "从设备拉取文件“%{file}”失败",
     "reverseFailed": "无法将 '%{remote}' 反向转发到为 '%{local}'",
+    "reverseRemoveFailed": "移除反向隧道 '%{remote}' 失败",
     "forwardFailed": "转发 '%{local}' 到 '%{remote}' 失败",
     "adbShellCommandFailed": "执行 adb shell 命令失败",
     "missingWidth": "缺少宽度",

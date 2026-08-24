@@ -198,6 +198,7 @@
     "failedToPushFile": "ファイルのプッシュに失敗しました",
     "failedToPullFile": "デバイスからファイル '%{file}' を pull できませんでした",
     "reverseFailed": "'%{remote}' を '%{local}' に reverse できませんでした",
+    "reverseRemoveFailed": "reverse '%{remote}' を削除できませんでした",
     "forwardFailed": "'{}' を '{}' に forward できませんでした",
     "adbShellCommandFailed": "adb shell コマンドの実行に失敗しました",
     "missingWidth": "幅がありません",

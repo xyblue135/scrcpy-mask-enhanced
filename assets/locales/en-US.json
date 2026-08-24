@@ -198,6 +198,7 @@
     "failedToPushFile": "Failed to push file",
     "failedToPullFile": "Failed to pull file '%{file}' from device",
     "reverseFailed": "Failed to reverse '%{remote}' to '%{local}'",
+    "reverseRemoveFailed": "Failed to remove reverse '%{remote}'",
     "forwardFailed": "Failed to forward '{}' to '{}'",
     "adbShellCommandFailed": "Failed to run adb shell command",
     "missingWidth": "Missing width",
