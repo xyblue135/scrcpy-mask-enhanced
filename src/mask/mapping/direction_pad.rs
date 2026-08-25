@@ -28,6 +28,7 @@ use crate::{
         },
     },
     mask::mask_command::MaskSize,
+    config::LocalConfig,
     scrcpy::constant::MotionEventAction,
     utils::ChannelSenderCS,
 };
@@ -305,7 +306,7 @@ fn random_distance_scale(mapping: &BindMappingDirectionPad) -> f32 {
 }
 
 fn randomize_direction_pad_state(state: Vec2, mapping: &BindMappingDirectionPad) -> Vec2 {
-    if mapping.enable_randomization {
+    if mapping.enable_randomization && LocalConfig::get_mapping_randomization_enabled() {
         state * random_distance_scale(mapping)
     } else {
         state
@@ -322,11 +323,17 @@ fn apply_direction_pad_down(
     state: Vec2,
 ) {
     let pointer_id = mapping.pointer_id;
+    let randomization = mapping.enable_randomization
+        && LocalConfig::get_mapping_randomization_enabled();
     let original_pos: Vec2 = mapping.position.into();
 
-    let random_offset = Vec2::new(mapping.random_offset_x, mapping.random_offset_y);
+    let random_offset = if LocalConfig::get_button_randomization_enabled() {
+        Vec2::new(mapping.random_offset_x, mapping.random_offset_y)
+    } else {
+        Vec2::ZERO
+    };
     let jitter_offset = Vec2::new(mapping.jitter_offset_x, mapping.jitter_offset_y);
-    let random_anchor = if mapping.enable_randomization {
+    let random_anchor = if randomization {
         random_offset_vec2(original_pos, random_offset)
     } else {
         original_pos
@@ -341,12 +348,12 @@ fn apply_direction_pad_down(
         random_anchor,
     );
 
-    let strategy = if mapping.enable_randomization {
+    let strategy = if randomization {
         SingleSwipeStrategy::ArcWithEaseOut
     } else {
         SingleSwipeStrategy::Linear
     };
-    let swipe_start = if mapping.enable_randomization {
+    let swipe_start = if randomization {
         random_anchor
     } else {
         original_pos
@@ -358,9 +365,14 @@ fn apply_direction_pad_down(
         original_size,
         swipe_start,
         swipe_start + actual_state,
-        mapping.initial_duration,
+        if randomization {
+            mapping.initial_duration
+        } else {
+            0
+        },
         DEFAULT_SWIPE_DURATION,
         strategy,
+        if randomization { 2.0 } else { 0.0 },
     );
 
     direction_pad_map.0.insert(
@@ -375,7 +387,7 @@ fn apply_direction_pad_down(
             last_state_actual: actual_state,
             next_jitter_at: next_jitter_deadline(),
             current_jitter: Vec2::ZERO,
-            enable_randomization: mapping.enable_randomization,
+            enable_randomization: randomization,
             jitter_offset,
             move_gen: Arc::new(AtomicU64::new(0)),
         },

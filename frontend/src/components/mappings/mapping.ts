@@ -74,6 +74,8 @@ export interface SingleTapConfig {
   stealth_mode?: boolean;
   /** Any ONE of these buttons cancels stealth by tapping the stealth coordinate again. */
   cancel_bind?: ButtonBinding;
+  /** LongPress: a dedicated "hold" button that presses and holds for `duration` ms. */
+  long_press?: boolean;
   type: "SingleTap";
 }
 
@@ -104,6 +106,17 @@ export function newStealthTap(position: Position): SingleTapConfig {
     ...newSingleTap(position),
     stealth_mode: true,
     cancel_bind: ["KeyW", "KeyA", "KeyS", "KeyD", "ShiftLeft", "ShiftRight"],
+    sync: false,
+  };
+}
+
+/** LongPress reuses SingleTap on the wire (type stays "SingleTap"), distinguished
+ *  by the `long_press` flag so old mapping files stay compatible. */
+export function newLongPress(position: Position): SingleTapConfig {
+  return {
+    ...newSingleTap(position),
+    long_press: true,
+    duration: 500,
     sync: false,
   };
 }
@@ -180,6 +193,8 @@ export interface SwipeConfig {
   id: string;
   bind: ButtonBinding;
   enable_randomization: boolean;
+  /** Simple Bezier wave: when on, the swipe follows a gentle curved path. */
+  bezier_wave: boolean;
   duration: number;
   note: string;
   pointer_id: number;
@@ -193,6 +208,7 @@ export function newSwipe(position: Position): SwipeConfig {
     id: newMappingId(),
     bind: [],
     enable_randomization: false,
+    bezier_wave: false,
     duration: 100,
     note: "",
     pointer_id: 1,
@@ -551,6 +567,8 @@ export function newScript(position: Position): ScriptConfig {
   };
 }
 
+export type WheelReleaseMode = "on_release" | "on_hover_delay";
+
 export interface WheelConfig {
   id: string;
   bind: ButtonBinding;
@@ -564,6 +582,12 @@ export interface WheelConfig {
   initial_duration: number;
   random_offset_x: number;
   random_offset_y: number;
+  dead_radius: number;
+  start_angle: number;
+  release_mode: WheelReleaseMode;
+  hover_delay_ms: number;
+  jitter_offset: number;
+  jitter_interval_ms: number;
   type: "Wheel";
 }
 
@@ -584,6 +608,12 @@ export function newWheel(position: Position): WheelConfig {
     initial_duration: 0,
     random_offset_x: default_random_offset,
     random_offset_y: default_random_offset,
+    dead_radius: 0,
+    start_angle: 0,
+    release_mode: "on_release",
+    hover_delay_ms: 300,
+    jitter_offset: 2,
+    jitter_interval_ms: 80,
     type: "Wheel",
   };
 }
@@ -676,6 +706,7 @@ export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
           return {
             ...mapping,
             id,
+            bezier_wave: mapping.bezier_wave ?? false,
             script_hooks: withDefaultScriptHooks(mapping.script_hooks),
           };
         case "Fire":
@@ -777,6 +808,12 @@ export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
             initial_duration: mapping.initial_duration ?? 0,
             random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
             random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
+            dead_radius: mapping.dead_radius ?? 0,
+            start_angle: mapping.start_angle ?? 0,
+            release_mode: mapping.release_mode ?? "on_release",
+            hover_delay_ms: mapping.hover_delay_ms ?? 300,
+            jitter_offset: mapping.jitter_offset ?? 2,
+            jitter_interval_ms: mapping.jitter_interval_ms ?? 80,
           };
         default:
           return {

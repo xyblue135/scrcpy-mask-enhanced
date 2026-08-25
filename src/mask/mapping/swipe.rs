@@ -20,12 +20,12 @@ use crate::{
         script::{BindMappingScriptHooks, MappingScriptHooks},
         script_helper::{ScriptRuntimeCommandSender, ScriptSharedState},
         utils::{
-            ControlMsgHelper, MultiSwipeStrategy, Position, SingleSwipeStrategy,
-            build_multisegment_swipe_intermediate_points,
+            ControlMsgHelper, Position, SingleSwipeStrategy,
             build_single_segment_swipe_intermediate_points,
         },
     },
     mask::mask_command::MaskSize,
+    config::LocalConfig,
     scrcpy::constant::MotionEventAction,
     utils::ChannelSenderCS,
 };
@@ -38,6 +38,7 @@ pub struct BindMappingSwipe {
     pub positions: Vec<Position>,
     pub duration: u64,
     pub enable_randomization: bool,
+    pub bezier_wave: bool,
     pub strategy: SingleSwipeStrategy,
     pub bind: ButtonBinding,
     pub input_binding: InputBinding,
@@ -58,6 +59,7 @@ impl From<MappingSwipe> for BindMappingSwipe {
             positions: value.positions,
             duration: value.duration,
             enable_randomization: value.enable_randomization,
+            bezier_wave: value.bezier_wave,
             strategy,
             bind: value.bind.clone(),
             input_binding: PulseBinding::just_pressed(value.bind).0,
@@ -76,6 +78,9 @@ pub struct MappingSwipe {
     pub duration: u64,
     #[serde(default)]
     pub enable_randomization: bool,
+    /// 简单贝塞尔波动：开启后从起点到终点走一条带单侧波动的曲线轨迹。
+    #[serde(default)]
+    pub bezier_wave: bool,
     pub bind: ButtonBinding,
     #[serde(default)]
     pub script_hooks: MappingScriptHooks,
@@ -111,7 +116,14 @@ pub fn handle_swipe(
                     let pointer_id = mapping.pointer_id;
                     let points = mapping.positions.clone();
                     let duration = mapping.duration;
-                    let strategy = mapping.strategy;
+                    let bezier_wave = mapping.bezier_wave;
+                    let strategy = if mapping.enable_randomization
+                        && LocalConfig::get_mapping_randomization_enabled()
+                    {
+                        mapping.strategy
+                    } else {
+                        SingleSwipeStrategy::Linear
+                    };
                     let hooks = mapping.script_hooks.clone();
                     let exec_ctx = make_mapping_execution_context(
                         &cs_tx_res,
@@ -126,21 +138,57 @@ pub fn handle_swipe(
                     );
                     runtime.spawn_background_task(move |_ctx| async move {
                         let result = run_with_hooks(hooks, exec_ctx, move |ctx| async move {
+                            // 只使用前两个坐标：起点 + 终点（旧的多点配置仅取前两点）。
+                            let start: Vec2 = points
+                                .first()
+                                .copied()
+                                .unwrap_or(Position { x: 0, y: 0 })
+                                .into();
+                            let end: Vec2 = points.get(1).copied().unwrap_or(points[0]).into();
                             ControlMsgHelper::send_touch(
                                 &ctx.cs_tx,
                                 MotionEventAction::Down,
                                 pointer_id,
                                 ctx.original_size,
-                                points[0].into(),
+                                start,
                             );
-                            let mut cur_pos: Vec2 = points[0].into();
-                            if points.len() > 2 {
-                                let waypoints: Vec<Vec2> =
-                                    points.iter().map(|&p| Vec2::from(p)).collect();
-                                for step in build_multisegment_swipe_intermediate_points(
-                                    &waypoints,
-                                    MultiSwipeStrategy::from(strategy),
-                                    duration,
+                            if bezier_wave {
+                                // 简单贝塞尔波动：二次贝塞尔，控制点在中点法向偏移。
+                                let wave_points = build_bezier_wave_points(start, end);
+                                let step_wait = if wave_points.len() > 1 {
+                                    duration / wave_points.len() as u64
+                                } else {
+                                    duration
+                                };
+                                for p in wave_points.into_iter().skip(1) {
+                                    ControlMsgHelper::send_touch(
+                                        &ctx.cs_tx,
+                                        MotionEventAction::Move,
+                                        pointer_id,
+                                        ctx.original_size,
+                                        p,
+                                    );
+                                    sleep(Duration::from_millis(step_wait)).await;
+                                }
+                                ControlMsgHelper::send_touch(
+                                    &ctx.cs_tx,
+                                    MotionEventAction::Move,
+                                    pointer_id,
+                                    ctx.original_size,
+                                    end,
+                                );
+                                ControlMsgHelper::send_touch(
+                                    &ctx.cs_tx,
+                                    MotionEventAction::Up,
+                                    pointer_id,
+                                    ctx.original_size,
+                                    end,
+                                );
+                            } else {
+                                let mut cur_pos = start;
+                                let next_pos = end;
+                                for step in build_single_segment_swipe_intermediate_points(
+                                    cur_pos, next_pos, strategy, duration,
                                 ) {
                                     ControlMsgHelper::send_touch(
                                         &ctx.cs_tx,
@@ -151,40 +199,22 @@ pub fn handle_swipe(
                                     );
                                     sleep(Duration::from_millis(step.wait_ms)).await;
                                 }
-                                cur_pos = (*points.last().unwrap()).into();
-                            } else {
-                                for i in 1..points.len() {
-                                    let next_pos: Vec2 = points[i].into();
-                                    for step in build_single_segment_swipe_intermediate_points(
-                                        cur_pos, next_pos, strategy, duration,
-                                    ) {
-                                        ControlMsgHelper::send_touch(
-                                            &ctx.cs_tx,
-                                            MotionEventAction::Move,
-                                            pointer_id,
-                                            ctx.original_size,
-                                            step.pos,
-                                        );
-                                        sleep(Duration::from_millis(step.wait_ms)).await;
-                                    }
-
-                                    ControlMsgHelper::send_touch(
-                                        &ctx.cs_tx,
-                                        MotionEventAction::Move,
-                                        pointer_id,
-                                        ctx.original_size,
-                                        next_pos,
-                                    );
-                                    cur_pos = next_pos;
-                                }
+                                ControlMsgHelper::send_touch(
+                                    &ctx.cs_tx,
+                                    MotionEventAction::Move,
+                                    pointer_id,
+                                    ctx.original_size,
+                                    next_pos,
+                                );
+                                cur_pos = next_pos;
+                                ControlMsgHelper::send_touch(
+                                    &ctx.cs_tx,
+                                    MotionEventAction::Up,
+                                    pointer_id,
+                                    ctx.original_size,
+                                    cur_pos,
+                                );
                             }
-                            ControlMsgHelper::send_touch(
-                                &ctx.cs_tx,
-                                MotionEventAction::Up,
-                                pointer_id,
-                                ctx.original_size,
-                                cur_pos,
-                            );
                             Ok::<(), MappingExecutionError>(())
                         })
                         .await;
@@ -196,4 +226,27 @@ pub fn handle_swipe(
             }
         }
     }
+}
+
+/// 从起点到终点生成带简单贝塞尔波动的轨迹点（二次贝塞尔，控制点在中点法向偏移）。
+fn build_bezier_wave_points(start: Vec2, end: Vec2) -> Vec<Vec2> {
+    let delta = end - start;
+    let dist = delta.length();
+    if dist <= f32::EPSILON {
+        return vec![start];
+    }
+    let steps = 16;
+    let dir = delta / dist;
+    let normal = Vec2::new(-dir.y, dir.x);
+    // 波动幅度随距离变化（12% 距离，最小 8px），轨迹整体偏向法向一侧。
+    let wave_amp = (dist * 0.12).max(8.0);
+    let control = start + delta * 0.5 + normal * wave_amp;
+    let mut pts = Vec::with_capacity(steps + 1);
+    for i in 0..=steps {
+        let t = i as f32 / steps as f32;
+        let inv = 1.0 - t;
+        let q = inv * inv * start + 2.0 * inv * t * control + t * t * end;
+        pts.push(q);
+    }
+    pts
 }

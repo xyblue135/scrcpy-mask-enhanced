@@ -510,6 +510,42 @@ async fn update_config(
                 "macro_preset_enabled must be a boolean",
             ));
         }
+        "mapping_randomization_enabled" => {
+            if let Some(value) = payload.value.as_bool() {
+                LocalConfig::set_mapping_randomization_enabled(value);
+                return Ok(JsonResponse::success(
+                    format!("mapping randomization enabled set to {value}"),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(
+                "mapping_randomization_enabled must be a boolean",
+            ));
+        }
+        "button_randomization_enabled" => {
+            if let Some(value) = payload.value.as_bool() {
+                LocalConfig::set_button_randomization_enabled(value);
+                return Ok(JsonResponse::success(
+                    format!("button randomization enabled set to {value}"),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(
+                "button_randomization_enabled must be a boolean",
+            ));
+        }
+        "touch_probe_enabled" => {
+            if let Some(value) = payload.value.as_bool() {
+                LocalConfig::set_touch_probe_enabled(value);
+                return Ok(JsonResponse::success(
+                    format!("touch probe enabled set to {value}"),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(
+                "touch_probe_enabled must be a boolean",
+            ));
+        }
         "scrcpy_module" => {
             let module: ScrcpyModuleConfig =
                 serde_json::from_value(payload.value).map_err(|error| {

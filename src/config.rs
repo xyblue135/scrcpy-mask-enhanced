@@ -139,6 +139,13 @@ pub struct LocalConfig {
     pub quick_switch_enabled: bool,
     /// 全局宏预设开关：关闭时宏预设绑定不被执行（也用于前端是否显示）。
     pub macro_preset_enabled: bool,
+    /// 全局轨迹随机化开关：关闭时所有映射的随机锚点/抖动/漂移不生效。
+    pub mapping_randomization_enabled: bool,
+    /// 全局按钮随机化开关：关闭时所有按钮的随机偏移范围（random_offset）不生效。
+    pub button_randomization_enabled: bool,
+    /// 全局触摸事件探针开关：开启后把每次注入手机的触摸事件写入
+    /// data/touch_probe.jsonl（与 perf.jsonl 分开存放），用于定位手机端卡顿。
+    pub touch_probe_enabled: bool,
     pub mapping_label_opacity: f32,
     // 键盘映射按钮的显示大小倍数（仅影响可视化按钮大小，adb 点击仍为按钮中心）
     pub mapping_button_scale: f32,
@@ -195,6 +202,9 @@ impl Default for LocalConfig {
             mapping_quick_switches: Vec::new(),
             quick_switch_enabled: true,
             macro_preset_enabled: true,
+            mapping_randomization_enabled: true,
+            button_randomization_enabled: true,
+            touch_probe_enabled: true,
             mapping_label_opacity: 0.3,
             mapping_button_scale: 1.0,
             language: DEFAULT_LANGUAGE.to_string(),
@@ -364,6 +374,18 @@ impl LocalConfig {
         CONFIG.read().unwrap().macro_preset_enabled
     }
 
+    pub fn get_mapping_randomization_enabled() -> bool {
+        CONFIG.read().unwrap().mapping_randomization_enabled
+    }
+
+    pub fn get_button_randomization_enabled() -> bool {
+        CONFIG.read().unwrap().button_randomization_enabled
+    }
+
+    pub fn get_touch_probe_enabled() -> bool {
+        CONFIG.read().unwrap().touch_probe_enabled
+    }
+
     define_setter!(
         (web_port, u16),
         (web_bind_addr, Ipv4Addr),
@@ -381,6 +403,9 @@ impl LocalConfig {
         (mapping_quick_switches, Vec<MappingQuickSwitch>),
         (quick_switch_enabled, bool),
         (macro_preset_enabled, bool),
+        (mapping_randomization_enabled, bool),
+        (button_randomization_enabled, bool),
+        (touch_probe_enabled, bool),
         (mapping_label_opacity, f32),
         (mapping_button_scale, f32),
         (language, String),

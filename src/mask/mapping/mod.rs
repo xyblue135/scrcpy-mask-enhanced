@@ -61,6 +61,7 @@ impl Plugin for MappingPlugins {
         app.add_plugins((IneffablePlugin, CursorPlugins))
             .insert_state(MappingState::Stop)
             .insert_resource(ActiveMappingConfig(None, String::new()))
+            .insert_resource(quick_switch::PendingQuickSwitchLoad::default())
             .register_input_action::<MappingAction>()
             .configure_sets(
                 Update,

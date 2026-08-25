@@ -35,7 +35,13 @@
     "measureTip": "Screenshots below are for reference only",
     "measureTipDetail": "To accurately measure real streaming latency, use another phone to record the streaming window and the phone screen side by side. The game clock difference between the two screenshots is a rough reference, but their timestamp difference mainly reflects screenshot command latency, not the real streaming latency.",
     "perfMonitorGuideTitle": "Want more detailed latency data? Use perf_monitor",
-    "perfMonitorGuideDetail": "The screenshot comparison above only gives a rough sense of overall latency. The main program writes per-stage probe timings (network read, video decode, UI render, audio decode, etc.) to perf.jsonl in the data directory every second.\nTo view detailed probe latency curves, configure perf_monitor yourself:\n1. Run python monitor.py inside the project perf_monitor directory (zero third-party deps, stdlib only);\n2. It listens on 127.0.0.1:8765 by default and opens a browser page automatically;\n3. While the main program runs, the page shows avg / p95 / max timings, FPS and dropped-frame stats in real time.\nOptions: --dir to set the perf.jsonl directory, --port to change the port, --host to change the listen address, --no-browser to skip opening the browser."
+    "perfMonitorGuideDetail": "The screenshot comparison above only gives a rough sense of overall latency. For detailed metrics, use the two monitor pages under perf_monitor (zero third-party deps, stdlib only):\n· Screen performance: the main program writes per-stage probe timings (network read, video decode, UI render, audio decode, etc.) to perf.jsonl every second. Run python monitor.py to view (default port 8765; shows avg / p95 / max curves, FPS and dropped-frame stats).\n· Mapping performance: every touch event injected into the phone is written to data/touch_probe.jsonl. Run python touch_monitor.py to view (default port 8766; shows event rate, event intervals and the event stream).\nOptions: --dir to set the jsonl directory, --port to change the port, --host to change the listen address, --no-browser to skip opening the browser.",
+    "screenPerfTitle": "Screen performance monitor (perf.jsonl)",
+    "screenPerfDesc": "Records per-stage streaming timings (network read, video decode, UI render, audio decode) plus FPS / dropped-frame stats, one row per second. View curves with perf_monitor/monitor.py.",
+    "touchProbeEnabled": "Mapping performance probe (touch events)",
+    "touchProbeDesc": "Appends every touch event injected into the phone (timestamp, interval since the last event, action, pointer, coords) to data/touch_probe.jsonl. Use it to check whether phone-side stutter is caused by event density / jitter. View with perf_monitor/touch_monitor.py. Enabled by default.",
+    "touchProbeOn": "On",
+    "touchProbeOff": "Off"
   },
   "devices": {
     "adbTools": {
@@ -169,6 +175,14 @@
       },
       "name": "SingleTap"
     },
+    "longPress": {
+      "setting": {
+        "title": "Mapping Configuration - LongPress",
+        "duration": "Hold duration",
+        "durationHint": "How long the finger stays pressed before auto-release (ms). Useful for games that need a long-press to trigger."
+      },
+      "name": "LongPress"
+    },
     "repeatTap": {
       "setting": {
         "title": "Mapping Configuration - RepeatTap",
@@ -200,17 +214,17 @@
     },
     "swipe": {
       "setting": {
-        "keepLastOne": "Keep at least one operation!",
         "title": "Mapping Configuration - Swipe",
-        "enableRandomization": "Enable path randomization",
-        "enableRandomizationHint": "Replaces straight line segments with smooth curves that have random arc curvature, making each swipe trajectory slightly different.",
-        "positonsHelp": "Drag with the left mouse button and add or edit with the right mouse button",
         "duration": "Duration",
         "durationHint": "Total time to complete the entire swipe motion (ms).",
-        "edit": "Edit",
-        "delete": "Delete",
-        "positions": "Position sequence",
-        "back": "Back"
+        "start": "Start point",
+        "startHint": "Starting coordinates of the swipe (you can also drag the button on canvas to move the start point).",
+        "end": "End point",
+        "endHint": "Ending coordinates of the swipe.",
+        "bezierWave": "Bezier wave",
+        "bezierWaveHint": "When on, the swipe follows a gentle one-sided curved path (quadratic Bezier) from start to end instead of a straight line.",
+        "enableRandomization": "Enable path randomization",
+        "enableRandomizationHint": "Replaces straight line segments with smooth curves that have random arc curvature, making each swipe trajectory slightly different."
       },
       "name": "Swipe"
     },
@@ -309,7 +323,20 @@
         "enableRandomization": "Randomization",
         "editLabel": "Advanced editing",
         "edit": "Edit",
-        "back": "Back"
+        "back": "Back",
+        "deadRadius": "Center deadzone",
+        "deadRadiusHint": "While the cursor stays inside the deadzone the touch is locked to the wheel center; drag out to start selecting a sector.",
+        "startAngle": "Start angle",
+        "startAngleHint": "Starting direction (degrees) of sector 0, to align with the game wheel orientation.",
+        "releaseMode": "Release mode",
+        "releaseModeOnRelease": "Select on release",
+        "releaseModeOnHoverDelay": "Select on hover delay",
+        "hoverDelay": "Hover delay",
+        "hoverDelayHint": "Milliseconds to hover on the target sector before auto-committing (hover-delay mode only).",
+        "jitterInterval": "Random drift period",
+        "jitterIntervalHint": "How often (ms) a random offset is applied to the wheel target while active. Larger values mean lower frequency and better responsiveness; 50~200ms recommended.",
+        "jitterOffset": "Drift amplitude",
+        "jitterOffsetHint": "Maximum random offset per drift tick (px, based on 1080 height). Set to 0 to disable drift entirely."
       },
       "name": "Wheel"
     },
@@ -424,6 +451,14 @@
       "macroPresetEnabled": "Enable macro presets (global)",
       "macroPresetOn": "Macro presets",
       "macroPresetOff": "Off",
+      "buttonRandomizationEnabled": "Enable button randomization (global)",
+      "buttonRandomizationOn": "Button random",
+      "buttonRandomizationOff": "Off",
+      "buttonRandomizationUpdated": "Button randomization toggle updated",
+      "randomizationEnabled": "Enable wheel randomization (global)",
+      "randomizationOn": "Wheel random",
+      "randomizationOff": "Off",
+      "randomizationUpdated": "Wheel randomization toggle updated",
       "boundSettings": "Bound settings",
       "boundSettingsTitle": "Bound settings",
       "boundSettingsHint": "The keys below are occupied by preset switching or macro presets. The mapping keys below cannot use these keys.",

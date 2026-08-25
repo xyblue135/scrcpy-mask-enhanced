@@ -44,6 +44,7 @@ use crate::{
         },
         mask_command::MaskSize,
     },
+    config::LocalConfig,
     scrcpy::constant::MotionEventAction,
     utils::ChannelSenderCS,
 };
@@ -522,10 +523,12 @@ fn start_mouse_cast_after_before(
 
     let pointer_id = mapping.pointer_id;
     let original_pos: Vec2 = mapping.position.into();
-    let original_pos = random_offset_vec2(
-        original_pos,
-        Vec2::new(mapping.random_offset_x, mapping.random_offset_y),
-    );
+    let random_offset = if LocalConfig::get_button_randomization_enabled() {
+        Vec2::new(mapping.random_offset_x, mapping.random_offset_y)
+    } else {
+        Vec2::ZERO
+    };
+    let original_pos = random_offset_vec2(original_pos, random_offset);
     let center_pos: Vec2 = mapping.center.into();
     let release_mode = mapping.release_mode.clone();
     let cast_no_direction = mapping.cast_no_direction;
@@ -559,7 +562,9 @@ fn start_mouse_cast_after_before(
         current_pos
     };
 
-    let initial_swipe_strategy = if mapping.enable_initial_swipe_randomization {
+    let initial_swipe_randomization = mapping.enable_initial_swipe_randomization
+        && LocalConfig::get_mapping_randomization_enabled();
+    let initial_swipe_strategy = if initial_swipe_randomization {
         SingleSwipeStrategy::ArcWithEaseOut
     } else {
         SingleSwipeStrategy::Linear
@@ -571,9 +576,14 @@ fn start_mouse_cast_after_before(
         mask_size,
         current_pos,
         target_pos,
-        mapping.initial_duration,
+        if initial_swipe_randomization {
+            mapping.initial_duration
+        } else {
+            0
+        },
         DEFAULT_SWIPE_DURATION,
         initial_swipe_strategy,
+        if initial_swipe_randomization { 2.0 } else { 0.0 },
     );
 
     if matches!(release_mode, MouseCastReleaseMode::OnPress) {
@@ -1149,12 +1159,16 @@ fn start_pad_cast_after_before(
     let original_size: Vec2 = active_mapping.original_size.into();
     let pointer_id = mapping.pointer_id;
     let original_pos: Vec2 = mapping.position.into();
-    let original_pos = random_offset_vec2(
-        original_pos,
-        Vec2::new(mapping.random_offset_x, mapping.random_offset_y),
-    );
+    let randomization = mapping.enable_randomization
+        && LocalConfig::get_mapping_randomization_enabled();
+    let random_offset = if LocalConfig::get_button_randomization_enabled() {
+        Vec2::new(mapping.random_offset_x, mapping.random_offset_y)
+    } else {
+        Vec2::ZERO
+    };
+    let original_pos = random_offset_vec2(original_pos, random_offset);
     let current_pos = original_pos / original_size * mask_size;
-    let (random_anchor, random_offset) = if mapping.enable_randomization {
+    let (random_anchor, random_offset) = if randomization {
         let offset = anchor_random_offset(mapping.drag_radius, mapping.drag_radius);
         let anchor = random_offset_vec2(original_pos, offset);
         (anchor, offset)
@@ -1170,12 +1184,12 @@ fn start_pad_cast_after_before(
         current_pos,
     );
 
-    let slide_start = if mapping.enable_randomization {
+    let slide_start = if randomization {
         random_anchor / original_size * mask_size
     } else {
         current_pos
     };
-    let strategy = if mapping.enable_randomization {
+    let strategy = if randomization {
         SingleSwipeStrategy::ArcWithEaseOut
     } else {
         SingleSwipeStrategy::Linear
@@ -1190,6 +1204,7 @@ fn start_pad_cast_after_before(
         0,
         DEFAULT_SWIPE_DURATION,
         strategy,
+        2.0,
     );
 
     active_cast.0 = Some(ActiveCastSpellItem::new_pad_item(
@@ -1204,7 +1219,7 @@ fn start_pad_cast_after_before(
         initial_swipe_done,
         mapping.block_direction_pad,
         mapping.pad_action.clone(),
-        mapping.enable_randomization,
+        randomization,
         random_anchor,
         random_offset,
     ));

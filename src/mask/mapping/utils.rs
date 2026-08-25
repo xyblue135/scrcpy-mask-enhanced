@@ -7,6 +7,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use crate::config::LocalConfig;
 use crate::tokio_tasks::TokioTasksRuntime;
 use bevy::math::Vec2;
 use serde::{Deserialize, Serialize};
@@ -73,6 +74,46 @@ impl MulAssign<Vec2> for Position {
 
 pub struct ControlMsgHelper;
 
+/// 触摸事件流探针：开关开启时把每次注入手机的触摸事件追加写入
+/// `data/touch_probe.jsonl`（与 perf.jsonl 分开存放）。
+/// 每行一条事件，含时间戳、距上一条的间隔、action、指针与坐标，便于
+/// 分析「手机端卡顿是否由事件过密/抖动导致」。
+pub fn probe_touch(action: MotionEventAction, pointer_id: u64, pos: Vec2) {
+    if !LocalConfig::get_touch_probe_enabled() {
+        return;
+    }
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs_f64())
+        .unwrap_or(0.0);
+    let since_last_ms = {
+        use std::sync::atomic::Ordering::Relaxed;
+        static LAST_TS_MS: AtomicU64 = AtomicU64::new(0);
+        let ts_ms = (now * 1000.0) as u64;
+        let last = LAST_TS_MS.swap(ts_ms, Relaxed);
+        if last == 0 { 0.0 } else { (ts_ms - last) as f64 }
+    };
+    let line = serde_json::json!({
+        "ts": now,
+        "since_last_ms": since_last_ms,
+        "action": format!("{:?}", action),
+        "pointer_id": pointer_id,
+        "x": pos.x as i32,
+        "y": pos.y as i32,
+    });
+    let mut s = serde_json::to_string(&line).unwrap();
+    s.push('\n');
+    let path = crate::utils::relate_to_data_path(["touch_probe.jsonl"]);
+    if let Ok(mut f) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+    {
+        use std::io::Write;
+        let _ = f.write_all(s.as_bytes());
+    }
+}
+
 impl ControlMsgHelper {
     pub fn send_touch(
         cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
@@ -98,6 +139,7 @@ impl ControlMsgHelper {
         }) {
             log::warn!("[Mapping] send_touch failed: {}", e);
         }
+        probe_touch(action, pointer_id, pos);
     }
 
     pub fn send_keycode(
@@ -229,6 +271,7 @@ pub fn spawn_initial_swipe(
     initial_duration_ms: u64,
     swipe_duration_ms: u64,
     swipe_strategy: SingleSwipeStrategy,
+    jitter_offset: f32,
 ) -> Arc<AtomicBool> {
     let done = Arc::new(AtomicBool::new(false));
     let done_clone = done.clone();
@@ -240,8 +283,8 @@ pub fn spawn_initial_swipe(
             let jitter_interval = initial_duration_ms / jitter_count as u64;
             for _ in 0..jitter_count {
                 let offset = Vec2::new(
-                    (rand::random::<f32>() - 0.5) * 4.0,
-                    (rand::random::<f32>() - 0.5) * 4.0,
+                    (rand::random::<f32>() * 2.0 - 1.0) * jitter_offset,
+                    (rand::random::<f32>() * 2.0 - 1.0) * jitter_offset,
                 );
                 ControlMsgHelper::send_touch(
                     &cs_tx,

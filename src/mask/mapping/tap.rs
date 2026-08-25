@@ -30,9 +30,20 @@ use crate::{
         utils::{ControlMsgHelper, Position, default_random_offset, random_offset_vec2},
     },
     mask::mask_command::MaskSize,
+    config::LocalConfig,
     scrcpy::constant::MotionEventAction,
     utils::ChannelSenderCS,
 };
+
+/// Effective random offset: zeroed when the global button-randomization
+/// switch is turned off so buttons tap exactly at their center.
+fn effective_random_offset(x: f32, y: f32) -> Vec2 {
+    if LocalConfig::get_button_randomization_enabled() {
+        Vec2::new(x, y)
+    } else {
+        Vec2::ZERO
+    }
+}
 
 pub fn tap_init(mut commands: Commands) {
     commands.insert_resource(ActiveRepeatTapMap::default());
@@ -128,6 +139,8 @@ pub struct MappingSingleTap {
     pub sync: bool,
     #[serde(default)]
     pub stealth_mode: bool,
+    #[serde(default)]
+    pub long_press: bool,
     #[serde(default = "default_empty_cancel_bind")]
     pub cancel_bind: ButtonBinding,
     pub bind: ButtonBinding,
@@ -186,7 +199,7 @@ fn apply_single_tap_down(
 ) {
     let random_pos = random_offset_vec2(
         mapping.position.into(),
-        Vec2::new(mapping.random_offset_x, mapping.random_offset_y),
+        effective_random_offset(mapping.random_offset_x, mapping.random_offset_y),
     );
     ControlMsgHelper::send_touch(
         &cs_tx.0,
@@ -381,7 +394,7 @@ pub fn handle_single_tap(
                         let pointer_id = mapping.pointer_id;
                         let random_pos = random_offset_vec2(
                             mapping.position.into(),
-                            Vec2::new(mapping.random_offset_x, mapping.random_offset_y),
+                            effective_random_offset(mapping.random_offset_x, mapping.random_offset_y),
                         );
                         let duration = Duration::from_millis(mapping.duration as u64);
                         let hooks = mapping.script_hooks.clone();
@@ -605,7 +618,7 @@ fn make_repeat_tap_timer(mapping: &BindMappingRepeatTap, original_size: Vec2) ->
         original_pos: mapping.position.into(),
         original_size,
         duration: Duration::from_millis(mapping.duration as u64),
-        random_offset: Vec2::new(mapping.random_offset_x, mapping.random_offset_y),
+        random_offset: effective_random_offset(mapping.random_offset_x, mapping.random_offset_y),
     }
 }
 
@@ -887,7 +900,7 @@ pub fn handle_multiple_tap(
                     let original_size: Vec2 = active_mapping.original_size.into();
                     let pointer_id = mapping.pointer_id;
                     let items = mapping.items.clone();
-                    let random_offset = Vec2::new(mapping.random_offset_x, mapping.random_offset_y);
+                    let random_offset = effective_random_offset(mapping.random_offset_x, mapping.random_offset_y);
                     let hooks = mapping.script_hooks.clone();
                     let exec_ctx = make_mapping_execution_context(
                         &cs_tx_res,

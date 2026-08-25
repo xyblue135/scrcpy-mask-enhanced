@@ -35,7 +35,13 @@
     "measureTip": "下方截图仅供参考",
     "measureTipDetail": "要准确测量真实投屏延迟，请用另一台手机拍摄「投屏窗口」和「手机屏幕」两个画面同时对比。两张截图的游戏时钟差可作粗略参考，但它们的时间戳差异主要反映截图指令耗时，并非真实投屏延迟。",
     "perfMonitorGuideTitle": "想查看更详细的延迟探针数据？请使用 perf_monitor",
-    "perfMonitorGuideDetail": "上方截图对比只能粗略感知整体延迟。主程序每秒会把各环节耗时探针（网络读取、视频解码、UI 渲染、音频解码等）写入数据目录下的 perf.jsonl。\n如需查看详细探针延迟曲线，请自行配置 perf_monitor：\n1. 在项目 perf_monitor 目录下执行 python monitor.py（零第三方依赖，仅标准库）；\n2. 脚本默认监听 127.0.0.1:8765 并自动打开浏览器页面；\n3. 主程序运行期间页面实时展示各探针 avg / p95 / max 耗时曲线、帧率与丢帧统计。\n可选参数：--dir 指定 perf.jsonl 所在目录，--port 修改端口，--host 修改监听地址，--no-browser 不自动打开浏览器。"
+    "perfMonitorGuideDetail": "上方截图对比只能粗略感知整体延迟，细分延迟请使用 perf_monitor 下的两个监控页面（零第三方依赖，仅标准库）：\n· 屏幕性能：主程序每秒把各环节耗时探针（网络读取、视频解码、UI 渲染、音频解码等）写入数据目录下的 perf.jsonl，运行 python monitor.py 查看（默认端口 8765，页面展示各探针 avg / p95 / max 曲线、帧率与丢帧统计）。\n· 映射性能：每次注入手机的触摸事件写入 data/touch_probe.jsonl，运行 python touch_monitor.py 查看（默认端口 8766，页面展示事件频率、事件间隔与事件流）。\n可选参数：--dir 指定 jsonl 所在目录，--port 修改端口，--host 修改监听地址，--no-browser 不自动打开浏览器。",
+    "screenPerfTitle": "屏幕性能监控（perf.jsonl）",
+    "screenPerfDesc": "记录投屏链路各环节耗时（网络读取、视频解码、UI 渲染、音频解码等）与帧率/丢帧统计，每秒一行。用 perf_monitor/monitor.py 查看延迟曲线。",
+    "touchProbeEnabled": "映射性能探针（触摸事件）",
+    "touchProbeDesc": "把每次注入手机的触摸事件（时间戳、距上一条间隔、类型、指针、坐标）追加写入 data/touch_probe.jsonl。用于分析手机端卡顿是否由事件过密/抖动导致，用 perf_monitor/touch_monitor.py 查看。默认开启。",
+    "touchProbeOn": "开",
+    "touchProbeOff": "关"
   },
   "devices": {
     "adbTools": {
@@ -169,6 +175,14 @@
       },
       "name": "点击"
     },
+    "longPress": {
+      "setting": {
+        "title": "映射配置 - 长按",
+        "duration": "长按时长",
+        "durationHint": "按下后手指按住多久再抬起（毫秒）。适合需要长按触发的手游操作。"
+      },
+      "name": "长按"
+    },
     "repeatTap": {
       "setting": {
         "title": "映射配置 - 连点",
@@ -202,15 +216,15 @@
       "setting": {
         "duration": "滑动耗时",
         "durationHint": "完成整个滑动动作的总耗时（毫秒）。",
-        "delete": "删除",
-        "keepLastOne": "至少保留一个操作！",
         "title": "映射配置 - 滑动",
-        "positions": "坐标序列",
+        "start": "起点",
+        "startHint": "滑动的起始坐标（画布上拖拽按钮也可移动起点）。",
+        "end": "终点",
+        "endHint": "滑动的结束坐标。",
+        "bezierWave": "贝塞尔曲线波动",
+        "bezierWaveHint": "开启后从起点到终点走一条带单侧弧度的平滑曲线轨迹（二次贝塞尔），而非直线。",
         "enableRandomization": "启用轨迹随机化",
-        "enableRandomizationHint": "将直线路径替换为带随机弧线的平滑曲线，使每次滑动轨迹略有不同。",
-        "positonsHelp": "使用鼠标左键拖动，鼠标右键进行添加或编辑",
-        "edit": "编辑",
-        "back": "返回"
+        "enableRandomizationHint": "将直线路径替换为带随机弧线的平滑曲线，使每次滑动轨迹略有不同。"
       },
       "name": "滑动"
     },
@@ -309,7 +323,20 @@
         "enableRandomization": "随机化",
         "editLabel": "高级编辑",
         "edit": "编辑",
-        "back": "返回"
+        "back": "返回",
+        "deadRadius": "中心死区",
+        "deadRadiusHint": "光标在死区内时触摸点固定在轮盘中心，拖出后才开始选中扇区。",
+        "startAngle": "起始角度",
+        "startAngleHint": "扇区 0 的起始方向（度），用于对齐游戏轮盘的实际朝向。",
+        "releaseMode": "释放方式",
+        "releaseModeOnRelease": "松开即选中",
+        "releaseModeOnHoverDelay": "悬停确认",
+        "hoverDelay": "悬停确认时长",
+        "hoverDelayHint": "悬停在目标扇区多少毫秒后自动确认（仅悬停确认模式生效）。",
+        "jitterInterval": "随机偏移周期",
+        "jitterIntervalHint": "轮盘激活期间每隔多少毫秒在目标位置叠加一次随机偏移。周期越大越低频、越跟手，建议 50~200ms。",
+        "jitterOffset": "随机偏移幅度",
+        "jitterOffsetHint": "每次周期偏移的最大幅度（px，基于 1080 高度）。设为 0 可完全关闭漂移。"
       },
       "name": "轮盘专用按钮"
     },
@@ -424,6 +451,14 @@
       "macroPresetEnabled": "开启宏预设（全局）",
       "macroPresetOn": "宏预设",
       "macroPresetOff": "关",
+      "buttonRandomizationEnabled": "开启按钮随机化（全局）",
+      "buttonRandomizationOn": "按钮随机化",
+      "buttonRandomizationOff": "关",
+      "buttonRandomizationUpdated": "按钮随机化开关已更新",
+      "randomizationEnabled": "开启轮盘随机化（全局）",
+      "randomizationOn": "轮盘随机化",
+      "randomizationOff": "关",
+      "randomizationUpdated": "轮盘随机化开关已更新",
       "boundSettings": "已绑定设置",
       "boundSettingsTitle": "已绑定设置",
       "boundSettingsHint": "以下按键已被预设切换或宏预设占用，下方的按键映射配置将无法使用这些按键。",

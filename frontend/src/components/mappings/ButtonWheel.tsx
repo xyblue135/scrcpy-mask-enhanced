@@ -5,6 +5,7 @@ import {
   Flex,
   InputNumber,
   Popover,
+  Select,
   Slider,
   Space,
   Switch,
@@ -55,9 +56,11 @@ function wheelSectorPath(
   count: number,
   index: number,
   radius: number,
+  startAngle: number = 0,
 ): string {
-  const start = (index / count) * Math.PI * 2;
-  const end = ((index + 1) / count) * Math.PI * 2;
+  const offset = (startAngle * Math.PI) / 180;
+  const start = (index / count) * Math.PI * 2 + offset;
+  const end = ((index + 1) / count) * Math.PI * 2 + offset;
   const rad = radius;
   const x1 = rad * Math.cos(start);
   const y1 = rad * Math.sin(start);
@@ -209,6 +212,7 @@ function WheelCenter({
   center,
   radius,
   count,
+  startAngle,
   maskArea,
   originalSize,
   onCenterChange,
@@ -217,6 +221,7 @@ function WheelCenter({
   center: Position;
   radius: number;
   count: number;
+  startAngle: number;
   maskArea: { width: number; height: number; left: number; top: number };
   originalSize: { width: number; height: number };
   onCenterChange: (pos: Position) => void;
@@ -300,7 +305,7 @@ function WheelCenter({
         {Array.from({ length: Math.max(count, 1) }).map((_, i) => (
           <path
             key={i}
-            d={wheelSectorPath(Math.max(count, 1), i, maskRadius)}
+            d={wheelSectorPath(Math.max(count, 1), i, maskRadius, startAngle)}
             fill={WHEEL_COLORS[i % WHEEL_COLORS.length]}
             style={{ opacity: 0.35 }}
           />
@@ -365,6 +370,7 @@ function WheelEditor({
               center={config.center}
               radius={config.radius}
               count={config.count}
+              startAngle={config.start_angle}
               maskArea={maskArea}
               originalSize={originalSize}
               onCenterChange={(center) => onChange({ ...config, center })}
@@ -432,16 +438,64 @@ function Setting({
             value={config.count}
           />
         </ItemBox>
-        <ItemBox label={t("mappings.directionPad.setting.initDuration")}>
+        <ItemBox
+          label={t("mappings.wheel.setting.deadRadius")}
+          tooltip={t("mappings.wheel.setting.deadRadiusHint")}
+        >
           <InputNumber
             className="w-full"
-            value={config.initial_duration}
+            value={config.dead_radius}
             min={0}
             onChange={(v) =>
-              v !== null && onConfigChange({ ...config, initial_duration: v })
+              v !== null && onConfigChange({ ...config, dead_radius: v })
             }
           />
         </ItemBox>
+        <ItemBox
+          label={t("mappings.wheel.setting.startAngle")}
+          tooltip={t("mappings.wheel.setting.startAngleHint")}
+        >
+          <Slider
+            min={0}
+            max={360}
+            onChange={(v) => onConfigChange({ ...config, start_angle: v })}
+            value={config.start_angle}
+          />
+        </ItemBox>
+        <ItemBox label={t("mappings.wheel.setting.releaseMode")}>
+          <Select
+            className="w-full"
+            value={config.release_mode}
+            onChange={(release_mode) =>
+              onConfigChange({ ...config, release_mode })
+            }
+            options={[
+              {
+                value: "on_release",
+                label: t("mappings.wheel.setting.releaseModeOnRelease"),
+              },
+              {
+                value: "on_hover_delay",
+                label: t("mappings.wheel.setting.releaseModeOnHoverDelay"),
+              },
+            ]}
+          />
+        </ItemBox>
+        {config.release_mode === "on_hover_delay" && (
+          <ItemBox
+            label={t("mappings.wheel.setting.hoverDelay")}
+            tooltip={t("mappings.wheel.setting.hoverDelayHint")}
+          >
+            <InputNumber
+              className="w-full"
+              value={config.hover_delay_ms}
+              min={0}
+              onChange={(v) =>
+                v !== null && onConfigChange({ ...config, hover_delay_ms: v })
+              }
+            />
+          </ItemBox>
+        )}
         <ItemBox label={t("mappings.wheel.setting.enableRandomization")}>
           <Switch
             checked={config.enable_randomization}
@@ -450,6 +504,38 @@ function Setting({
             }
           />
         </ItemBox>
+        {config.enable_randomization && (
+          <>
+            <ItemBox
+              label={t("mappings.wheel.setting.jitterInterval")}
+              tooltip={t("mappings.wheel.setting.jitterIntervalHint")}
+            >
+              <InputNumber
+                className="w-full"
+                value={config.jitter_interval_ms}
+                min={0}
+                addonAfter="ms"
+                onChange={(v) =>
+                  v !== null &&
+                  onConfigChange({ ...config, jitter_interval_ms: v })
+                }
+              />
+            </ItemBox>
+            <ItemBox
+              label={t("mappings.wheel.setting.jitterOffset")}
+              tooltip={t("mappings.wheel.setting.jitterOffsetHint")}
+            >
+              <InputNumber
+                className="w-full"
+                value={config.jitter_offset}
+                min={0}
+                onChange={(v) =>
+                  v !== null && onConfigChange({ ...config, jitter_offset: v })
+                }
+              />
+            </ItemBox>
+          </>
+        )}
         <ItemBox label={t("mappings.common.randomOffsetX")}>
           <InputNumber
             className="w-full"

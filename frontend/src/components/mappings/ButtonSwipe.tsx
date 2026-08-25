@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { MappingUpdater, SwipeConfig } from "./mapping";
-import { Button, Flex, InputNumber, Popover, Space, Switch, Tooltip, Typography } from "antd";
+import { Flex, InputNumber, Space, Switch, Tooltip, Typography } from "antd";
 import {
-  clientPositionToMappingPosition,
   mappingButtonDragFactory,
   mappingButtonPosition,
   mappingButtonScaledPresetStyle,
@@ -11,8 +10,6 @@ import {
 import { useAppSelector } from "../../store/store";
 import { ItemBoxContainer, ItemBox } from "../common/ItemBox";
 import {
-  DeviceBackground,
-  RefreshImageButton,
   SettingBind,
   SettingFooter,
   SettingMappingId,
@@ -22,8 +19,7 @@ import {
   SettingScriptHooks,
 } from "./Common";
 import { useTranslation } from "react-i18next";
-import { RollbackOutlined } from "@ant-design/icons";
-import { IconFont, useMessageContext } from "../../hooks";
+import { IconFont } from "../../hooks";
 import {
   MappingOverlayPolyline,
   type MappingOverlayPoint,
@@ -57,8 +53,7 @@ export default function ButtonSwipe({
 
   const maskArea = useAppSelector((state) => state.other.maskArea);
   const [showSetting, setShowSetting] = useState(false);
-  const [isEditingPos, setIsEditingPos] = useState(false);
-  const mappingGuide = useMappingGuideState(showSetting && !isEditingPos);
+  const mappingGuide = useMappingGuideState(showSetting);
   const mappingButtonScale = useAppSelector((state) => state.localConfig.mappingButtonScale);
 
   const scale = useMemo(() => {
@@ -82,7 +77,7 @@ export default function ButtonSwipe({
   useEffect(() => {
     const element = document.getElementById(id);
     if (element) {
-      const position = config.positions[0];
+      const position = config.positions[0] ?? { x: 0, y: 0 };
       element.style.transform = mappingButtonTransformStyle(
         position.x,
         position.y,
@@ -95,14 +90,11 @@ export default function ButtonSwipe({
     maskArea,
     originalSize,
     ({ x, y }) => {
-      const newConfig = {
-        ...config,
-      };
-      newConfig.positions[0] = {
-        x,
-        y,
-      };
-      onConfigChange(newConfig);
+      const positions = [
+        { x, y },
+        config.positions[1] ?? { x, y },
+      ];
+      onConfigChange({ ...config, positions });
     }
   );
 
@@ -130,9 +122,6 @@ export default function ButtonSwipe({
             setShowSetting(false);
             onConfigCopy();
           }}
-          originalSize={originalSize}
-          isEditing={isEditingPos}
-          onIsEditingChange={(v) => setIsEditingPos(v)}
         />
       </SettingModal>
       <MappingOverlayPolyline
@@ -163,240 +152,34 @@ export default function ButtonSwipe({
   );
 }
 
-type PositonEditorItemProps = {
-  maskArea: { width: number; height: number; left: number; top: number };
-  originalSize: { width: number; height: number };
-  position: Position;
-  index: number;
-  onItemChange: (index: number, position: Position) => void;
-  onItemDelete: (index: number) => void;
-};
-
-function PositonEditorItem({
-  maskArea,
-  originalSize,
-  position,
-  index,
-  onItemChange,
-  onItemDelete,
-}: PositonEditorItemProps) {
-  const { t } = useTranslation();
-
-  const [open, setOpen] = useState(false);
-
-  const handleDrag = mappingButtonDragFactory(
-    maskArea,
-    originalSize,
-    (pos) => onItemChange(index, pos),
-    100
-  );
-
-  const scale = useMemo(() => {
-    return {
-      x: maskArea.width / originalSize.width,
-      y: maskArea.height / originalSize.height,
-    };
-  }, [originalSize, maskArea]);
-
-  return (
-    <Popover
-      destroyOnHidden
-      trigger="contextMenu"
-      open={open}
-      onOpenChange={(open) => setOpen(open)}
-      content={
-        <ItemBoxContainer gap={12}>
-          <ItemBox>
-            <Button
-              block
-              type="primary"
-              onClick={() => {
-                setOpen(false);
-                onItemDelete(index);
-              }}
-            >
-              {t("mappings.swipe.setting.delete")}
-            </Button>
-          </ItemBox>
-        </ItemBoxContainer>
-      }
-    >
-      <div
-        className="rounded-full w-3 h-3 bg-primary absolute left--1.5 top--1.5 text-center text-bold hover:bg-primary-hover active:bg-primary-active"
-        style={{
-          transform: mappingButtonTransformStyle(position.x, position.y, scale),
-        }}
-        onMouseDown={handleDrag}
-      >
-        <span className="relative bottom-5 whitespace-nowrap">{index + 1}</span>
-      </div>
-    </Popover>
-  );
-}
-
-function PositonEditor({
-  positions,
-  originalSize,
-  onExit,
-  onChange,
-}: {
-  positions: Position[];
-  originalSize: { width: number; height: number };
-  onExit: () => void;
-  onChange: (positions: Position[]) => void;
-}) {
-  const maskArea = useAppSelector((state) => state.other.maskArea);
-  const messageApi = useMessageContext();
-  const { t } = useTranslation();
-
-  const scale = useMemo(() => {
-    return {
-      x: maskArea.width / originalSize.width,
-      y: maskArea.height / originalSize.height,
-    };
-  }, [originalSize, maskArea]);
-
-  function handleItemDelete(index: number) {
-    if (positions.length === 1) {
-      messageApi?.warning(t("mappings.swipe.setting.keepLastOne"));
-      return;
-    }
-    onChange(positions.filter((_, i) => i !== index));
-  }
-
-  function handleItemChange(index: number, position: Position) {
-    onChange([
-      ...positions.slice(0, index),
-      position,
-      ...positions.slice(index + 1),
-    ]);
-  }
-
-  function handleEditorClick(e: React.MouseEvent) {
-    if (e.target === e.currentTarget && e.button === 2) {
-      onChange([
-        ...positions,
-        clientPositionToMappingPosition(
-          e.clientX,
-          e.clientY,
-          maskArea,
-          originalSize.width,
-          originalSize.height
-        ),
-      ]);
-    }
-  }
-
-  return (
-    <div className="select-none fixed left-0 top-0 right-0 bottom-0 bg-[var(--ant-color-bg-mask)] z-2000">
-      <Space.Compact className="absolute top-8 right-8 z--1">
-        <RefreshImageButton />
-        <Button
-          type="primary"
-          icon={<RollbackOutlined />}
-          onClick={() => onExit()}
-        >
-          {t("mappings.swipe.setting.back")}
-        </Button>
-      </Space.Compact>
-      <div
-        className="absolute border border-solid border-primary"
-        style={{
-          left: maskArea.left - 1,
-          top: maskArea.top - 1,
-          width: maskArea.width,
-          height: maskArea.height,
-        }}
-      >
-        <DeviceBackground alpha={0} />
-        <svg
-          className="w-full h-full absolute color-primary"
-          onMouseDown={handleEditorClick}
-          onContextMenu={(e) => e.preventDefault()}
-        >
-          <defs>
-            <marker
-              id="arrow"
-              markerWidth="8"
-              markerHeight="7"
-              refX="8"
-              refY="3.5"
-              orient="auto"
-              markerUnits="strokeWidth"
-            >
-              <path d="M0,0 L8,3.5 L0,7 Z" fill="currentColor" />
-            </marker>
-          </defs>
-          {positions.map((pos, index) => {
-            if (index === positions.length - 1) return null;
-            const { x: x1, y: y1 } = mappingButtonPosition(pos.x, pos.y, scale);
-            const { x: x2, y: y2 } = mappingButtonPosition(
-              positions[index + 1].x,
-              positions[index + 1].y,
-              scale
-            );
-
-            return (
-              <line
-                key={index}
-                x1={x1}
-                y1={y1}
-                x2={x2}
-                y2={y2}
-                stroke="currentColor"
-                strokeWidth="2"
-                markerEnd="url(#arrow)"
-              />
-            );
-          })}
-        </svg>
-        {positions.map((position, index) => (
-          <PositonEditorItem
-            key={index}
-            position={position}
-            index={index}
-            onItemChange={handleItemChange}
-            onItemDelete={handleItemDelete}
-            maskArea={maskArea}
-            originalSize={originalSize}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function Setting({
   config,
   onConfigChange,
   onConfigDelete,
   onConfigCopy,
-  originalSize,
-  isEditing,
-  onIsEditingChange,
 }: {
   config: SwipeConfig;
   onConfigChange: MappingUpdater<SwipeConfig>;
   onConfigDelete: () => void;
   onConfigCopy: () => void;
-  originalSize: { width: number; height: number };
-  isEditing: boolean;
-  onIsEditingChange: (v: boolean) => void;
 }) {
   const { t } = useTranslation();
-  const messageApi = useMessageContext();
+
+  function setPoint(index: 0 | 1, axis: "x" | "y", value: number | null) {
+    if (value === null) return;
+    const start = config.positions[0] ?? { x: 0, y: 0 };
+    const end = config.positions[1] ?? start;
+    const positions: Position[] = [start, end];
+    positions[index] = { ...positions[index], [axis]: value };
+    onConfigChange({ ...config, positions });
+  }
+
+  const start = config.positions[0] ?? { x: 0, y: 0 };
+  const end = config.positions[1] ?? start;
 
   return (
     <div>
       <h1 className="title-with-line">{t("mappings.swipe.setting.title")}</h1>
-      {isEditing && (
-        <PositonEditor
-          positions={config.positions}
-          originalSize={originalSize}
-          onExit={() => onIsEditingChange(false)}
-          onChange={(positions) => onConfigChange({ ...config, positions })}
-        />
-      )}
       <ItemBoxContainer className="max-h-70vh overflow-y-auto pr-2 scrollbar">
         <SettingMappingId id={config.id} />
         <SettingBind
@@ -409,16 +192,45 @@ function Setting({
             onConfigChange({ ...config, pointer_id: pointerId })
           }
         />
-        <ItemBox label={t("mappings.swipe.setting.positions")}>
-          <Button
-            type="dashed"
-            onClick={() => {
-              messageApi?.info(t("mappings.swipe.setting.positonsHelp"));
-              onIsEditingChange(true);
-            }}
-          >
-            {t("mappings.swipe.setting.edit")}
-          </Button>
+        <ItemBox label={t("mappings.swipe.setting.start")} tooltip={t("mappings.swipe.setting.startHint")}>
+          <Space.Compact className="w-full">
+            <InputNumber
+              className="w-full"
+              addonBefore="X"
+              value={start.x}
+              onChange={(v) => setPoint(0, "x", v)}
+            />
+            <InputNumber
+              className="w-full"
+              addonBefore="Y"
+              value={start.y}
+              onChange={(v) => setPoint(0, "y", v)}
+            />
+          </Space.Compact>
+        </ItemBox>
+        <ItemBox label={t("mappings.swipe.setting.end")} tooltip={t("mappings.swipe.setting.endHint")}>
+          <Space.Compact className="w-full">
+            <InputNumber
+              className="w-full"
+              addonBefore="X"
+              value={end.x}
+              onChange={(v) => setPoint(1, "x", v)}
+            />
+            <InputNumber
+              className="w-full"
+              addonBefore="Y"
+              value={end.y}
+              onChange={(v) => setPoint(1, "y", v)}
+            />
+          </Space.Compact>
+        </ItemBox>
+        <ItemBox label={t("mappings.swipe.setting.bezierWave")} tooltip={t("mappings.swipe.setting.bezierWaveHint")}>
+          <Switch
+            checked={config.bezier_wave}
+            onChange={(bezier_wave) =>
+              onConfigChange({ ...config, bezier_wave })
+            }
+          />
         </ItemBox>
         <ItemBox label={t("mappings.swipe.setting.duration")} tooltip={t("mappings.swipe.setting.durationHint")}>
           <InputNumber

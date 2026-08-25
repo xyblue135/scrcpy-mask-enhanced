@@ -41,6 +41,7 @@ export default function ButtonSingleTap({
   onConfigCopy: () => void;
 }) {
   const id = `mapping-single-tap-${index}`;
+  const isLongPress = config.long_press ?? false;
   const bindText = config.bind.length > 0 ? config.bind.join("+") : "???";
   const className =
     "rounded-full absolute box-border border-solid border-2 color-text " +
@@ -137,7 +138,7 @@ export default function ButtonSingleTap({
         justify="center"
         align="center"
       >
-        <Tooltip trigger="click" title={`${config.stealth_mode ? "StealthTap" : config.type}: ${bindText}`}>
+        <Tooltip trigger="click" title={`${config.stealth_mode ? "StealthTap" : isLongPress ? "LongPress" : config.type}: ${bindText}`}>
           <Typography.Text ellipsis={true} className="text-2.5 font-bold">
             {bindText}
           </Typography.Text>
@@ -159,6 +160,7 @@ function Setting({
   onConfigCopy: () => void;
 }) {
   const { t } = useTranslation();
+  const isLongPress = config.long_press ?? false;
 
   return (
     <div>
@@ -166,7 +168,9 @@ function Setting({
         {t(
           config.stealth_mode
             ? "mappings.stealthTap.setting.title"
-            : "mappings.singleTap.setting.title"
+            : isLongPress
+              ? "mappings.longPress.setting.title"
+              : "mappings.singleTap.setting.title"
         )}
       </h1>
       <ItemBoxContainer className="max-h-70vh overflow-y-auto pr-2 scrollbar">
@@ -191,7 +195,7 @@ function Setting({
             onConfigChange({ ...config, pointer_id: pointerId })
           }
         />
-        {!config.stealth_mode && (
+        {!config.stealth_mode && !isLongPress && (
           <ItemBox label={t("mappings.singleTap.setting.sync")} tooltip={t("mappings.singleTap.setting.syncHint")}>
             <Switch
               checked={config.sync}
@@ -202,7 +206,18 @@ function Setting({
           </ItemBox>
         )}
         {!config.stealth_mode && !config.sync && (
-          <ItemBox label={t("mappings.singleTap.setting.duration")} tooltip={t("mappings.singleTap.setting.durationHint")}>
+          <ItemBox
+            label={
+              isLongPress
+                ? t("mappings.longPress.setting.duration")
+                : t("mappings.singleTap.setting.duration")
+            }
+            tooltip={
+              isLongPress
+                ? t("mappings.longPress.setting.durationHint")
+                : t("mappings.singleTap.setting.durationHint")
+            }
+          >
             <InputNumber
               className="w-full"
               value={config.duration}

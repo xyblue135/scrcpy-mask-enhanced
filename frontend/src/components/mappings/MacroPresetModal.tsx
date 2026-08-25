@@ -39,34 +39,13 @@ type MacroMappingStep = {
   afterMs: number;
 };
 
-type MacroTapStep = {
-  id: string;
-  type: "tap";
-  x: number;
-  y: number;
-  afterMs: number;
-};
-
-type MacroHoldStep = {
-  id: string;
-  type: "hold";
-  x: number;
-  y: number;
-  durationMs: number;
-  afterMs: number;
-};
-
 type MacroWaitStep = {
   id: string;
   type: "wait";
   waitMs: number;
 };
 
-export type MacroStep =
-  | MacroMappingStep
-  | MacroTapStep
-  | MacroHoldStep
-  | MacroWaitStep;
+export type MacroStep = MacroMappingStep | MacroWaitStep;
 
 export type MacroMeta = {
   version: 1;
@@ -179,16 +158,6 @@ export function compileMacroScript(
       continue;
     }
 
-    if (step.type === "tap") {
-      lines.push(`${indent}tap(${pointerId}, ${Math.round(step.x)}, ${Math.round(step.y)})`);
-      if (step.afterMs > 0) lines.push(`${indent}wait(${Math.round(step.afterMs)})`);
-      continue;
-    }
-
-    lines.push(`${indent}tap(${pointerId}, ${Math.round(step.x)}, ${Math.round(step.y)}, "down")`);
-    if (step.durationMs > 0) lines.push(`${indent}wait(${Math.round(step.durationMs)})`);
-    lines.push(`${indent}tap(${pointerId}, ${Math.round(step.x)}, ${Math.round(step.y)}, "up")`);
-    if (step.afterMs > 0) lines.push(`${indent}wait(${Math.round(step.afterMs)})`);
   }
 
   if (meta.preventOverlap) {
@@ -261,45 +230,6 @@ function MappingStepEditor({
         onChange={(value) => value !== null && onChange({ ...step, afterMs: value })}
       />
     </Space.Compact>
-  );
-}
-
-function CoordinateStepEditor({
-  step,
-  onChange,
-}: {
-  step: MacroTapStep | MacroHoldStep;
-  onChange: (step: MacroTapStep | MacroHoldStep) => void;
-}) {
-  return (
-    <Flex vertical gap={8} className="w-full">
-      <Space.Compact className="w-full">
-        <InputNumber className="w-full" prefix="X:" value={step.x} min={0} onChange={(x) => x !== null && onChange({ ...step, x })} />
-        <InputNumber className="w-full" prefix="Y:" value={step.y} min={0} onChange={(y) => y !== null && onChange({ ...step, y })} />
-      </Space.Compact>
-      <Space.Compact className="w-full">
-        {step.type === "hold" && (
-          <InputNumber
-            className="w-full"
-            addonBefore="按住"
-            addonAfter="ms"
-            min={0}
-            value={step.durationMs}
-            onChange={(durationMs) =>
-              durationMs !== null && onChange({ ...step, durationMs })
-            }
-          />
-        )}
-        <InputNumber
-          className="w-full"
-          addonBefore="后延迟"
-          addonAfter="ms"
-          min={0}
-          value={step.afterMs}
-          onChange={(afterMs) => afterMs !== null && onChange({ ...step, afterMs })}
-        />
-      </Space.Compact>
-    </Flex>
   );
 }
 
@@ -383,17 +313,6 @@ export default function MacroPresetModal({
         id: stepId(),
         type,
         mappingId: targetOptions[0]?.value ?? "",
-        afterMs: 50,
-      };
-    } else if (type === "tap") {
-      step = { id: stepId(), type, x: 0, y: 0, afterMs: 50 };
-    } else if (type === "hold") {
-      step = {
-        id: stepId(),
-        type,
-        x: 0,
-        y: 0,
-        durationMs: 300,
         afterMs: 50,
       };
     } else {
@@ -495,8 +414,6 @@ export default function MacroPresetModal({
                   <Typography.Text strong>动作步骤（按顺序执行）</Typography.Text>
                   <Space wrap>
                     <Button size="small" onClick={() => addStep("mapping")}>+ 已有键位</Button>
-                    <Button size="small" onClick={() => addStep("tap")}>+ 坐标点击</Button>
-                    <Button size="small" onClick={() => addStep("hold")}>+ 长按</Button>
                     <Button size="small" onClick={() => addStep("wait")}>+ 等待</Button>
                   </Space>
                 </Flex>
@@ -516,9 +433,6 @@ export default function MacroPresetModal({
                       <div className="flex-1 min-w-0">
                         {step.type === "mapping" && (
                           <MappingStepEditor step={step} targetOptions={targetOptions} onChange={(next) => updateStep(index, next)} />
-                        )}
-                        {(step.type === "tap" || step.type === "hold") && (
-                          <CoordinateStepEditor step={step} onChange={(next) => updateStep(index, next as MacroStep)} />
                         )}
                         {step.type === "wait" && (
                           <InputNumber

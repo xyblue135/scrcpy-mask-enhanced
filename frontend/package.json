@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build --emptyOutDir",
+    "build": "tsc -b && vite build --emptyOutDir && node scripts/copy-perf-monitor.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },

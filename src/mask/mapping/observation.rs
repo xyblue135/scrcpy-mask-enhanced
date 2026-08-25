@@ -26,6 +26,7 @@ use crate::{
             script::{BindMappingScriptHooks, MappingScriptHooks},
             script_helper::{ScriptRuntimeCommandSender, ScriptSharedState},
             utils::{ControlMsgHelper, Position, default_random_offset, random_offset_vec2},
+            wheel::ActiveWheel,
         },
         mask_command::MaskSize,
     },
@@ -252,7 +253,13 @@ pub fn handle_observation_trigger(
     mask_size: Res<MaskSize>,
     cursor_pos: Res<CursorPosition>,
     mut active_map: ResMut<ActiveObservationMap>,
+    active_wheel: Res<ActiveWheel>,
 ) {
+    // Suppress viewport rotation while a wheel is being dragged, so the wheel
+    // gesture and observation aiming don't fight over the cursor.
+    if active_wheel.is_active() {
+        return;
+    }
     for (_, item) in active_map.0.iter_mut() {
         let mut delta = (cursor_pos.0 - item.start_cursor_pos) * item.sensitivity;
         if item.max_radius > 0.0 {

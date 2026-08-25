@@ -567,6 +567,8 @@ async fn get_mapping_list(
             "mapping_quick_switches": quick_switches,
             "quick_switch_enabled": LocalConfig::get_quick_switch_enabled(),
             "macro_preset_enabled": LocalConfig::get_macro_preset_enabled(),
+            "mapping_randomization_enabled": LocalConfig::get_mapping_randomization_enabled(),
+            "button_randomization_enabled": LocalConfig::get_button_randomization_enabled(),
         })),
     ))
 }

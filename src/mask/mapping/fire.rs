@@ -30,6 +30,7 @@ use crate::{
             script::{BindMappingScriptHooks, MappingScriptHooks},
             script_helper::{ScriptRuntimeCommandSender, ScriptSharedState},
             utils::{ControlMsgHelper, Position, default_random_offset, random_offset_vec2},
+            wheel::ActiveWheel,
         },
         mask_command::MaskSize,
     },
@@ -195,7 +196,13 @@ pub fn handle_fps(
     cursor_pos: Res<CursorPosition>,
     mask_size: Res<MaskSize>,
     runtime: ResMut<TokioTasksRuntime>,
+    active_wheel: Res<ActiveWheel>,
 ) {
+    // Suppress Fps mode toggling while a wheel is being dragged, so the wheel
+    // gesture and FPS aiming don't fight over the cursor.
+    if active_wheel.is_active() {
+        return;
+    }
     if let Some(active_mapping) = &active_mapping.0 {
         for (action, mapping) in &active_mapping.mappings {
             if action.as_ref().starts_with("Fps") {

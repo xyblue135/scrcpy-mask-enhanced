@@ -83,7 +83,11 @@ import ButtonCancelCast from "./ButtonCancelCast";
 import ButtonObservation from "./ButtonObservation";
 import ButtonFps from "./ButtonFps";
 import ButtonRawInput from "./ButtonRawInput";
-import { setActiveMappingFile } from "../../store/localConfig";
+import {
+  setActiveMappingFile,
+  setMappingRandomizationEnabled,
+  setButtonRandomizationEnabled,
+} from "../../store/localConfig";
 import { useTranslation } from "react-i18next";
 import { ItemBox, ItemBoxContainer } from "../common/ItemBox";
 import ButtonFire from "./ButtonFire";
@@ -575,6 +579,7 @@ type EditState = {
 
 const buttonTypes = [
   "SingleTap",
+  "LongPress",
   "RepeatTap",
   "MultipleTap",
   "Swipe",
@@ -614,13 +619,27 @@ const mappingConstructorMap: any = Object.fromEntries(
   ]),
 );
 
-const menuItems = [
-  ...buttonTypes.map((key) => [
-    key,
-    `mappings.${key.charAt(0).toLowerCase() + key.slice(1)}.name`,
-  ]),
-  ["DirectionPadToggleRun", "mappings.directionPadToggleRun.name"],
+// Order matters: derived variants are grouped right after their base type so
+// related controls (e.g. direction pad, its toggle-run variant, and the wheel)
+// stay together in the "add mapping" menu.
+const menuItems: [string, string][] = [
+  ["SingleTap", "mappings.singleTap.name"],
+  ["LongPress", "mappings.longPress.name"],
   ["StealthTap", "mappings.stealthTap.name"],
+  ["RepeatTap", "mappings.repeatTap.name"],
+  ["MultipleTap", "mappings.multipleTap.name"],
+  ["Swipe", "mappings.swipe.name"],
+  ["DirectionPad", "mappings.directionPad.name"],
+  ["DirectionPadToggleRun", "mappings.directionPadToggleRun.name"],
+  ["Wheel", "mappings.wheel.name"],
+  ["MouseCastSpell", "mappings.mouseCastSpell.name"],
+  ["PadCastSpell", "mappings.padCastSpell.name"],
+  ["CancelCast", "mappings.cancelCast.name"],
+  ["Observation", "mappings.observation.name"],
+  ["Fps", "mappings.fps.name"],
+  ["Fire", "mappings.fire.name"],
+  ["RawInput", "mappings.rawInput.name"],
+  ["Script", "mappings.script.name"],
 ];
 
 const firstAutoPointerId = 1;
@@ -1254,6 +1273,12 @@ export default function Mappings() {
   const [mappingQuickSwitches, setMappingQuickSwitches] = useState<MappingQuickSwitch[]>([]);
   const [quickSwitchEnabled, setQuickSwitchEnabled] = useState(true);
   const [macroPresetEnabled, setMacroPresetEnabled] = useState(true);
+  const randomizationEnabled = useAppSelector(
+    (state) => state.localConfig.mappingRandomizationEnabled,
+  );
+  const buttonRandomizationEnabled = useAppSelector(
+    (state) => state.localConfig.buttonRandomizationEnabled,
+  );
   const [showAllMappingGuides, setShowAllMappingGuides] = useState(false);
   const [showRandomRanges, setShowRandomRanges] = useState(false);
   const [positionUnlocked, setPositionUnlocked] = useState(false);
@@ -1316,11 +1341,15 @@ export default function Mappings() {
         mapping_quick_switches: MappingQuickSwitch[];
         quick_switch_enabled: boolean;
         macro_preset_enabled: boolean;
+        mapping_randomization_enabled: boolean;
+        button_randomization_enabled: boolean;
       }>("/api/mapping/get_mapping_list");
       setMappingList(res.data.mapping_list);
       setMappingQuickSwitches(res.data.mapping_quick_switches ?? []);
       setQuickSwitchEnabled(res.data.quick_switch_enabled ?? true);
       setMacroPresetEnabled(res.data.macro_preset_enabled ?? true);
+      dispatch(setMappingRandomizationEnabled(res.data.mapping_randomization_enabled ?? true));
+      dispatch(setButtonRandomizationEnabled(res.data.button_randomization_enabled ?? true));
       if (activeMappingFile !== res.data.active_mapping)
         dispatch(setActiveMappingFile(res.data.active_mapping));
 
@@ -1346,8 +1375,20 @@ export default function Mappings() {
       });
       if (key === "quick_switch_enabled") setQuickSwitchEnabled(value);
       if (key === "macro_preset_enabled") setMacroPresetEnabled(value);
+      if (key === "mapping_randomization_enabled")
+        dispatch(setMappingRandomizationEnabled(value));
+      if (key === "button_randomization_enabled")
+        dispatch(setButtonRandomizationEnabled(value));
       messageApi?.success(
-        t(key === "quick_switch_enabled" ? "mappings.home.quickSwitchUpdated" : "mappings.home.macroPresetUpdated"),
+        t(
+          key === "quick_switch_enabled"
+            ? "mappings.home.quickSwitchUpdated"
+            : key === "macro_preset_enabled"
+              ? "mappings.home.macroPresetUpdated"
+              : key === "button_randomization_enabled"
+                ? "mappings.home.buttonRandomizationUpdated"
+                : "mappings.home.randomizationUpdated",
+        ),
       );
     } catch (error: any) {
       messageApi?.error(error);
@@ -1781,6 +1822,22 @@ export default function Mappings() {
                 onChange={(v) => updateGlobalToggle("macro_preset_enabled", v)}
                 checkedChildren={t("mappings.home.macroPresetOn")}
                 unCheckedChildren={t("mappings.home.macroPresetOff")}
+              />
+            </Tooltip>
+            <Tooltip title={t("mappings.home.buttonRandomizationEnabled")}>
+              <Switch
+                checked={buttonRandomizationEnabled}
+                onChange={(v) => updateGlobalToggle("button_randomization_enabled", v)}
+                checkedChildren={t("mappings.home.buttonRandomizationOn")}
+                unCheckedChildren={t("mappings.home.buttonRandomizationOff")}
+              />
+            </Tooltip>
+            <Tooltip title={t("mappings.home.randomizationEnabled")}>
+              <Switch
+                checked={randomizationEnabled}
+                onChange={(v) => updateGlobalToggle("mapping_randomization_enabled", v)}
+                checkedChildren={t("mappings.home.randomizationOn")}
+                unCheckedChildren={t("mappings.home.randomizationOff")}
               />
             </Tooltip>
             <Button

@@ -236,6 +236,9 @@ export interface LocalConfigState {
   stayAwake: boolean;
   screenOffTimeout: number;
   powerOffOnClose: boolean;
+  mappingRandomizationEnabled: boolean;
+  buttonRandomizationEnabled: boolean;
+  touchProbeEnabled: boolean;
 }
 
 const initialState: LocalConfigState = {
@@ -280,6 +283,9 @@ const initialState: LocalConfigState = {
   stayAwake: false,
   screenOffTimeout: -1,
   powerOffOnClose: false,
+  mappingRandomizationEnabled: true,
+  buttonRandomizationEnabled: true,
+  touchProbeEnabled: true,
 };
 
 const localConfigSlice = createSlice({
@@ -340,6 +346,9 @@ const localConfigSlice = createSlice({
     setStayAwake: (state, action: PayloadAction<boolean>) => { state.stayAwake = action.payload; updateLocalConfig("stay_awake", action.payload); },
     setScreenOffTimeout: (state, action: PayloadAction<number>) => { state.screenOffTimeout = action.payload; updateLocalConfig("screen_off_timeout", action.payload); },
     setPowerOffOnClose: (state, action: PayloadAction<boolean>) => { state.powerOffOnClose = action.payload; updateLocalConfig("power_off_on_close", action.payload); },
+    setMappingRandomizationEnabled: (state, action: PayloadAction<boolean>) => { state.mappingRandomizationEnabled = action.payload; updateLocalConfig("mapping_randomization_enabled", action.payload, 0); },
+    setButtonRandomizationEnabled: (state, action: PayloadAction<boolean>) => { state.buttonRandomizationEnabled = action.payload; updateLocalConfig("button_randomization_enabled", action.payload, 0); },
+    setTouchProbeEnabled: (state, action: PayloadAction<boolean>) => { state.touchProbeEnabled = action.payload; updateLocalConfig("touch_probe_enabled", action.payload, 0); },
   },
 });
 
@@ -386,5 +395,8 @@ export const {
   setStayAwake,
   setScreenOffTimeout,
   setPowerOffOnClose,
+  setMappingRandomizationEnabled,
+  setButtonRandomizationEnabled,
+  setTouchProbeEnabled,
 } = localConfigSlice.actions;
 export default localConfigSlice.reducer;

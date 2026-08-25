@@ -1,6 +1,8 @@
 import { useState, useCallback, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Flex, Typography, Upload, Alert } from "antd";
+import { Button, Flex, Typography, Upload, Alert, Switch } from "antd";
+import { useAppDispatch, useAppSelector } from "../store/store";
+import { setTouchProbeEnabled } from "../store/localConfig";
 import {
   CloudUploadOutlined,
   PhoneOutlined,
@@ -38,6 +40,10 @@ async function fetchBlobWithHeader(
 
 export default function LatencyCompare() {
   const { t } = useTranslation();
+  const dispatch = useAppDispatch();
+  const touchProbeEnabled = useAppSelector(
+    (state) => state.localConfig.touchProbeEnabled,
+  );
   // 手机截图
   const [phoneImg, setPhoneImg] = useState<string>("");
   const [phonePath, setPhonePath] = useState<string>("");
@@ -167,6 +173,48 @@ export default function LatencyCompare() {
       <Typography.Title level={4} style={{ marginTop: 0 }}>
         {t("latencyCompare.title")}
       </Typography.Title>
+
+      {/* 屏幕性能监控：perf.jsonl（投屏链路各环节耗时探针） */}
+      <Alert
+        type="info"
+        showIcon
+        message={
+          <Flex vertical gap={2}>
+            <Typography.Text strong>
+              {t("latencyCompare.screenPerfTitle")}
+            </Typography.Text>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              {t("latencyCompare.screenPerfDesc")}
+            </Typography.Text>
+          </Flex>
+        }
+        style={{ marginBottom: 16 }}
+      />
+
+      {/* 映射性能监控：touch_probe.jsonl（注入手机的触摸事件流探针） */}
+      <Alert
+        type="warning"
+        showIcon
+        message={
+          <Flex align="center" gap={12} justify="space-between" wrap>
+            <Flex vertical gap={2} style={{ flex: 1, minWidth: 240 }}>
+              <Typography.Text strong>
+                {t("latencyCompare.touchProbeEnabled")}
+              </Typography.Text>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {t("latencyCompare.touchProbeDesc")}
+              </Typography.Text>
+            </Flex>
+            <Switch
+              checked={touchProbeEnabled}
+              onChange={(v) => dispatch(setTouchProbeEnabled(v))}
+              checkedChildren={t("latencyCompare.touchProbeOn")}
+              unCheckedChildren={t("latencyCompare.touchProbeOff")}
+            />
+          </Flex>
+        }
+        style={{ marginBottom: 16 }}
+      />
 
       {/* 预览参考说明 */}
       <Alert

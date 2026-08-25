@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>scrcpy-mask 映射性能监控</title>
+<script src="/vendor/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --border: #e3e5ea;
+    --text: #1c1e23;
+    --muted: #6b7280;
+    --brand: #4b3fe3;
+    --brand-soft: #f2f3ff;
+    --series-1: #4b3fe3;
+    --series-2: #efaa17;
+    --series-3: #27d2bf;
+    --danger: #e8463a;
+    --ok: #1dc981;
+    --radius: 10px;
+    --mono: "JetBrains Mono", "SF Mono", Consolas, Menlo, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "SF Pro Text", "PingFang SC", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .wrap { display: flex; gap: 16px; padding: 16px; height: 100vh; }
+  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+  .side { width: 440px; flex-shrink: 0; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+  .card h2 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 10px; }
+
+  .topbar { display: flex; align-items: center; gap: 16px; padding: 12px 16px; }
+  .topbar h1 { font-size: 15px; font-weight: 600; }
+  .status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); padding: 3px 10px; border-radius: 999px; background: var(--brand-soft); }
+  .status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+  .status.off .dot { background: var(--danger); }
+  .status.off { background: #fdeceb; }
+  .status.waiting .dot { background: var(--series-2); }
+  .path { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: auto; }
+
+  .stats { display: flex; gap: 12px; }
+  .stat { flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+  .stat .label { font-size: 12px; color: var(--muted); }
+  .stat .value { font-size: 20px; font-weight: 600; font-family: var(--mono); margin-top: 2px; }
+  .stat .value small { font-size: 12px; font-weight: 400; color: var(--muted); }
+  .stat.danger .value { color: var(--danger); }
+  .stat.ok .value { color: var(--ok); }
+
+  .chart-box { position: relative; height: 200px; }
+  .legend { display: flex; gap: 14px; font-size: 11px; color: var(--muted); margin-top: 8px; flex-wrap: wrap; }
+  .legend .item { display: inline-flex; align-items: center; gap: 5px; }
+  .legend .swatch { width: 9px; height: 9px; border-radius: 2px; }
+
+  .info-banner {
+    font-size: 12px; color: #155e75; background: #e0f2fe;
+    border: 1px solid #bae6fd; border-radius: 8px; padding: 8px 12px; line-height: 1.6;
+  }
+  .info-banner b { color: #0c4a6e; }
+
+  .action-stats { display: flex; gap: 10px; flex-wrap: wrap; }
+  .action-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--brand-soft); border-radius: 999px;
+    padding: 4px 12px; font-size: 12px; font-family: var(--mono);
+  }
+  .action-chip b { font-weight: 600; }
+
+  .elist {
+    display: flex; flex-direction: column;
+    max-height: 360px; overflow-y: auto; font-size: 12px;
+    border: 1px solid var(--border); border-radius: 8px;
+  }
+  .ehead, .erow {
+    display: grid;
+    grid-template-columns: 110px 60px 52px 60px 60px 52px;
+    align-items: center;
+    column-gap: 8px;
+    white-space: nowrap;
+  }
+  .ehead {
+    position: sticky; top: 0; z-index: 1;
+    background: #fafbfc; color: var(--muted); font-size: 11px;
+    padding: 6px 10px; border-bottom: 1px solid var(--border);
+  }
+  .erow { padding: 3px 10px; font-family: var(--mono); }
+  .erow:nth-child(odd) { background: #fafbfc; }
+  .act-move { color: var(--series-1); }
+  .act-down { color: var(--ok); font-weight: 600; }
+  .act-up { color: var(--danger); font-weight: 600; }
+  .gap-hot { color: var(--danger); font-weight: 600; }
+  .empty { font-size: 12px; color: var(--muted); text-align: center; padding: 24px 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="main">
+    <div class="card topbar">
+      <h1>scrcpy-mask 映射性能监控</h1>
+      <span class="status" id="status"><span class="dot"></span><span id="statusText">连接中</span></span>
+      <span class="path" id="path"></span>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="label">事件 / 秒</div><div class="value" id="eps">--</div></div>
+      <div class="stat"><div class="label">Move 占比</div><div class="value" id="movePct">--</div></div>
+      <div class="stat"><div class="label">平均间隔 (ms)</div><div class="value" id="avgGap">--<small> ms</small></div></div>
+      <div class="stat"><div class="label">窗口内事件数</div><div class="value" id="total">--</div></div>
+    </div>
+
+    <div class="info-banner">
+      <b>说明：</b>本页面对应 <b>touch_probe.jsonl</b>（每次注入手机的触摸事件一行）。
+      <b>事件/秒</b>反映注入密度，<b>平均间隔</b>越小说明事件越密集。
+      若开随机抖动后间隔经常 &lt; 8ms（即每秒 100+ 条 Move），手机端就可能处理不过来而卡顿。
+    </div>
+
+    <div class="card">
+      <h2>事件频率 / 事件间隔</h2>
+      <div class="chart-box"><canvas id="rateChart"></canvas></div>
+      <div class="legend">
+        <span class="item"><span class="swatch" style="background:#4b3fe3"></span>事件/秒</span>
+        <span class="item"><span class="swatch" style="background:#efaa17"></span>间隔 ms</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Action 分布（时间窗口内）</h2>
+      <div class="action-stats" id="actionStats"></div>
+    </div>
+  </div>
+
+  <div class="side">
+    <div class="card">
+      <h2>最近事件流（新→旧）</h2>
+      <div class="elist" id="eventList">
+        <div class="ehead">
+          <span>时间</span>
+          <span>Action</span>
+          <span>指针</span>
+          <span>X</span>
+          <span>Y</span>
+          <span>间隔ms</span>
+        </div>
+        <div class="empty">等待数据…（请确认主程序已运行并开启映射性能探针）</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+const $ = (id) => document.getElementById(id);
+const state = {
+  rateSeries: [],      // [{ts, v}] 事件/秒
+  gapSeries: [],       // [{ts, v}] 间隔 ms
+  actionCounts: {},    // {action: n}
+  total: 0,
+  lastTs: 0,
+  windowSec: 120,
+};
+
+let rateChart;
+function initChart() {
+  if (typeof Chart === "undefined") return;
+  rateChart = new Chart($("rateChart"), {
+    type: "line",
+    data: { datasets: [] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { type: "linear", ticks: { maxTicksLimit: 8 } },
+        y: { beginAtZero: true },
+      },
+    },
+  });
+}
+
+function renderStats(snap) {
+  const evs = snap.events_per_sec || [];
+  const latestEps = evs.length ? evs[evs.length - 1].v : 0;
+  $("eps").textContent = latestEps || "--";
+
+  const total = (snap.action_counts && Object.values(snap.action_counts).reduce((a, v) => a + v, 0)) || 0;
+  const moves = (snap.action_counts && snap.action_counts.Move) || 0;
+  $("movePct").textContent = total ? (moves / total * 100).toFixed(0) + "%" : "--";
+  $("total").textContent = snap.total_events ?? "--";
+
+  const gaps = snap.since_last || [];
+  const gapsOk = gaps.map((p) => p.v).filter((v) => v != null && v >= 0);
+  const avgGap = gapsOk.length
+    ? gapsOk.reduce((a, v) => a + v, 0) / gapsOk.length
+    : null;
+  $("avgGap").textContent = avgGap != null ? avgGap.toFixed(1) : "--";
+  const el = $("avgGap");
+  el.parentElement.className = "stat" + (avgGap != null && avgGap < 8 ? " danger" : "");
+}
+
+function renderActionStats(counts) {
+  const el = $("actionStats");
+  el.innerHTML = "";
+  const entries = Object.entries(counts || {});
+  if (!entries.length) {
+    el.innerHTML = '<span class="empty" style="padding:4px">暂无数据</span>';
+    return;
+  }
+  for (const [action, count] of entries.sort((a, b) => b[1] - a[1])) {
+    const chip = document.createElement("span");
+    chip.className = "action-chip";
+    chip.innerHTML = `<b>${action}</b> ${count}`;
+    el.appendChild(chip);
+  }
+}
+
+function renderRecent(events) {
+  const el = $("eventList");
+  el.querySelectorAll(".erow").forEach((n) => n.remove());
+  if (!events || !events.length) {
+    return;
+  }
+  const rows = [...events].reverse(); // 新→旧
+  for (const e of rows) {
+    const action = e.action || "?";
+    const cls =
+      action === "Move" ? "act-move" : action === "Down" ? "act-down" : action === "Up" ? "act-up" : "";
+    const gap = e.since_last_ms;
+    const gapHtml = gap != null && gap < 8
+      ? `<span class="gap-hot">${gap}</span>`
+      : gap != null ? gap : "—";
+    const row = document.createElement("div");
+    row.className = "erow";
+    row.innerHTML =
+      `<span>${new Date((e.ts || 0) * 1000).toLocaleTimeString("zh-CN", { hour12: false })}</span>` +
+      `<span class="${cls}">${action}</span>` +
+      `<span>#${e.pointer_id ?? "?"}</span>` +
+      `<span>${e.x ?? "—"}</span>` +
+      `<span>${e.y ?? "—"}</span>` +
+      `<span>${gapHtml}</span>`;
+    el.appendChild(row);
+  }
+}
+
+function renderCharts() {
+  if (!rateChart) return;
+  const rel = (ts) => +(ts - (state.lastTs - state.windowSec)).toFixed(1);
+  rateChart.data.datasets = [
+    {
+      label: "事件/秒",
+      data: state.rateSeries.map((p) => ({ x: rel(p.ts), y: p.v })),
+      borderColor: "#4b3fe3", backgroundColor: "#4b3fe3", borderWidth: 1.5, pointRadius: 0, tension: 0.15,
+    },
+    {
+      label: "间隔ms",
+      data: state.gapSeries.map((p) => ({ x: rel(p.ts), y: p.v })),
+      borderColor: "#efaa17", backgroundColor: "#efaa17", borderWidth: 1.2, pointRadius: 0, tension: 0.15,
+    },
+  ];
+  rateChart.update();
+}
+
+function renderAll(snap) {
+  state.rateSeries = snap.events_per_sec || [];
+  state.gapSeries = snap.since_last || [];
+  state.actionCounts = snap.action_counts || {};
+  if (snap.total_events != null) state.total = snap.total_events;
+  if (snap.now) state.lastTs = snap.now;
+  renderStats(snap);
+  renderActionStats(state.actionCounts);
+  renderRecent(snap.recent || []);
+  renderCharts();
+}
+
+function ingestRow(row) {
+  // 新事件：追加到频率/间隔序列
+  const ts = row.ts || 0;
+  state.lastTs = ts;
+  const cutoff = Date.now() / 1000 - state.windowSec;
+  state.rateSeries.push({ ts: Math.floor(ts), v: 1 }); // 简化：近似
+  state.gapSeries.push({ ts, v: row.since_last_ms ?? 0 });
+  state.rateSeries = state.rateSeries.filter((p) => p.ts > cutoff);
+  state.gapSeries = state.gapSeries.filter((p) => p.ts > cutoff);
+  state.actionCounts[row.action || "?"] = (state.actionCounts[row.action || "?"] || 0) + 1;
+  renderCharts();
+  fetch("/api/snapshot").then((r) => r.json()).then(renderStats).catch(() => {});
+}
+
+function connect() {
+  const es = new EventSource("/events");
+  es.addEventListener("snapshot", (e) => { try { renderAll(JSON.parse(e.data)); } catch (_) {} });
+  es.addEventListener("message", (e) => {
+    if (e.data === ": keepalive") return;
+    try { ingestRow(JSON.parse(e.data)); } catch (_) {}
+  });
+  es.onopen = () => setStatus("live", "实时连接");
+  es.onerror = () => {
+    setStatus("off", "连接断开，重连中…");
+    es.close();
+    setTimeout(connect, 2000);
+  };
+}
+
+function setStatus(kind, text) {
+  const el = $("status");
+  el.className = "status " + (kind === "live" ? "" : "off");
+  $("statusText").textContent = text;
+}
+
+setInterval(() => {
+  if (Date.now() / 1000 - state.lastTs > 5) {
+    $("status").className = "status waiting";
+    $("statusText").textContent = "等待主程序写入数据…";
+  } else {
+    $("status").className = "status";
+    $("statusText").textContent = "实时连接";
+  }
+}, 2000);
+
+fetch("/health").then((r) => r.json()).then((h) => { $("path").textContent = h.file || ""; }).catch(() => {});
+fetch("/api/snapshot").then((r) => r.json()).then(renderAll).catch(() => {});
+initChart();
+connect();
+</script>
+</body>
+</html>
