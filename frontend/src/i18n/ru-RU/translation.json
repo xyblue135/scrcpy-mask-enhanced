@@ -373,6 +373,7 @@
       "quickSwitchHint": "Установите фокус и нажмите сочетание клавиш. Рекомендуется Ctrl/Alt + F1-F12. Backspace или Delete очищает поле.",
       "quickSwitchPlaceholder": "Нажмите сочетание клавиш",
       "clearQuickSwitch": "Очистить быстрое переключение",
+      "quickSwitchNeedShortcut": "Сначала задайте сочетание клавиш",
       "migration": "Миграция к размеру текущего основного устройства",
       "editing": "Редактирование",
       "rename": "Переименовать",

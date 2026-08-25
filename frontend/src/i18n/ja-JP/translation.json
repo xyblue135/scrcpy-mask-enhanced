@@ -373,6 +373,7 @@
       "quickSwitchHint": "入力欄にフォーカスしてキーの組み合わせを押してください。Ctrl/Alt + F1-F12 を推奨します。Backspace または Delete で消去します。",
       "quickSwitchPlaceholder": "キーの組み合わせを入力",
       "clearQuickSwitch": "クイック切替を消去",
+      "quickSwitchNeedShortcut": "先にキーの組み合わせを設定してください",
       "migration": "現在のメインデバイスサイズへ移行",
       "editing": "編集中",
       "rename": "名前変更",

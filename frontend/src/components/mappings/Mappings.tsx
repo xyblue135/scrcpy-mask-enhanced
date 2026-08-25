@@ -362,12 +362,16 @@ function Manager({
         <Flex align="center" gap="small" wrap={false}>
           <Switch
             checked={record.quickSwitch.enabled}
-            onChange={(enabled) =>
+            onChange={(enabled) => {
+              if (enabled && record.quickSwitch.shortcut.length === 0) {
+                messageApi?.warning(t("mappings.home.quickSwitchNeedShortcut"));
+                return;
+              }
               onQuickSwitchChange(record.file, {
                 enabled,
                 shortcut: record.quickSwitch.shortcut,
-              })
-            }
+              });
+            }}
           />
           <Tooltip title={t("mappings.home.quickSwitchHint")}>
             <Input
@@ -398,7 +402,7 @@ function Manager({
                 if (event.metaKey) shortcut.push("SuperLeft");
                 shortcut.push(key);
                 onQuickSwitchChange(record.file, {
-                  enabled: record.quickSwitch.enabled,
+                  enabled: true,
                   shortcut,
                 });
               }}

@@ -386,6 +386,7 @@
       "quickSwitchHint": "点击输入框后按下组合键。建议使用 Ctrl/Alt + F1-F12，避免与游戏键位冲突。退格或 Delete 可清除。",
       "quickSwitchPlaceholder": "点击后按组合键",
       "clearQuickSwitch": "清除快捷切换",
+      "quickSwitchNeedShortcut": "请先设置快捷键组合，再开启快捷切换",
       "active": "启用",
       "migration": "迁移到当前主设备尺寸",
       "editing": "编辑",

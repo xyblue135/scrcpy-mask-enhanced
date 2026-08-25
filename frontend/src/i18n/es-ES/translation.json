@@ -373,6 +373,7 @@
       "quickSwitchHint": "Enfoca el campo y pulsa una combinación. Se recomienda Ctrl/Alt + F1-F12. Retroceso o Delete la borra.",
       "quickSwitchPlaceholder": "Pulsa una combinación",
       "clearQuickSwitch": "Borrar cambio rápido",
+      "quickSwitchNeedShortcut": "Establece un atajo de teclado antes de activar",
       "migration": "Migración al tamaño actual del dispositivo principal",
       "editing": "Editando",
       "rename": "Renombrar",

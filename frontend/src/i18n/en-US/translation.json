@@ -387,6 +387,7 @@
       "quickSwitchHint": "Focus the field and press a key chord. Ctrl/Alt + F1-F12 is recommended to avoid game bindings. Backspace or Delete clears it.",
       "quickSwitchPlaceholder": "Press a key chord",
       "clearQuickSwitch": "Clear quick switch",
+      "quickSwitchNeedShortcut": "Set a keyboard shortcut before enabling quick switch",
       "migration": "Migration to current main device size",
       "editing": "Editing",
       "rename": "Rename",

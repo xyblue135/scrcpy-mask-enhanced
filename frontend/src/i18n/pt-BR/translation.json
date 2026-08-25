@@ -373,6 +373,7 @@
       "quickSwitchHint": "Foque o campo e pressione uma combinação. Recomendamos Ctrl/Alt + F1-F12. Backspace ou Delete limpa.",
       "quickSwitchPlaceholder": "Pressione uma combinação",
       "clearQuickSwitch": "Limpar troca rápida",
+      "quickSwitchNeedShortcut": "Defina um atalho de teclado antes de ativar",
       "migration": "Migrar para o tamanho atual do dispositivo principal",
       "editing": "Editando",
       "rename": "Renomear",
