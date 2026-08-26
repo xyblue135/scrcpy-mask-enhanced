@@ -8,7 +8,6 @@ import {
 import * as MappingConstructor from "./mapping";
 
 import {
-  Alert,
   Badge,
   Button,
   Dropdown,
@@ -29,8 +28,8 @@ import {
   type TableProps,
 } from "antd";
 import {
-  useEffect,
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -58,6 +57,7 @@ import {
   KeyOutlined,
   SwapOutlined,
   EyeInvisibleOutlined,
+  AimOutlined,
 } from "@ant-design/icons";
 import IconButton from "../common/IconButton";
 import {
@@ -717,6 +717,7 @@ function Displayer({
   const dispatch = useAppDispatch();
   const maskArea = useAppSelector((state) => state.other.maskArea);
   const { t } = useTranslation();
+  const messageApi = useMessageContext();
 
   const cursorPosRef = useRef<HTMLDivElement>(null);
   const displayerRef = useRef<HTMLDivElement>(null);
@@ -729,10 +730,68 @@ function Displayer({
   const [rotated, setRotated] = useState(false);
   // 隐藏映射按键图标：隐藏画布上的按键图标，便于查看背景
   const [hideIcons, setHideIcons] = useState(false);
-  // 自定义模板分辨率弹窗
-  const [sizeEditOpen, setSizeEditOpen] = useState(false);
+  // 设备参考图（@image:image.png）尺寸与键盘映射分辨率（原弹窗逻辑移至内联）
   const [sizeW, setSizeW] = useState(0);
   const [sizeH, setSizeH] = useState(0);
+  const backgroundImage = useAppSelector(
+    (state) => state.other.backgroundImage,
+  );
+
+  // 切换预设或重置时，把当前 original_size 同步进本地编辑值
+  useEffect(() => {
+    setSizeW(state.current.original_size.width);
+    setSizeH(state.current.original_size.height);
+  }, [state.current.original_size.width, state.current.original_size.height]);
+
+  // 从设备截图自动识别宽高比（精度 0.001），并把宽高等比缩放回编辑框
+  function autoDetectResolution() {
+    const url = backgroundImage;
+    if (!url) {
+      messageApi?.warning(t("mappings.home.refreshScreenshotFirst"));
+      return;
+    }
+    const img = new window.Image();
+    img.onload = () => {
+      const nW = img.naturalWidth;
+      const nH = img.naturalHeight;
+      if (!nW || !nH) return;
+      // 比例保留到 0.001 精度
+      const ratio = Math.round((nW / nH) * 1000) / 1000;
+      setSizeH(nH);
+      setSizeW(Math.round(nH * ratio));
+      messageApi?.success(
+        t("mappings.home.autoDetectSuccess", {
+          w: nW,
+          h: nH,
+          ratio: ratio.toFixed(3),
+        }),
+      );
+    };
+    img.onerror = () => {
+      messageApi?.error(t("mappings.home.autoDetectFailed"));
+    };
+    img.src = url;
+  }
+
+  function applyResolution() {
+    if (sizeW <= 0 || sizeH <= 0) {
+      messageApi?.warning(t("mappings.home.resolutionMustPositive"));
+      return;
+    }
+    setState((prev) =>
+      prev
+        ? {
+            ...prev,
+            edited: true,
+            current: {
+              ...prev.current,
+              original_size: { width: sizeW, height: sizeH },
+            },
+          }
+        : prev,
+    );
+    messageApi?.success(t("mappings.home.resolutionApplied"));
+  }
 
   const getMappingContainerScroll = useCallback(() => {
     const mappingContainer = document.getElementById("mappings-container");
@@ -910,18 +969,6 @@ function Displayer({
             {t("mappings.home.hideIcons")}
           </Button>
         </Flex>
-        <Button
-          type="text"
-          size="small"
-          className="color-text-secondary font-bold"
-          onClick={() => {
-            setSizeW(state.current.original_size.width);
-            setSizeH(state.current.original_size.height);
-            setSizeEditOpen(true);
-          }}
-        >
-          {`[${originalSize.width} x ${originalSize.height}]`}
-        </Button>
       </Flex>
       <div
         ref={displayerRef}
@@ -931,6 +978,45 @@ function Displayer({
         style={ratioStyle}
         onMouseMove={handleMouseMove}
       >
+        <Flex
+          align="center"
+          gap={8}
+          wrap
+          className="absolute top-2 right-2 z-100 bg-[var(--ant-color-bg-container)] bg-opacity-90 px-3 py-2 rounded shadow-sm text-xs"
+        >
+          <span className="font-bold">
+            {t("mappings.home.keyboardMappingResolution")}
+          </span>
+          <InputNumber
+            size="small"
+            min={1}
+            value={sizeW}
+            onChange={(v) => setSizeW(v ?? 0)}
+            style={{ width: 90 }}
+          />
+          <span>×</span>
+          <InputNumber
+            size="small"
+            min={1}
+            value={sizeH}
+            onChange={(v) => setSizeH(v ?? 0)}
+            style={{ width: 90 }}
+          />
+          <Button
+            size="small"
+            icon={<AimOutlined />}
+            onClick={autoDetectResolution}
+          >
+            {t("mappings.home.autoDetectRatio")}
+          </Button>
+          <Button
+            size="small"
+            type="primary"
+            onClick={applyResolution}
+          >
+            {t("mappings.home.applyResolution")}
+          </Button>
+        </Flex>
         <DeviceBackground />
         <Dropdown
           menu={{
@@ -1015,62 +1101,6 @@ function Displayer({
           })}
         </MappingOverlayProvider>
       </div>
-      <Modal
-        open={sizeEditOpen}
-        title={t("mappings.home.customResolution")}
-        okText={t("mappings.home.applyResolution")}
-        cancelText={t("mappings.common.cancel")}
-        onCancel={() => setSizeEditOpen(false)}
-        onOk={() => {
-          if (sizeW > 0 && sizeH > 0) {
-            setState((prev) =>
-              prev
-                ? {
-                    ...prev,
-                    edited: true,
-                    current: {
-                      ...prev.current,
-                      original_size: { width: sizeW, height: sizeH },
-                    },
-                  }
-                : prev,
-            );
-          }
-          setSizeEditOpen(false);
-        }}
-      >
-        {/* 显著提示：分辨率必须与手机一致，不一致会错位 */}
-        <Alert
-          type="warning"
-          showIcon
-          message={t("mappings.home.resolutionMustMatch")}
-          style={{ marginBottom: 12 }}
-        />
-        <Alert
-          type="error"
-          showIcon
-          message={t("mappings.home.resolutionMismatchWarning")}
-          description={t("mappings.home.resolutionMismatchDetail")}
-          style={{ marginBottom: 12 }}
-        />
-        <Flex align="center" gap={8}>
-          <InputNumber
-            min={1}
-            value={sizeW}
-            onChange={(v) => setSizeW(v ?? 0)}
-            placeholder="W"
-            style={{ width: 120 }}
-          />
-          <span>x</span>
-          <InputNumber
-            min={1}
-            value={sizeH}
-            onChange={(v) => setSizeH(v ?? 0)}
-            placeholder="H"
-            style={{ width: 120 }}
-          />
-        </Flex>
-      </Modal>
     </div>
   );
 }

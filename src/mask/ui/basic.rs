@@ -12,6 +12,7 @@ use crate::{
     mask::{
         MaskFrameSet, MaskResizeState,
         mask_command::TitlebarState,
+        mapping::config::ActiveMappingConfig,
         video::{VideoPlayer, YuvVideoMaterial, create_initial_yuv_material},
         window_state::{MaskFullscreenState, MaskMaximizeState, toggle_window_maximized},
     },
@@ -87,6 +88,7 @@ impl Plugin for BasicPlugin {
                     sync_resize_cursor,
                     sync_titlebar_visibility,
                     sync_titlebar_title_visibility,
+                    sync_titlebar_title,
                     sync_pushpin_style,
                 ),
             );
@@ -842,6 +844,26 @@ fn sync_titlebar_title_visibility(
         if node.display != display {
             node.display = display;
         }
+    }
+}
+
+/// 标题栏文字跟随当前激活的映射预设：实时更新为
+/// `scrcpy-mask-enhanced-{预设文件名}`，便于在多预设场景下辨认当前窗口归属。
+fn sync_titlebar_title(
+    active_mapping: Res<ActiveMappingConfig>,
+    mut title_query: Query<&mut Text, With<TitlebarTitleMarker>>,
+) {
+    if !active_mapping.is_changed() {
+        return;
+    }
+    let suffix = if active_mapping.1.is_empty() {
+        String::new()
+    } else {
+        format!("-{}", active_mapping.1)
+    };
+    let full = format!("scrcpy-mask-enhanced{}", suffix);
+    for mut text in title_query.iter_mut() {
+        text.0 = full.clone();
     }
 }
 
