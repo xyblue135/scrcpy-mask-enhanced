@@ -66,13 +66,22 @@ def save_config(data_dir: Path) -> None:
 
 
 def default_data_dir() -> Path:
-    """兜底默认目录：主程序（debug 构建）data 目录下的 touch_probe.jsonl。
+    """兜底默认目录：主程序把 touch_probe.jsonl 写在 `data/` 目录下。
 
-    仅当网页未配置、也未通过 --dir 指定时才使用；路径可随时在网页内修改。
+    - debug 构建（cargo run）：data/ 位于项目根（CARGO_MANIFEST_DIR）下；
+    - release 构建：data/ 位于 exe 所在目录下。
     """
-    return Path(
-        r"D:\0_desktop\2_Frequently_Used_Folders\scrcpy-mask-enhanced\scrcpy-mask-enhanced\target\debug\data"
-    )
+    script_dir = Path(__file__).resolve().parent  # perf_monitor/
+    candidates = [
+        # debug：项目根/data （perf_monitor 在项目根下）
+        script_dir.parent / "data",
+        # release：exe 目录/data （perf_monitor 打包在 exe 的 assets/ 下）
+        script_dir.parent.parent / "data",
+    ]
+    for c in candidates:
+        if (c / "perf.jsonl").exists() or (c / "touch_probe.jsonl").exists():
+            return c
+    return candidates[0]
 
 
 class TouchStore:

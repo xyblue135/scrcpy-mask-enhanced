@@ -12,6 +12,7 @@
     python touch_monitor.py --dir D:/data    # 指定 touch_probe.jsonl 所在目录
     python touch_monitor.py --port 9001      # 修改端口
     python touch_monitor.py --no-browser     # 不自动打开浏览器
+    数据目录也可在网页「数据路径」卡片中随时修改并持久化（写入 touch_monitor_config.json）。
 """
 from __future__ import annotations
 
@@ -37,11 +38,50 @@ MAX_SNAPSHOT_ROWS = 400
 RECENT_EVENTS = 80
 
 
+CONFIG_FILE = Path(__file__).resolve().parent / "touch_monitor_config.json"
+
+
+def load_config_dir() -> Path | None:
+    """读取本地保存的数据目录配置（由网页端设置后持久化于此）。"""
+    try:
+        if CONFIG_FILE.exists():
+            data = json.loads(CONFIG_FILE.read_text("utf-8"))
+            d = data.get("dir")
+            if d:
+                return Path(d)
+    except Exception:
+        pass
+    return None
+
+
+def save_config(data_dir: Path) -> None:
+    """持久化数据目录到本地配置文件，重启后依然生效。"""
+    try:
+        CONFIG_FILE.write_text(
+            json.dumps({"dir": str(data_dir)}, ensure_ascii=False, indent=2),
+            "utf-8",
+        )
+    except OSError:
+        pass
+
+
 def default_data_dir() -> Path:
-    """默认读取主程序（debug/release 构建）data 目录下的 touch_probe.jsonl。"""
-    return Path(
-        r"D:\0_desktop\2_Frequently_Used_Folders\scrcpy-mask-enhanced\scrcpy-mask-enhanced\target\debug\data"
-    )
+    """兜底默认目录：主程序把 touch_probe.jsonl 写在 `data/` 目录下。
+
+    - debug 构建（cargo run）：data/ 位于项目根（CARGO_MANIFEST_DIR）下；
+    - release 构建：data/ 位于 exe 所在目录下。
+    """
+    script_dir = Path(__file__).resolve().parent  # perf_monitor/
+    candidates = [
+        # debug：项目根/data （perf_monitor 在项目根下）
+        script_dir.parent / "data",
+        # release：exe 目录/data （perf_monitor 打包在 exe 的 assets/ 下）
+        script_dir.parent.parent / "data",
+    ]
+    for c in candidates:
+        if (c / "perf.jsonl").exists() or (c / "touch_probe.jsonl").exists():
+            return c
+    return candidates[0]
 
 
 class TouchStore:
@@ -66,6 +106,14 @@ class TouchStore:
         with self._lock:
             if q in self._listeners:
                 self._listeners.remove(q)
+
+    def set_file(self, touch_file: Path) -> None:
+        """运行时切换数据文件（网页端修改路径后调用）。"""
+        with self._lock:
+            self.touch_file = touch_file
+            self._last_size = 0
+            self.events.clear()
+        self._start_ts = time.time()
 
     def _broadcast(self, row: dict) -> None:
         with self._lock:
@@ -200,6 +248,8 @@ class Handler(BaseHTTPRequestHandler):
             self._serve_sse()
         elif path == "/health":
             self._send_json({"ok": True, "file": str(STORE.touch_file)})
+        elif path == "/api/config":
+            self._send_json({"ok": True, "dir": str(STORE.touch_file.parent)})
         elif path.startswith("/vendor/"):
             self._serve_vendor(path.removeprefix("/vendor/"))
         else:
@@ -259,13 +309,43 @@ class Handler(BaseHTTPRequestHandler):
         finally:
             STORE.unsubscribe(q)
 
-    def _handle_one_shot(self) -> None:
+    def do_POST(self) -> None:
+        length = int(self.headers.get("Content-Length", "0") or "0")
+        raw = self.rfile.read(length) if length else b""
         try:
-            self.do_GET()
-        except (BrokenPipeError, ConnectionResetError):
-            pass
+            payload = json.loads(raw.decode("utf-8")) if raw else {}
+        except json.JSONDecodeError:
+            payload = {}
+        if urlparse(self.path).path == "/api/set-path":
+            self._set_path(payload)
+        else:
+            self.send_error(404)
 
-    do_POST = _handle_one_shot
+    def _set_path(self, payload: dict) -> None:
+        """网页端设置数据目录：切换 touch_probe.jsonl 并持久化到本地配置。"""
+        d = (payload or {}).get("dir", "")
+        if not d or not isinstance(d, str):
+            self._send_json({"ok": False, "error": "缺少 dir 参数"}, status=400)
+            return
+        p = Path(d.strip())
+        fname = STORE.touch_file.name
+        # 允许直接粘贴完整 touch_probe.jsonl 路径，自动取父目录（按文件名判断，文件尚未生成也生效）
+        if p.name == fname:
+            data_dir = p.parent
+        else:
+            data_dir = p
+        touch_file = data_dir / fname
+        warning = None
+        if not data_dir.exists():
+            warning = f"目录不存在：{data_dir}（已记录，主程序写入后将自动出现）"
+        save_config(data_dir)
+        STORE.set_file(touch_file)
+        self._send_json({
+            "ok": True,
+            "dir": str(data_dir),
+            "file": str(touch_file),
+            "warning": warning,
+        })
 
 
 def main() -> None:
@@ -277,7 +357,10 @@ def main() -> None:
     parser.add_argument("--no-browser", action="store_true")
     args = parser.parse_args()
 
-    if args.dir:
+    cfg = load_config_dir()
+    if cfg is not None:
+        data_dir = cfg
+    elif args.dir:
         data_dir = Path(args.dir)
     else:
         data_dir = default_data_dir()
