@@ -12,6 +12,7 @@
     python monitor.py --dir D:/perf    # 指定 perf.jsonl 所在目录
     python monitor.py --port 9000      # 修改端口
     python monitor.py --no-browser     # 不自动打开浏览器
+    数据目录也可在网页「数据路径」卡片中随时修改并持久化（写入 perf_monitor_config.json）。
 """
 from __future__ import annotations
 
@@ -39,8 +40,38 @@ MAX_SNAPSHOT_ROWS = 300
 APP_IDENTIFIER = "com.akichase.scrcpy-mask"
 
 
+CONFIG_FILE = Path(__file__).resolve().parent / "perf_monitor_config.json"
+
+
+def load_config_dir() -> Path | None:
+    """读取本地保存的数据目录配置（由网页端设置后持久化于此）。"""
+    try:
+        if CONFIG_FILE.exists():
+            data = json.loads(CONFIG_FILE.read_text("utf-8"))
+            d = data.get("dir")
+            if d:
+                return Path(d)
+    except Exception:
+        pass
+    return None
+
+
+def save_config(data_dir: Path) -> None:
+    """持久化数据目录到本地配置文件，重启后依然生效。"""
+    try:
+        CONFIG_FILE.write_text(
+            json.dumps({"dir": str(data_dir)}, ensure_ascii=False, indent=2),
+            "utf-8",
+        )
+    except OSError:
+        pass
+
+
 def default_data_dir() -> Path:
-    """默认读取主程序（release 构建）写在 target/release/data/ 下的 perf.jsonl。"""
+    """兜底默认目录：主程序（debug 构建）写在 target/debug/data/ 下的 perf.jsonl。
+
+    仅当网页未配置、也未通过 --dir 指定时才使用；路径可随时在网页内修改。
+    """
     return Path(
         r"D:\0_desktop\2_Frequently_Used_Folders\scrcpy-mask-enhanced\scrcpy-mask-enhanced\target\debug\data"
     )
@@ -68,6 +99,14 @@ class PerfStore:
         with self._lock:
             if q in self._listeners:
                 self._listeners.remove(q)
+
+    def set_file(self, perf_file: Path) -> None:
+        """运行时切换数据文件（网页端修改路径后调用）。"""
+        with self._lock:
+            self.perf_file = perf_file
+            self._last_size = 0
+            self.rows.clear()
+        self._start_ts = time.time()
 
     def _broadcast(self, row: dict) -> None:
         with self._lock:
@@ -188,6 +227,8 @@ class Handler(BaseHTTPRequestHandler):
             self._serve_sse()
         elif path == "/health":
             self._send_json({"ok": True, "file": str(STORE.perf_file)})
+        elif path == "/api/config":
+            self._send_json({"ok": True, "dir": str(STORE.perf_file.parent)})
         elif path.startswith("/vendor/"):
             self._serve_vendor(path.removeprefix("/vendor/"))
         else:
@@ -250,13 +291,43 @@ class Handler(BaseHTTPRequestHandler):
         finally:
             STORE.unsubscribe(q)
 
-    def _handle_one_shot(self) -> None:
+    def do_POST(self) -> None:
+        length = int(self.headers.get("Content-Length", "0") or "0")
+        raw = self.rfile.read(length) if length else b""
         try:
-            self.do_GET()
-        except (BrokenPipeError, ConnectionResetError):
-            pass
+            payload = json.loads(raw.decode("utf-8")) if raw else {}
+        except json.JSONDecodeError:
+            payload = {}
+        if urlparse(self.path).path == "/api/set-path":
+            self._set_path(payload)
+        else:
+            self.send_error(404)
 
-    do_POST = _handle_one_shot  # 不提供写接口，直接忽略
+    def _set_path(self, payload: dict) -> None:
+        """网页端设置数据目录：切换 perf.jsonl 并持久化到本地配置。"""
+        d = (payload or {}).get("dir", "")
+        if not d or not isinstance(d, str):
+            self._send_json({"ok": False, "error": "缺少 dir 参数"}, status=400)
+            return
+        p = Path(d.strip())
+        fname = STORE.perf_file.name
+        # 允许直接粘贴完整 perf.jsonl 路径，自动取父目录（按文件名判断，文件尚未生成也生效）
+        if p.name == fname:
+            data_dir = p.parent
+        else:
+            data_dir = p
+        perf_file = data_dir / fname
+        warning = None
+        if not data_dir.exists():
+            warning = f"目录不存在：{data_dir}（已记录，主程序写入后将自动出现）"
+        save_config(data_dir)
+        STORE.set_file(perf_file)
+        self._send_json({
+            "ok": True,
+            "dir": str(data_dir),
+            "file": str(perf_file),
+            "warning": warning,
+        })
 
 
 def main() -> None:
@@ -268,7 +339,10 @@ def main() -> None:
     parser.add_argument("--no-browser", action="store_true")
     args = parser.parse_args()
 
-    if args.dir:
+    cfg = load_config_dir()
+    if cfg is not None:
+        data_dir = cfg
+    elif args.dir:
         data_dir = Path(args.dir)
     else:
         data_dir = default_data_dir()

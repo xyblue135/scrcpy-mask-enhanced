@@ -135,6 +135,22 @@
   .empty {
     font-size: 12px; color: var(--muted); text-align: center; padding: 24px 8px;
   }
+
+  /* 数据路径配置卡片 */
+  .path-config { display: flex; gap: 8px; }
+  .path-config input {
+    flex: 1; min-width: 0; padding: 6px 8px; font-family: var(--mono); font-size: 12px;
+    border: 1px solid var(--border); border-radius: 6px;
+  }
+  .path-config button {
+    padding: 6px 14px; border: 1px solid var(--brand); background: var(--brand); color: #fff;
+    border-radius: 6px; cursor: pointer; font-size: 12px; white-space: nowrap;
+  }
+  .path-config button:hover { opacity: .9; }
+  .path-config button:disabled { opacity: .5; cursor: default; }
+  .path-status { font-size: 11px; color: var(--muted); margin-top: 6px; min-height: 14px; word-break: break-all; }
+  .path-status.ok { color: var(--ok); }
+  .path-status.err { color: var(--danger); }
 </style>
 </head>
 <body>
@@ -171,6 +187,14 @@
   </div>
 
   <div class="side">
+    <div class="card">
+      <h2>数据路径（perf.jsonl 目录）</h2>
+      <div class="path-config">
+        <input type="text" id="dataDir" placeholder="粘贴目录，如 D:\…\target\debug\data" spellcheck="false" />
+        <button id="applyDir">应用</button>
+      </div>
+      <div class="path-status" id="dirStatus"></div>
+    </div>
     <div class="card">
       <h2>实时排行 · 固定排序，点击切换曲线</h2>
       <div class="plist" id="probeList">
@@ -480,6 +504,62 @@ function setStatus(kind, text) {
   $("statusText").textContent = text;
 }
 
+// ---------- 数据路径配置（网页内自定义，替代写死路径） ----------
+function setupPathConfig() {
+  const LS_KEY = "perf_monitor_dir";
+  const dirInput = $("dataDir");
+  const applyBtn = $("applyDir");
+  const statusEl = $("dirStatus");
+  if (!dirInput) return;
+
+  // 先用本地保存的值预填，避免空白等待
+  const saved = localStorage.getItem(LS_KEY);
+  if (saved) dirInput.value = saved;
+
+  // 再向服务端拉取当前生效路径
+  fetch("/api/config").then((r) => r.json()).then((c) => {
+    if (c && c.dir) {
+      dirInput.value = c.dir;
+      localStorage.setItem(LS_KEY, c.dir);
+    }
+  }).catch(() => {});
+
+  applyBtn.addEventListener("click", async () => {
+    const dir = dirInput.value.trim();
+    if (!dir) {
+      statusEl.className = "path-status err";
+      statusEl.textContent = "请先填写目录路径";
+      return;
+    }
+    applyBtn.disabled = true;
+    statusEl.className = "path-status";
+    statusEl.textContent = "应用中…";
+    try {
+      const resp = await fetch("/api/set-path", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dir }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (resp.ok && data.ok) {
+        localStorage.setItem(LS_KEY, dir);
+        statusEl.className = "path-status ok";
+        statusEl.textContent = data.warning ? "已应用（" + data.warning + "）" : "已应用 ✓";
+        $("path").textContent = data.file || dir;
+      } else {
+        statusEl.className = "path-status err";
+        statusEl.textContent = "失败：" + (data.error || resp.status);
+      }
+    } catch (e) {
+      statusEl.className = "path-status err";
+      statusEl.textContent = "请求失败：" + e.message;
+    } finally {
+      applyBtn.disabled = false;
+      setTimeout(() => { statusEl.textContent = ""; statusEl.className = "path-status"; }, 4000);
+    }
+  });
+}
+
 // ---------- 参数控件 ----------
 $("windowSec").addEventListener("change", (e) => {
   state.windowSec = +e.target.value || 120;
@@ -514,6 +594,7 @@ setInterval(() => {
 
 fetch("/health").then((r) => r.json()).then((h) => { $("path").textContent = h.file || ""; }).catch(() => {});
 fetch("/api/snapshot").then((r) => r.json()).then(ingestSnapshot).catch(() => {});
+setupPathConfig();
 initCharts();
 connect();
 </script>
