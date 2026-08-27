@@ -78,7 +78,9 @@ def default_data_dir() -> Path:
     candidates = [
         # debug：项目根/data （perf_monitor 在项目根下）
         script_dir.parent / "data",
-        # release：exe 目录/data （perf_monitor 打包在 exe 的 assets/ 下）
+        # cargo run --release 未部署时：target/release/data
+        script_dir.parent.parent / "target" / "release" / "data",
+        # release 部署：exe 目录/data （perf_monitor 打包在 exe 的 assets/ 下）
         script_dir.parent.parent / "data",
     ]
     for c in candidates:
