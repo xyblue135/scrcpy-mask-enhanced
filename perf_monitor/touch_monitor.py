@@ -30,12 +30,15 @@ HOST = "127.0.0.1"
 DEFAULT_PORT = 8766
 # 保留最近的数据秒数（时间窗口）
 WINDOW_SECONDS = 300
-# 探测新行的轮询间隔
-POLL_INTERVAL = 0.2
+# 探测新行的轮询间隔（秒）。从 0.2 调到 0.5，降低 CPU/IO
+POLL_INTERVAL = 0.5
 # 单次 snapshot 最多返回的数据行数（超出则均匀降采样）
-MAX_SNAPSHOT_ROWS = 400
-# 最近事件表格保留条数
-RECENT_EVENTS = 80
+# 从 400 降到 200，浏览器渲染量减半，曲线仍清晰
+MAX_SNAPSHOT_ROWS = 200
+# SSE 订阅队列上限。暂停时新事件直接丢弃，避免积压浪费内存
+LISTENER_QUEUE_MAX = 64
+# SSE 端 keepalive 间隔（秒）
+SSE_KEEPALIVE_SEC = 15
 
 
 CONFIG_FILE = Path(__file__).resolve().parent / "touch_monitor_config.json"
@@ -99,7 +102,7 @@ class TouchStore:
         self._start_ts = time.time()
 
     def subscribe(self):
-        q = queue.Queue(maxsize=256)
+        q = queue.Queue(maxsize=LISTENER_QUEUE_MAX)
         with self._lock:
             self._listeners.append(q)
         return q
@@ -170,7 +173,6 @@ class TouchStore:
                 "events_per_sec": [],
                 "since_last": [],
                 "action_counts": {},
-                "recent": [],
                 "total_events": 0,
                 "latest": None,
             }
@@ -200,7 +202,6 @@ class TouchStore:
             "events_per_sec": events_per_sec,
             "since_last": since_last,
             "action_counts": dict(action_counts),
-            "recent": list(events)[-RECENT_EVENTS:],
             "total_events": len(events),
             "latest": events[-1],
         }
@@ -234,12 +235,16 @@ class Handler(BaseHTTPRequestHandler):
 
     def _send_json(self, obj: dict, status: int = 200) -> None:
         body = json.dumps(obj).encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Cache-Control", "no-store")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError, OSError):
+            # 客户端主动断开（关闭标签页/暂停/网络中断），吞掉异常避免刷屏
+            pass
 
     def do_GET(self) -> None:
         url = urlparse(self.path)
@@ -298,17 +303,26 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         q = STORE.subscribe()
         try:
-            self.wfile.write(_sse(json.dumps(STORE.snapshot()), "snapshot").encode("utf-8"))
-            self.wfile.flush()
+            try:
+                self.wfile.write(_sse(json.dumps(STORE.snapshot()), "snapshot").encode("utf-8"))
+                self.wfile.flush()
+            except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError, OSError):
+                return
             while True:
                 try:
-                    row = q.get(timeout=15)
-                    self.wfile.write(_sse(json.dumps(row)).encode("utf-8"))
-                    self.wfile.flush()
+                    row = q.get(timeout=SSE_KEEPALIVE_SEC)
+                    try:
+                        self.wfile.write(_sse(json.dumps(row)).encode("utf-8"))
+                        self.wfile.flush()
+                    except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError, OSError):
+                        return
                 except queue.Empty:
-                    self.wfile.write(b": keepalive\n\n")
-                    self.wfile.flush()
-        except (BrokenPipeError, ConnectionResetError):
+                    try:
+                        self.wfile.write(b": keepalive\n\n")
+                        self.wfile.flush()
+                    except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError, OSError):
+                        return
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError, OSError):
             pass
         finally:
             STORE.unsubscribe(q)

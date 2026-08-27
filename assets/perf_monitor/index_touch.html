@@ -16,7 +16,6 @@
     --brand-soft: #f2f3ff;
     --series-1: #4b3fe3;
     --series-2: #efaa17;
-    --series-3: #27d2bf;
     --danger: #e8463a;
     --ok: #1dc981;
     --radius: 10px;
@@ -30,9 +29,7 @@
     font-size: 14px;
     line-height: 1.5;
   }
-  .wrap { display: flex; gap: 16px; padding: 16px; height: 100vh; }
-  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
-  .side { width: 440px; flex-shrink: 0; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; }
+  .wrap { padding: 16px; max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
 
   .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
   .card h2 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 10px; }
@@ -47,17 +44,13 @@
   .path { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: auto; }
 
   .stats { display: flex; gap: 12px; flex-wrap: wrap; }
-  .stat { flex: 1 1 130px; min-width: 130px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+  .stat { flex: 1 1 180px; min-width: 160px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
   .stat .label { font-size: 12px; color: var(--muted); }
   .stat .value { font-size: 20px; font-weight: 600; font-family: var(--mono); margin-top: 2px; }
   .stat .value small { font-size: 12px; font-weight: 400; color: var(--muted); }
-  .stat.danger .value { color: var(--danger); }
-  .stat.ok .value { color: var(--ok); }
   .stat.muted { opacity: 0.55; }
-  .gap-stat .label { display: flex; justify-content: space-between; align-items: baseline; }
-  .gap-stat .label .win { font-size: 10px; color: var(--muted); font-weight: 400; }
 
-  .chart-box { position: relative; height: 200px; }
+  .chart-box { position: relative; height: 260px; }
   .legend { display: flex; gap: 14px; font-size: 11px; color: var(--muted); margin-top: 8px; flex-wrap: wrap; }
   .legend .item { display: inline-flex; align-items: center; gap: 5px; }
   .legend .swatch { width: 9px; height: 9px; border-radius: 2px; }
@@ -76,32 +69,9 @@
   }
   .action-chip b { font-weight: 600; }
 
-  .elist {
-    display: flex; flex-direction: column;
-    max-height: 360px; overflow-y: auto; font-size: 12px;
-    border: 1px solid var(--border); border-radius: 8px;
-  }
-  .ehead, .erow {
-    display: grid;
-    grid-template-columns: 110px 60px 52px 60px 60px 52px;
-    align-items: center;
-    column-gap: 8px;
-    white-space: nowrap;
-  }
-  .ehead {
-    position: sticky; top: 0; z-index: 1;
-    background: #fafbfc; color: var(--muted); font-size: 11px;
-    padding: 6px 10px; border-bottom: 1px solid var(--border);
-  }
-  .erow { padding: 3px 10px; font-family: var(--mono); }
-  .erow:nth-child(odd) { background: #fafbfc; }
-  .act-move { color: var(--series-1); }
-  .act-down { color: var(--ok); font-weight: 600; }
-  .act-up { color: var(--danger); font-weight: 600; }
-  .gap-hot { color: var(--danger); font-weight: 600; }
   .empty { font-size: 12px; color: var(--muted); text-align: center; padding: 24px 8px; }
 
-  /* 数据路径配置卡片 */
+  /* 数据路径配置 */
   .path-config { display: flex; gap: 8px; }
   .path-config input {
     flex: 1; min-width: 0; padding: 6px 8px; font-family: var(--mono); font-size: 12px;
@@ -131,80 +101,57 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="main">
-    <div class="card topbar">
-      <h1>scrcpy-mask 映射性能监控</h1>
-      <span class="status" id="status"><span class="dot"></span><span id="statusText">连接中</span></span>
-      <span class="path" id="path"></span>
-      <button class="pause-btn" id="pauseBtn" type="button" title="仅暂停当前页面的显示，后端数据继续写入">
-        <span id="pauseIcon">⏸</span><span id="pauseText">停止监控</span>
-      </button>
-    </div>
+  <div class="card topbar">
+    <h1>scrcpy-mask 映射性能监控</h1>
+    <span class="status" id="status"><span class="dot"></span><span id="statusText">连接中</span></span>
+    <span class="path" id="path"></span>
+    <button class="pause-btn" id="pauseBtn" type="button" title="仅暂停当前页面的显示，后端数据继续写入">
+      <span id="pauseIcon">⏸</span><span id="pauseText">停止监控</span>
+    </button>
+  </div>
 
-    <div class="stats">
-      <div class="stat"><div class="label">事件 / 秒</div><div class="value" id="eps">--</div></div>
-      <div class="stat"><div class="label">Move 占比</div><div class="value" id="movePct">--</div></div>
-      <div class="stat"><div class="label">窗口内事件数</div><div class="value" id="total">--</div></div>
-      <div class="stat gap-stat">
-        <div class="label">
-          <span>平均间隔</span><span class="win" id="gapWin">--</span>
-        </div>
-        <div class="value" id="avgGap">--<small> ms</small></div>
-      </div>
-      <div class="stat">
-        <div class="label">最高间隔</div>
-        <div class="value" id="maxGap">--<small> ms</small></div>
-      </div>
-      <div class="stat">
-        <div class="label">最低间隔</div>
-        <div class="value" id="minGap">--<small> ms</small></div>
-      </div>
+  <div class="stats">
+    <div class="stat">
+      <div class="label">事件 / 秒（最新）</div>
+      <div class="value" id="eps">--</div>
     </div>
-
-    <div class="info-banner">
-      <b>说明：</b>本页面对应 <b>touch_probe.jsonl</b>（每次注入手机的触摸事件一行）。
-      <b>事件/秒</b>反映注入密度，<b>平均间隔</b>越小说明事件越密集。
-      若开随机抖动后间隔经常 &lt; 8ms（即每秒 100+ 条 Move），手机端就可能处理不过来而卡顿。
+    <div class="stat">
+      <div class="label">Move 占比</div>
+      <div class="value" id="movePct">--</div>
     </div>
-
-    <div class="card">
-      <h2>事件频率 / 事件间隔</h2>
-      <div class="chart-box"><canvas id="rateChart"></canvas></div>
-      <div class="legend">
-        <span class="item"><span class="swatch" style="background:#4b3fe3"></span>事件/秒</span>
-        <span class="item"><span class="swatch" style="background:#efaa17"></span>间隔 ms</span>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Action 分布（时间窗口内）</h2>
-      <div class="action-stats" id="actionStats"></div>
+    <div class="stat">
+      <div class="label">窗口内事件数</div>
+      <div class="value" id="total">--</div>
     </div>
   </div>
 
-  <div class="side">
-    <div class="card">
-      <h2>数据路径（touch_probe.jsonl 目录）</h2>
-      <div class="path-config">
-        <input type="text" id="dataDir" placeholder="粘贴目录，如 D:\…\target\debug\data" spellcheck="false" />
-        <button id="applyDir">应用</button>
-      </div>
-      <div class="path-status" id="dirStatus"></div>
+  <div class="info-banner">
+    <b>说明：</b>本页面对应 <b>touch_probe.jsonl</b>（每次注入手机的触摸事件一行）。
+    折线图显示<b>事件延迟（since_last_ms）</b>——值越小说明注入越密集。
+    若开随机抖动后延迟经常 &lt; 8ms（即每秒 100+ 条 Move），手机端就可能处理不过来而卡顿。
+  </div>
+
+  <div class="card">
+    <h2>事件延迟 / 事件频率（时间窗口内）</h2>
+    <div class="chart-box"><canvas id="rateChart"></canvas></div>
+    <div class="legend">
+      <span class="item"><span class="swatch" style="background:#efaa17"></span>事件延迟 ms（since_last_ms）</span>
+      <span class="item"><span class="swatch" style="background:#4b3fe3"></span>事件/秒</span>
     </div>
-    <div class="card">
-      <h2>最近事件流（新→旧）</h2>
-      <div class="elist" id="eventList">
-        <div class="ehead">
-          <span>时间</span>
-          <span>Action</span>
-          <span>指针</span>
-          <span>X</span>
-          <span>Y</span>
-          <span>间隔ms</span>
-        </div>
-        <div class="empty">等待数据…（请确认主程序已运行并开启映射性能探针）</div>
-      </div>
+  </div>
+
+  <div class="card">
+    <h2>Action 分布（时间窗口内）</h2>
+    <div class="action-stats" id="actionStats"></div>
+  </div>
+
+  <div class="card">
+    <h2>数据路径（touch_probe.jsonl 目录）</h2>
+    <div class="path-config">
+      <input type="text" id="dataDir" placeholder="粘贴目录，如 D:\…\target\debug\data" spellcheck="false" />
+      <button id="applyDir">应用</button>
     </div>
+    <div class="path-status" id="dirStatus"></div>
   </div>
 </div>
 
@@ -214,7 +161,7 @@
 const $ = (id) => document.getElementById(id);
 const state = {
   rateSeries: [],      // [{ts, v}] 事件/秒
-  gapSeries: [],       // [{ts, v}] 间隔 ms
+  gapSeries: [],       // [{ts, v}] 事件延迟 ms
   actionCounts: {},    // {action: n}
   total: 0,
   lastTs: 0,
@@ -237,7 +184,7 @@ function initChart() {
       plugins: { legend: { display: false } },
       scales: {
         x: { type: "linear", ticks: { maxTicksLimit: 8 } },
-        y: { beginAtZero: true },
+        y: { beginAtZero: true, title: { display: true, text: "延迟 ms / 事件/秒" } },
       },
     },
   });
@@ -252,31 +199,6 @@ function renderStats(snap) {
   const moves = (snap.action_counts && snap.action_counts.Move) || 0;
   $("movePct").textContent = total ? (moves / total * 100).toFixed(0) + "%" : "--";
   $("total").textContent = snap.total_events ?? "--";
-
-  // 时间窗口内的间隔：平均 / 最高 / 最低
-  const gaps = snap.since_last || [];
-  const gapsOk = gaps.map((p) => p.v).filter((v) => v != null && v >= 0 && isFinite(v));
-  if (gapsOk.length) {
-    const sum = gapsOk.reduce((a, v) => a + v, 0);
-    const avgGap = sum / gapsOk.length;
-    const maxGap = Math.max.apply(null, gapsOk);
-    const minGap = Math.min.apply(null, gapsOk);
-    $("avgGap").textContent = avgGap.toFixed(1);
-    $("maxGap").textContent = maxGap.toFixed(1);
-    $("minGap").textContent = minGap.toFixed(1);
-    $("avgGap").parentElement.className = "value"
-      + (avgGap < 8 ? " danger" : "") + (state.paused ? " muted" : "");
-    $("maxGap").parentElement.className = "value" + (state.paused ? " muted" : "");
-    $("minGap").parentElement.className = "value" + (state.paused ? " muted" : "");
-  } else {
-    $("avgGap").textContent = "--";
-    $("maxGap").textContent = "--";
-    $("minGap").textContent = "--";
-  }
-  // 显示当前窗口长度（来自服务端 time_window）
-  if (snap.window_seconds) {
-    $("gapWin").textContent = "近 " + snap.window_seconds + "s";
-  }
 }
 
 function renderActionStats(counts) {
@@ -295,47 +217,21 @@ function renderActionStats(counts) {
   }
 }
 
-function renderRecent(events) {
-  const el = $("eventList");
-  el.querySelectorAll(".erow").forEach((n) => n.remove());
-  if (!events || !events.length) {
-    return;
-  }
-  const rows = [...events].reverse(); // 新→旧
-  for (const e of rows) {
-    const action = e.action || "?";
-    const cls =
-      action === "Move" ? "act-move" : action === "Down" ? "act-down" : action === "Up" ? "act-up" : "";
-    const gap = e.since_last_ms;
-    const gapHtml = gap != null && gap < 8
-      ? `<span class="gap-hot">${gap}</span>`
-      : gap != null ? gap : "—";
-    const row = document.createElement("div");
-    row.className = "erow";
-    row.innerHTML =
-      `<span>${new Date((e.ts || 0) * 1000).toLocaleTimeString("zh-CN", { hour12: false })}</span>` +
-      `<span class="${cls}">${action}</span>` +
-      `<span>#${e.pointer_id ?? "?"}</span>` +
-      `<span>${e.x ?? "—"}</span>` +
-      `<span>${e.y ?? "—"}</span>` +
-      `<span>${gapHtml}</span>`;
-    el.appendChild(row);
-  }
-}
-
 function renderCharts() {
   if (!rateChart) return;
   const rel = (ts) => +(ts - (state.lastTs - state.windowSec)).toFixed(1);
   rateChart.data.datasets = [
     {
-      label: "事件/秒",
-      data: state.rateSeries.map((p) => ({ x: rel(p.ts), y: p.v })),
-      borderColor: "#4b3fe3", backgroundColor: "#4b3fe3", borderWidth: 1.5, pointRadius: 0, tension: 0.15,
+      label: "事件延迟ms",
+      data: state.gapSeries.map((p) => ({ x: rel(p.ts), y: p.v })),
+      borderColor: "#efaa17", backgroundColor: "#efaa17", borderWidth: 1.5, pointRadius: 0, tension: 0.15,
+      yAxisID: "y",
     },
     {
-      label: "间隔ms",
-      data: state.gapSeries.map((p) => ({ x: rel(p.ts), y: p.v })),
-      borderColor: "#efaa17", backgroundColor: "#efaa17", borderWidth: 1.2, pointRadius: 0, tension: 0.15,
+      label: "事件/秒",
+      data: state.rateSeries.map((p) => ({ x: rel(p.ts), y: p.v })),
+      borderColor: "#4b3fe3", backgroundColor: "#4b3fe3", borderWidth: 1.2, pointRadius: 0, tension: 0.15,
+      yAxisID: "y",
     },
   ];
   rateChart.update();
@@ -349,7 +245,6 @@ function renderAll(snap) {
   if (snap.now) state.lastTs = snap.now;
   renderStats(snap);
   renderActionStats(state.actionCounts);
-  renderRecent(snap.recent || []);
   renderCharts();
 }
 
@@ -369,7 +264,11 @@ function ingestRow(row) {
   state.gapSeries = state.gapSeries.filter((p) => p.ts > cutoff);
   state.actionCounts[row.action || "?"] = (state.actionCounts[row.action || "?"] || 0) + 1;
   renderCharts();
-  fetch("/api/snapshot").then((r) => r.json()).then(renderStats).catch(() => {});
+  // 拉一次最新统计（事件/秒、Move 占比等）但**不**重绘整图，避免与上面的局部增量更新冲突
+  fetch("/api/snapshot").then((r) => r.json()).then((s) => {
+    renderStats(s);
+    renderActionStats(s.action_counts || {});
+  }).catch(() => {});
 }
 
 function connect() {
@@ -414,13 +313,7 @@ function setupPauseBtn() {
       const pending = state.pending;
       state.pending = [];
       if (pending.length) {
-        // 直接拉一次服务端快照，后端已经把这些事件纳入窗口了。
         fetch("/api/snapshot").then((r) => r.json()).then((snap) => {
-          state.rateSeries = snap.events_per_sec || [];
-          state.gapSeries = snap.since_last || [];
-          state.actionCounts = snap.action_counts || {};
-          if (snap.total_events != null) state.total = snap.total_events;
-          if (snap.now) state.lastTs = snap.now;
           renderAll(snap);
         }).catch(() => {});
       }
