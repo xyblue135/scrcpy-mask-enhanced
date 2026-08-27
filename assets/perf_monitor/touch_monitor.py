@@ -166,6 +166,7 @@ class TouchStore:
             return {
                 "now": time.time(),
                 "start": self._start_ts,
+                "window_seconds": self.window,
                 "events_per_sec": [],
                 "since_last": [],
                 "action_counts": {},
@@ -195,6 +196,7 @@ class TouchStore:
         return {
             "now": time.time(),
             "start": self._start_ts,
+            "window_seconds": self.window,
             "events_per_sec": events_per_sec,
             "since_last": since_last,
             "action_counts": dict(action_counts),

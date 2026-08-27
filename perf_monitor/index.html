@@ -151,6 +151,17 @@
   .path-status { font-size: 11px; color: var(--muted); margin-top: 6px; min-height: 14px; word-break: break-all; }
   .path-status.ok { color: var(--ok); }
   .path-status.err { color: var(--danger); }
+
+  /* 停止监控按钮（页面级暂停） */
+  .pause-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 14px; border: 1px solid var(--brand); background: #fff; color: var(--brand);
+    border-radius: 999px; cursor: pointer; font-size: 12px; font-weight: 500;
+    white-space: nowrap; transition: background .15s, color .15s;
+  }
+  .pause-btn:hover { background: var(--brand-soft); }
+  .pause-btn.paused { border-color: var(--danger); color: var(--danger); background: #fff5f4; }
+  .pause-btn.paused:hover { background: #fdeceb; }
 </style>
 </head>
 <body>
@@ -160,6 +171,9 @@
       <h1>scrcpy-mask 屏幕性能监控</h1>
       <span class="status" id="status"><span class="dot"></span><span id="statusText">连接中</span></span>
       <span class="path" id="path"></span>
+      <button class="pause-btn" id="pauseBtn" type="button" title="仅暂停当前页面的显示，后端数据继续写入">
+        <span id="pauseIcon">⏸</span><span id="pauseText">停止监控</span>
+      </button>
     </div>
 
     <div class="stats">
@@ -219,10 +233,6 @@
           <option value="p95">p95</option>
           <option value="avg">avg</option>
           <option value="max">max</option>
-        </select></label>
-        <label>自动暂停 <select id="pauseSel">
-          <option value="off">关闭</option>
-          <option value="on">无数据时暂停</option>
         </select></label>
       </div>
     </div>
@@ -500,7 +510,7 @@ function connect() {
 
 function setStatus(kind, text) {
   const el = $("status");
-  el.className = "status " + (kind === "live" ? "" : "off");
+  el.className = "status " + (kind === "live" ? "" : kind === "paused" ? "off" : kind);
   $("statusText").textContent = text;
 }
 
@@ -572,17 +582,32 @@ $("metricSel").addEventListener("change", (e) => {
   state.metric = e.target.value;
   renderProbeChart();
 });
-$("pauseSel").addEventListener("change", (e) => {
-  if (e.target.value === "on") {
-    state.live = false;
-  } else {
-    state.live = true;
-    renderAll();
-  }
-});
+
+// ---------- 停止监控（页面级暂停） ----------
+function setupPauseBtn() {
+  const btn = $("pauseBtn");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    state.live = !state.live;
+    if (!state.live) {
+      btn.classList.add("paused");
+      $("pauseIcon").textContent = "▶";
+      $("pauseText").textContent = "恢复监控";
+      setStatus("paused", "已暂停（后端继续写入）");
+    } else {
+      btn.classList.remove("paused");
+      $("pauseIcon").textContent = "⏸";
+      $("pauseText").textContent = "停止监控";
+      setStatus("live", "实时连接");
+      renderAll();
+    }
+  });
+}
 
 // 无数据超时提示
 setInterval(() => {
+  // 暂停态下不要用"等待数据"覆盖状态
+  if (!state.live) return;
   if (Date.now() / 1000 - state.lastTs > 5) {
     $("status").className = "status waiting";
     $("statusText").textContent = "等待主程序写入数据…";
@@ -595,6 +620,7 @@ setInterval(() => {
 fetch("/health").then((r) => r.json()).then((h) => { $("path").textContent = h.file || ""; }).catch(() => {});
 fetch("/api/snapshot").then((r) => r.json()).then(ingestSnapshot).catch(() => {});
 setupPathConfig();
+setupPauseBtn();
 initCharts();
 connect();
 </script>

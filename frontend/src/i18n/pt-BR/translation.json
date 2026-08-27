@@ -9,7 +9,7 @@
   "sider": {
     "devices": "Dispositivos",
     "mappings": "Mapeamentos",
-    "latencyCompare": "Comparar latência",
+    "latencyCompare": "Desempenho e Latência",
     "scrcpyPresets": "Predefinições Scrcpy",
     "settings": "Configurações"
   },
@@ -17,7 +17,7 @@
     "main": "Boas-vindas ao Scrcpy Mask 👏🏻"
   },
   "latencyCompare": {
-    "title": "Comparar latência",
+    "title": "Desempenho e Latência",
     "desc": "Capture a tela atual do telefone (salva no armazenamento interno) e capture a janela de transmissão do PC (salva localmente) e compare-as para medir a latência relativa. Você também pode enviar capturas do telefone aqui.",
     "phoneCard": "Captura do telefone (salva no telefone)",
     "saveToPhone": "Capturar e salvar no telefone",

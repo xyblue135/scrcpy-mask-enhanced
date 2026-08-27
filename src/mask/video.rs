@@ -667,7 +667,10 @@ fn finish_lowcast_trace(trace: &mut Option<VideoFrameTrace>, v_rx: &ChannelRecei
     let queued = trace.queued_at.unwrap_or(copy_finished);
     let ui_taken = trace.ui_taken_at.unwrap_or(queued);
 
-    log::info!(
+    // 与 perf.jsonl 中的细分探针（socket->submit / decode / copy / slot / ui_wait / ui_update
+    // 等）功能完全重叠，关闭时只走 perf 即可。需要时通过 `RUST_LOG=scrcpy_mask::mask::video=debug`
+    // 临时打开。
+    log::debug!(
         "[LowCast][Latency] frame={} pts={:?} socket->submit={:.2}ms decode={:.2}ms copy={:.2}ms slot={:.2}ms ui_wait={:.2}ms ui_update={:.2}ms client_total={:.2}ms dropped={} delivered={}",
         trace.sequence,
         trace.pts,

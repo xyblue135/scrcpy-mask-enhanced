@@ -9,7 +9,7 @@
   "sider": {
     "devices": "デバイス",
     "mappings": "マッピング",
-    "latencyCompare": "遅延比較",
+    "latencyCompare": "パフォーマンスと遅延",
     "scrcpyPresets": "Scrcpy プリセット",
     "settings": "設定"
   },
@@ -17,7 +17,7 @@
     "main": "Scrcpy Mask へようこそ 👏🏻"
   },
   "latencyCompare": {
-    "title": "遅延比較",
+    "title": "パフォーマンスと遅延",
     "desc": "現在の携帯画面を撮影（端末内ストレージに保存）し、PCの投写ウィンドウを撮影（ローカルに保存）して比較することで相対遅延を確認できます。携帯のスクリーンショットをここにアップロードして確認することもできます。",
     "phoneCard": "携帯のスクリーンショット（端末に保存）",
     "saveToPhone": "撮影して端末に保存",

@@ -5,7 +5,6 @@ use copypasta::{ClipboardContext, ClipboardProvider};
 use rust_i18n::t;
 use tokio::{
     io::AsyncWriteExt,
-    net::TcpListener,
     sync::{
         broadcast,
         mpsc::{self, UnboundedReceiver},
@@ -18,10 +17,12 @@ use crate::{
     config::LocalConfig,
     mask::mask_command::MaskCommand,
     scrcpy::{
+        adb::Device,
         connection::ScrcpyConnection,
         control_msg::{ScrcpyControlMsg, ScrcpyDeviceMsg},
     },
     utils::{LatestVideoFrame, mask_win_move_helper, share::ControlledDevice},
+    utils::bind_reuseaddr_listener,
     web::ws::WebSocketNotification,
 };
 
@@ -129,7 +130,38 @@ impl Controller {
         ws_tx: broadcast::Sender<WebSocketNotification>,
     ) {
         log::info!("[Controller] {}: {}", t!("scrcpy.startingController"), addr);
-        let listener = TcpListener::bind(addr).await.unwrap();
+        // 端口可能因为上一次进程崩溃或 adb forward 残留而不可用。
+        // 先用 SO_REUSEADDR 试一次；如果还失败（比如端口被 adb forward 主动占用），
+        // 就清空 adb 的所有 forward 后再试一次，给用户一个"自动善后"的体感，
+        // 不再要求手动 `adb kill-server`。
+        let listener = match bind_reuseaddr_listener(addr) {
+            Ok(l) => l,
+            Err(first_err) => {
+                let adb_path = LocalConfig::get().adb_path;
+                log::warn!(
+                    "[Controller] 首次监听 {} 失败: {} (kind={:?})。正在清理 adb 旧转发后重试...",
+                    addr,
+                    first_err,
+                    first_err.kind()
+                );
+                Device::remove_all_forwards(&adb_path);
+                // 给 adb 一个短暂的窗口释放 socket 句柄（Windows 上一般几十 ms 就够）。
+                std::thread::sleep(std::time::Duration::from_millis(300));
+                match bind_reuseaddr_listener(addr) {
+                    Ok(l) => {
+                        log::info!("[Controller] 清理 adb 后重试 bind 成功：{}", addr);
+                        l
+                    }
+                    Err(second_err) => {
+                        log::error!(
+                            "[Controller] 清理 adb 后仍然监听 {} 失败: {} (kind={:?})。请检查是否有其他程序占用此端口，或换一个 controller_port。",
+                            addr, second_err, second_err.kind()
+                        );
+                        return;
+                    }
+                }
+            }
+        };
 
         // scrcpy device msg handler
         let (cr_tx, cr_rx) = mpsc::unbounded_channel::<ScrcpyDeviceMsg>();

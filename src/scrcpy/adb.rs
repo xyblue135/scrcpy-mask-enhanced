@@ -79,6 +79,49 @@ impl Device {
             })
     }
 
+    /// 启动期清场：在不指定设备的情况下，调用 `adb forward --remove-all` 一次。
+    /// 用来解决"上次进程崩溃 / 强制杀进程后，宿主端口还卡在 adb 的 forward 上，
+    /// 本次启动 bind 失败"这个老问题。不会动 adb server 本身，不影响已连接设备。
+    ///
+    /// 成功或失败都返回 `Result<(), String>`，失败仅记日志，**不传播错误**——
+    /// 清场本身不应该阻塞启动流程。
+    pub fn remove_all_forwards(adb_path: &str) {
+        use std::process::{Command, Stdio};
+
+        let mut cmd = Command::new(adb_path);
+        cmd.arg("forward").arg("--remove-all");
+        // 把 stdin/stdout/stderr 都丢掉，避免挂到 adb 交互式界面。
+        cmd.stdin(Stdio::null());
+        cmd.stdout(Stdio::null());
+        cmd.stderr(Stdio::null());
+
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            // 隐藏 Windows 弹出的 cmd 黑窗。
+            cmd.creation_flags(0x08000000);
+        }
+
+        match cmd.status() {
+            Ok(status) if status.success() => {
+                log::info!("[Adb] 启动期已执行 `adb forward --remove-all`，清空旧转发。");
+            }
+            Ok(status) => {
+                log::warn!(
+                    "[Adb] `adb forward --remove-all` 退出码 {}（无转发可清或 adb 未运行），可忽略。",
+                    status
+                );
+            }
+            Err(e) => {
+                log::warn!(
+                    "[Adb] 启动期清场失败：无法调用 `{} forward --remove-all`：{}。",
+                    adb_path,
+                    e
+                );
+            }
+        }
+    }
+
     /// 移除本程序为该设备创建的 adb reverse 隧道（退出清理用，不动 adb 服务端）。
     pub fn reverse_remove(id: &str, remote: &str) -> Result<(), String> {
         let mut device = Device::new_server_device(id);

@@ -9,7 +9,7 @@
   "sider": {
     "devices": "Devices",
     "mappings": "Mappings",
-    "latencyCompare": "Latency Compare",
+    "latencyCompare": "Performance & Latency",
     "scrcpyPresets": "Scrcpy Presets",
     "settings": "Settings"
   },
@@ -17,7 +17,7 @@
     "main": "Welcome to Scrcpy Mask 👏🏻"
   },
   "latencyCompare": {
-    "title": "Latency Compare",
+    "title": "Performance & Latency",
     "desc": "Capture the current phone screen (saved to the phone's internal storage) and capture the PC streaming window (saved locally), then compare them to gauge relative latency. You can also upload phone screenshots here to inspect.",
     "phoneCard": "Phone screenshot (saved on phone)",
     "saveToPhone": "Capture & save to phone",

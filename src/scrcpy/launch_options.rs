@@ -168,6 +168,16 @@ impl ScrcpyPreset {
                 ),
                 parameter("video-bit-rate", "video_bit_rate", "5000000", server),
                 parameter("max-fps", "max_fps", "60", server),
+                // I 帧 / intra refresh：i-frame-interval=1（旧默认）会让 HEVC
+                // 每秒产一个 80~300KB 的 I 帧，是 net.read_packet P95 飙到 100+ms
+                // 的主要来源。这里默认拉到 10 秒一次，配套开 intra refresh 让 bitrate
+                // 渐变而不是突刺，1080P 静态画面下读包尖刺应能压到 30~50ms。
+                parameter(
+                    "video-codec-options",
+                    "video_codec_options",
+                    "vendor.qti-ext-enc-low-latency.enable=1,priority=0,i-frame-interval=10,intra-refresh-mode=1,intra-refresh-period=120",
+                    server,
+                ),
                 parameter(
                     "mouse",
                     "mouse",
@@ -385,8 +395,22 @@ mod tests {
         assert!(args.contains(&"video_encoder=c2.qti.hevc.encoder.cq".to_string()));
         assert!(args.contains(&"video_bit_rate=5000000".to_string()));
         assert!(args.contains(&"max_fps=60".to_string()));
-        assert!(!args.iter().any(|arg| arg.starts_with("mouse=")));
-        assert!(!args.iter().any(|arg| arg.starts_with("video_buffer=")));
+        // 默认预设必须把 i-frame-interval 拉到 10 秒并开启 intra refresh，
+        // 否则 HEVC 1 秒一 I 帧会让 net.read_packet P95 飙到 100ms+。
+        let codec_opts = args
+            .iter()
+            .find(|arg| arg.starts_with("video_codec_options="))
+            .expect("preset should set video_codec_options");
+        assert!(codec_opts.contains("i-frame-interval=10"), "{codec_opts}");
+        assert!(codec_opts.contains("intra-refresh-mode=1"), "{codec_opts}");
+        assert!(
+            !args.iter().any(|arg| arg.starts_with("mouse=")),
+            "mouse 是 client-only，不能进入 server args"
+        );
+        assert!(
+            !args.iter().any(|arg| arg.starts_with("video_buffer=")),
+            "video_buffer 是 client-only，不能进入 server args"
+        );
     }
 
     #[test]

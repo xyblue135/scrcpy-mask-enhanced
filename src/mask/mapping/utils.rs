@@ -149,7 +149,7 @@ impl ControlMsgHelper {
                             dx * dx + dy * dy < threshold_sq
                         })
                     } else {
-                        false
+                        Some(false)
                     }
                 };
                 if should_drop == Some(true) {

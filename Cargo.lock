@@ -6258,6 +6258,7 @@ dependencies = [
  "seq-macro",
  "serde",
  "serde_json",
+ "socket2",
  "strum",
  "strum_macros",
  "tokio",

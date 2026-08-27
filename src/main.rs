@@ -165,6 +165,18 @@ fn start_servers(mut commands: Commands) {
     commands.insert_resource(ChannelReceiverVideoSnapshot(snapshot_rx));
     commands.insert_resource(ChannelSenderD(d_tx.clone()));
     commands.insert_resource(ChannelSenderWS(ws_tx.clone()));
+    // 启动期先主动清一次 adb 旧 forward：避免上一次进程被强杀后，宿主端口仍被
+    // adb 的 forward 占着导致本次 controller bind 失败。
+    // 用 info 级别给出"正在清理 adb 转发 / 避免端口冲突"的可见提示，让用户
+    // 在日志里能直观看到这一步是正常流程而不是报错。
+    log::info!(
+        "[Startup] 正在清理残留的 adb 转发，避免 controller 端口冲突（{}）...",
+        controller_addr
+    );
+    adb::Device::remove_all_forwards(&config.adb_path);
+    // 给 adb 留一个极短的窗口释放 socket 句柄，再让 controller 监听。
+    std::thread::sleep(std::time::Duration::from_millis(150));
+    log::info!("[Startup] adb 转发清理完成，继续启动 controller。");
     web::Server::start(
         web_addr,
         cs_tx.clone(),

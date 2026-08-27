@@ -9,7 +9,7 @@
   "sider": {
     "devices": "设备",
     "mappings": "映射",
-    "latencyCompare": "延迟对比",
+    "latencyCompare": "性能监测和延迟对比",
     "scrcpyPresets": "Scrcpy 预设",
     "settings": "设置"
   },
@@ -17,7 +17,7 @@
     "main": "欢迎来到 Scrcpy Mask 👏🏻"
   },
   "latencyCompare": {
-    "title": "延迟对比",
+    "title": "性能监测和延迟对比",
     "desc": "在手机端截取当前画面（保存到手机内部），并截取 PC 端投屏窗口（保存到本地），两者对比可感知相对延迟。也可以上传手机截图到此处查看。",
     "phoneCard": "手机截屏（保存在手机）",
     "saveToPhone": "截取并保存到手机",

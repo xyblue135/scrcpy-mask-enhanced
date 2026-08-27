@@ -24,7 +24,7 @@ use tower_http::{
 use crate::{
     mask::mask_command::MaskCommand,
     scrcpy::{control_msg::ScrcpyControlMsg, controller::ControllerCommand},
-    utils::{VideoSnapshotResult, relate_to_data_path, relate_to_root_path},
+    utils::{VideoSnapshotResult, bind_reuseaddr_listener, relate_to_data_path, relate_to_root_path},
     web::ws::WebSocketNotification,
 };
 
@@ -60,7 +60,19 @@ impl Server {
     ) {
         log::info!("[WebServe] {}: {}", t!("web.server.startingOn"), addr);
 
-        let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+        // 与 controller 一样：使用 SO_REUSEADDR，避免上一次进程残留导致
+        // 端口仍处于 TIME_WAIT 时本次启动直接 panic。失败时打清楚错误并退出
+        // 线程，不拖垮整个 bevy 主循环。
+        let listener = match bind_reuseaddr_listener(addr) {
+            Ok(l) => l,
+            Err(e) => {
+                log::error!(
+                    "[WebServe] 监听 {} 失败: {} (kind={:?})。常见原因：上一次进程残留 / adb forward 未清理。可在 adb 中执行 `adb forward --remove-all` 后重试，或换一个 web_port。",
+                    addr, e, e.kind()
+                );
+                return;
+            }
+        };
 
         let ip_str = if addr.ip().is_unspecified() || addr.ip().is_loopback() {
             "localhost"
@@ -78,9 +90,10 @@ impl Server {
             log::error!("[WebServe] {}: {}", t!("web.server.failedToOpenBrowser"), e)
         });
 
-        axum::serve(listener, Self::app(cs_tx, d_tx, m_tx, snapshot_tx, ws_tx))
-            .await
-            .unwrap();
+        if let Err(e) = axum::serve(listener, Self::app(cs_tx, d_tx, m_tx, snapshot_tx, ws_tx)).await {
+            // 运行期错误（比如 client reset、shutdown 等）只记日志，不 panic。
+            log::error!("[WebServe] {}: {}", t!("web.server.serveFailed"), e);
+        }
     }
 
     fn app(

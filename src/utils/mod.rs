@@ -2,6 +2,7 @@ pub mod share;
 
 use std::{
     env,
+    net::SocketAddrV4,
     path::{Path, PathBuf},
     sync::{
         Arc, Mutex,
@@ -15,7 +16,9 @@ use reqwest::header::USER_AGENT;
 use rust_i18n::t;
 use semver::Version;
 use serde::Deserialize;
-use tokio::sync::{broadcast, oneshot};
+use socket2::{Domain, Socket, SockAddr, Type};
+use tokio::{net::TcpListener, sync::oneshot};
+use tokio::sync::broadcast;
 
 use crate::{
     config::LocalConfig,
@@ -61,6 +64,36 @@ pub fn is_safe_file_name(name: &str) -> bool {
         && !name.contains("..")
         && !name.chars().any(|c| ILLEGAL_CHARS.contains(&c))
         && Path::new(name).file_name().is_some()
+}
+
+/// 创建一个允许 `SO_REUSEADDR` 的 TCP 监听器并把它交给 tokio。
+///
+/// 在 Windows 上，`SO_REUSEADDR` 是解决"程序崩溃/被强杀后端口处于 TIME_WAIT / 残留 LISTEN
+/// 状态"导致下一次启动直接 panic 的最直接手段。配合下面的 `bind_reuseaddr` 包装，
+/// 任何 listener 都默认开启此选项，避免每次启动失败都让用户去手动 `adb kill-server`。
+///
+/// # 参数
+/// - `addr`: 监听地址（IP + 端口）。
+///
+/// # 错误
+/// - `bind` / `listen` 本身失败时返回 `std::io::Error`，由调用方决定是 panic、
+///   退避重试还是上抛给上层。
+pub fn bind_reuseaddr_listener(
+    addr: SocketAddrV4,
+) -> std::io::Result<TcpListener> {
+    // 调用方传入的就是 SocketAddrV4，永远是 IPv4 域，简化分支。
+    // 接收连接队列设大一些，避免多个 web socket 同时连进来时丢握手。
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, None)?;
+    socket.set_reuse_address(true)?;
+    socket.set_nonblocking(true)?;
+    // SocketAddrV4 不直接实现 ToSockAddrs，但 socket2 提供了
+    // `impl From<SocketAddrV4> for SockAddr`，直接转换即可，不走 DNS。
+    let sock_addr = SockAddr::from(addr);
+    socket.bind(&sock_addr)?;
+    // 与原 `TcpListener::bind` 默认行为对齐：accept 队列 128。
+    socket.listen(128)?;
+    let std_listener: std::net::TcpListener = socket.into();
+    TcpListener::from_std(std_listener)
 }
 
 fn get_base_root() -> PathBuf {
