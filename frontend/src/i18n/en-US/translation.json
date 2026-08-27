@@ -41,7 +41,10 @@
     "touchProbeEnabled": "Mapping performance probe (touch events)",
     "touchProbeDesc": "Appends every touch event injected into the phone (timestamp, interval since the last event, action, pointer, coords) to data/touch_probe.jsonl. Use it to check whether phone-side stutter is caused by event density / jitter. View with perf_monitor/touch_monitor.py. Enabled by default.",
     "touchProbeOn": "On",
-    "touchProbeOff": "Off"
+    "touchProbeOff": "Off",
+    "moveThresholdTitle": "Move event distance threshold (denoise)",
+    "moveThresholdUnit": "Current threshold: {{value}} px (0 = off)",
+    "moveThresholdDesc": "For consecutive Move events on the same pointer_id, if dx² + dy² < threshold² the event is dropped. This significantly reduces event count, CPU scheduling, network messages, log volume and UI pressure, with very little impact on the actual feel. Start with 2~6 px; the payoff is biggest in high-frequency micro-move scenarios (FPS view / direction pad). Larger thresholds denoise harder, but going too large can produce visible \"jumps\" while aiming in games."
   },
   "devices": {
     "adbTools": {

@@ -264,4 +264,9 @@ pub fn register_all() {
     register("audio.queue_push", "音频写入播放队列", "");
     register("ws.recv", "处理一条 WS 消息", "");
     register("ws.send", "发送一条 WS 通知", "");
+    register(
+        "touch.move_filtered",
+        "Move 事件被距离阈值过滤掉的次数（per pointer_id）",
+        "高 = 抖动/高频微移明显；与 touch_probe.jsonl 行数对比可估算降噪比例",
+    );
 }

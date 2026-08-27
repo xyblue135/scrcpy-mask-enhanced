@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     ops::MulAssign,
     sync::{
         Arc,
@@ -10,6 +11,7 @@ use std::{
 use crate::config::LocalConfig;
 use crate::tokio_tasks::TokioTasksRuntime;
 use bevy::math::Vec2;
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use tokio::{sync::broadcast, time::sleep};
 
@@ -17,6 +19,11 @@ use crate::scrcpy::{
     constant::{self, MotionEventAction, MotionEventButtons},
     control_msg::ScrcpyControlMsg,
 };
+
+/// 各 pointer_id 上次实际发送的触摸位置（mask 坐标系）。
+/// 用于 Move 事件的距离阈值降噪：与上次位置距离² < threshold² 的 Move 直接丢弃。
+static LAST_SENT_TOUCH_POS: Lazy<std::sync::Mutex<HashMap<u64, Vec2>>> =
+    Lazy::new(|| std::sync::Mutex::new(HashMap::new()));
 
 pub const DEFAULT_SWIPE_DURATION: u64 = 25; // ms
 
@@ -126,6 +133,35 @@ impl ControlMsgHelper {
         if size.x <= 0.0 || size.y <= 0.0 {
             return;
         }
+
+        // 按距离阈值降噪：同一 pointer_id 的连续 Move，若与上次发送位置距离² < threshold²
+        // 直接丢弃。显著减少网络消息 / 日志体积 / CPU 调度，对实际手感影响很小。
+        // Down / Up 永远不过滤，并同步更新参考点（保证后续 Move 的比较基准正确）。
+        let threshold = LocalConfig::get_move_distance_threshold();
+        if threshold > 0.0 {
+            if matches!(action, MotionEventAction::Move) {
+                let threshold_sq = threshold * threshold;
+                let should_drop = {
+                    if let Ok(map) = LAST_SENT_TOUCH_POS.lock() {
+                        map.get(&pointer_id).map(|last| {
+                            let dx = pos.x - last.x;
+                            let dy = pos.y - last.y;
+                            dx * dx + dy * dy < threshold_sq
+                        })
+                    } else {
+                        false
+                    }
+                };
+                if should_drop == Some(true) {
+                    crate::perf::incr("touch.move_filtered");
+                    return;
+                }
+            }
+            if let Ok(mut map) = LAST_SENT_TOUCH_POS.lock() {
+                map.insert(pointer_id, pos);
+            }
+        }
+
         if let Err(e) = cs_tx.send(ScrcpyControlMsg::InjectTouchEvent {
             action,
             pointer_id,

@@ -1,8 +1,8 @@
 import { useState, useCallback, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Flex, Typography, Upload, Alert, Switch } from "antd";
+import { Alert, Button, Flex, InputNumber, Slider, Switch, Typography, Upload } from "antd";
 import { useAppDispatch, useAppSelector } from "../store/store";
-import { setTouchProbeEnabled } from "../store/localConfig";
+import { setMoveDistanceThreshold, setTouchProbeEnabled } from "../store/localConfig";
 import {
   CloudUploadOutlined,
   PhoneOutlined,
@@ -43,6 +43,9 @@ export default function LatencyCompare() {
   const dispatch = useAppDispatch();
   const touchProbeEnabled = useAppSelector(
     (state) => state.localConfig.touchProbeEnabled,
+  );
+  const moveThreshold = useAppSelector(
+    (state) => state.localConfig.moveDistanceThreshold,
   );
   // 手机截图
   const [phoneImg, setPhoneImg] = useState<string>("");
@@ -211,6 +214,52 @@ export default function LatencyCompare() {
               checkedChildren={t("latencyCompare.touchProbeOn")}
               unCheckedChildren={t("latencyCompare.touchProbeOff")}
             />
+          </Flex>
+        }
+        style={{ marginBottom: 16 }}
+      />
+
+      {/* Move 事件距离阈值降噪：按 dx²+dy² < threshold² 丢弃，显著降低网络/日志/UI 压力 */}
+      <Alert
+        type="success"
+        showIcon
+        message={
+          <Flex vertical gap={6}>
+            <Flex align="center" justify="space-between" wrap gap={8}>
+              <Typography.Text strong>
+                {t("latencyCompare.moveThresholdTitle")}
+              </Typography.Text>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {t("latencyCompare.moveThresholdUnit", {
+                  value: moveThreshold,
+                })}
+              </Typography.Text>
+            </Flex>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              {t("latencyCompare.moveThresholdDesc")}
+            </Typography.Text>
+            <Flex align="center" gap={12}>
+              <Slider
+                min={0}
+                max={64}
+                step={1}
+                value={moveThreshold}
+                onChange={(v) => dispatch(setMoveDistanceThreshold(v as number))}
+                style={{ flex: 1, minWidth: 160 }}
+                tooltip={{ formatter: (v) => `${v} px` }}
+              />
+              <InputNumber
+                min={0}
+                max={64}
+                step={1}
+                value={moveThreshold}
+                onChange={(v) =>
+                  v !== null && dispatch(setMoveDistanceThreshold(v))
+                }
+                style={{ width: 90 }}
+                addonAfter="px"
+              />
+            </Flex>
           </Flex>
         }
         style={{ marginBottom: 16 }}

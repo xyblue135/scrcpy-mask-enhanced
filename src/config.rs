@@ -146,6 +146,10 @@ pub struct LocalConfig {
     /// 全局触摸事件探针开关：开启后把每次注入手机的触摸事件写入
     /// data/touch_probe.jsonl（与 perf.jsonl 分开存放），用于定位手机端卡顿。
     pub touch_probe_enabled: bool,
+    /// Move 事件距离阈值（mask 坐标系下像素）：0 = 关闭。
+    /// 对同一 pointer_id 的连续 Move 事件，若 dx² + dy² < threshold² 则直接丢弃，
+    /// 显著减少网络消息 / 日志体积 / CPU 调度，对实际手感影响很小。
+    pub move_distance_threshold: f32,
     pub mapping_label_opacity: f32,
     // 键盘映射按钮的显示大小倍数（仅影响可视化按钮大小，adb 点击仍为按钮中心）
     pub mapping_button_scale: f32,
@@ -205,6 +209,7 @@ impl Default for LocalConfig {
             mapping_randomization_enabled: true,
             button_randomization_enabled: true,
             touch_probe_enabled: true,
+            move_distance_threshold: 0.0,
             mapping_label_opacity: 0.3,
             mapping_button_scale: 1.0,
             language: DEFAULT_LANGUAGE.to_string(),
@@ -386,6 +391,13 @@ impl LocalConfig {
         CONFIG.read().unwrap().touch_probe_enabled
     }
 
+    /// Move 事件距离阈值（mask 坐标系下像素），0 表示关闭。
+    /// 对同一 pointer_id 的连续 Move 事件，若 dx² + dy² < threshold² 则直接丢弃。
+    pub fn get_move_distance_threshold() -> f32 {
+        let raw = CONFIG.read().unwrap().move_distance_threshold;
+        if raw.is_finite() && raw > 0.0 { raw } else { 0.0 }
+    }
+
     define_setter!(
         (web_port, u16),
         (web_bind_addr, Ipv4Addr),
@@ -406,6 +418,7 @@ impl LocalConfig {
         (mapping_randomization_enabled, bool),
         (button_randomization_enabled, bool),
         (touch_probe_enabled, bool),
+        (move_distance_threshold, f32),
         (mapping_label_opacity, f32),
         (mapping_button_scale, f32),
         (language, String),

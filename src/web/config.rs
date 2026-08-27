@@ -546,6 +546,24 @@ async fn update_config(
                 "touch_probe_enabled must be a boolean",
             ));
         }
+        "move_distance_threshold" => {
+            if let Some(value) = payload.value.as_f64() {
+                if !value.is_finite() {
+                    return Err(WebServerError::bad_request(
+                        "move_distance_threshold must be a finite number",
+                    ));
+                }
+                let value = (value as f32).clamp(0.0, 64.0);
+                LocalConfig::set_move_distance_threshold(value);
+                return Ok(JsonResponse::success(
+                    format!("move distance threshold set to {value}"),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(
+                "move_distance_threshold must be a number (pixels, 0 = off)",
+            ));
+        }
         "scrcpy_module" => {
             let module: ScrcpyModuleConfig =
                 serde_json::from_value(payload.value).map_err(|error| {

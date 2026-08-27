@@ -41,7 +41,10 @@
     "touchProbeEnabled": "映射性能探针（触摸事件）",
     "touchProbeDesc": "把每次注入手机的触摸事件（时间戳、距上一条间隔、类型、指针、坐标）追加写入 data/touch_probe.jsonl。用于分析手机端卡顿是否由事件过密/抖动导致，用 perf_monitor/touch_monitor.py 查看。默认开启。",
     "touchProbeOn": "开",
-    "touchProbeOff": "关"
+    "touchProbeOff": "关",
+    "moveThresholdTitle": "Move 事件距离阈值降噪",
+    "moveThresholdUnit": "当前阈值：{{value}} px（0 = 关闭）",
+    "moveThresholdDesc": "对同一 pointer_id 的连续 Move 事件，若 dx² + dy² < threshold² 则直接丢弃。显著减少事件数量 / CPU 调度 / 网络消息 / 日志体积 / UI 压力，对实际手感影响很小。建议从 2~6 px 开始尝试，FPS 视角/方向轮盘等高频微移场景下收益最明显。阈值越大降噪越狠，但过大可能让游戏内的瞄准出现可见的「跳点」。"
   },
   "devices": {
     "adbTools": {
