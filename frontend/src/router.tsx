@@ -8,6 +8,7 @@ const Welcome = lazy(() => import("./components/Welcome"));
 const Devices = lazy(() => import("./components/Devices"));
 const Mappings = lazy(() => import("./components/mappings/Mappings"));
 const AdbResolution = lazy(() => import("./components/AdbResolution"));
+const AdbPackages = lazy(() => import("./components/AdbPackages"));
 const LatencyCompare = lazy(() => import("./components/LatencyCompare"));
 const ScrcpyPresets = lazy(() => import("./components/ScrcpyModuleModal"));
 const Settings = lazy(() => import("./components/Settings"));
@@ -46,6 +47,14 @@ const router = createBrowserRouter([
         element: (
           <LoadingWrapper>
             <AdbResolution />
+          </LoadingWrapper>
+        ),
+      },
+      {
+        path: "adb-packages",
+        element: (
+          <LoadingWrapper>
+            <AdbPackages />
           </LoadingWrapper>
         ),
       },

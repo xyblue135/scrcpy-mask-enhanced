@@ -80,6 +80,8 @@
       "startAdbAppSuccess": "成功启动应用",
     "wmSizeSuccess": "屏幕尺寸设置成功",
     "wmDensitySuccess": "屏幕密度设置成功",
+    "wmCurrentSuccess": "获取当前屏幕参数成功",
+    "pmListPackagesSuccess": "获取应用列表成功",
       "noAppFound": "未找到可启动应用",
       "noDisplayFound": "未找到显示",
       "invalidStartAppParams": "启动应用参数无效"
@@ -259,5 +261,6 @@
     "windowLevelChanged": "蒙版置顶"
   }
 }
+
 
 

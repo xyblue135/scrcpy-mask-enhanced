@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, time::Duration};
 
 use axum::{
     Json, Router,
-    extract::State,
+    extract::{Query, State},
     http::{HeaderMap, HeaderValue, StatusCode},
     response::IntoResponse,
     routing::{get, post},
@@ -61,6 +61,8 @@ pub fn routers(
         .route("/adb_start_app", post(adb_start_app))
         .route("/adb_wm_size", post(adb_wm_size))
         .route("/adb_wm_density", post(adb_wm_density))
+        .route("/adb_wm_current", get(adb_wm_current))
+        .route("/adb_pm_list_packages", post(adb_pm_list_packages))
         .route("/control/set_display_power", post(set_display_power))
         .route("/control/set_pointer_location", post(set_pointer_location))
         .route("/control/send_key", post(send_key))
@@ -798,6 +800,61 @@ async fn adb_wm_density(
     Ok(JsonResponse::success(
         t!("web.device.wmDensitySuccess"),
         None,
+    ))
+}
+
+#[derive(Deserialize)]
+struct PostDataDeviceId {
+    device_id: String,
+}
+
+async fn adb_wm_current(
+    Query(payload): Query<PostDataDeviceId>,
+) -> Result<JsonResponse, WebServerError> {
+    ensure_device_controlled(&payload.device_id).await?;
+    let device_id = &payload.device_id;
+
+    let mut size_output = Vec::<u8>::new();
+    Device::shell(device_id, ["wm", "size"], &mut size_output)
+        .map_err(WebServerError::bad_request)?;
+    let size_raw = String::from_utf8_lossy(&size_output).trim().to_string();
+
+    let mut density_output = Vec::<u8>::new();
+    Device::shell(device_id, ["wm", "density"], &mut density_output)
+        .map_err(WebServerError::bad_request)?;
+    let density_raw = String::from_utf8_lossy(&density_output).trim().to_string();
+
+    Ok(JsonResponse::success(
+        t!("web.device.wmCurrentSuccess"),
+        Some(json!({
+            "size_raw": size_raw,
+            "density_raw": density_raw,
+        })),
+    ))
+}
+
+async fn adb_pm_list_packages(
+    Json(payload): Json<PostDataAdbDevice>,
+) -> Result<JsonResponse, WebServerError> {
+    ensure_device_controlled(&payload.device_id).await?;
+    let device_id = &payload.device_id;
+
+    let raw = adb_shell_text(device_id, ["pm", "list", "packages"])
+        .map_err(WebServerError::bad_request)?;
+
+    let packages: Vec<String> = raw
+        .lines()
+        .filter_map(|line| line.strip_prefix("package:"))
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+
+    Ok(JsonResponse::success(
+        t!("web.device.pmListPackagesSuccess"),
+        Some(json!({
+            "packages": packages,
+            "raw_cmd": "adb shell pm list packages",
+        })),
     ))
 }
 

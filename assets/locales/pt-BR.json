@@ -78,6 +78,8 @@
       "startAdbAppSuccess": "App iniciado com sucesso",
     "wmSizeSuccess": "Tamanho da tela definido",
     "wmDensitySuccess": "Densidade da tela definida",
+    "wmCurrentSuccess": "get current screen param success",
+    "pmListPackagesSuccess": "get app list success",
       "noAppFound": "Nenhum app iniciável encontrado",
       "noDisplayFound": "Nenhum display encontrado",
       "invalidStartAppParams": "Parâmetros para iniciar app inválidos"
@@ -257,5 +259,6 @@
     "windowLevelChanged": "Máscara sempre no topo"
   }
 }
+
 
 

@@ -78,6 +78,8 @@
       "startAdbAppSuccess": "アプリを起動しました",
     "wmSizeSuccess": "画面サイズを設定しました",
     "wmDensitySuccess": "画面密度を設定しました",
+    "wmCurrentSuccess": "get current screen param success",
+    "pmListPackagesSuccess": "get app list success",
       "noAppFound": "起動可能なアプリが見つかりません",
       "noDisplayFound": "ディスプレイが見つかりません",
       "invalidStartAppParams": "アプリ起動パラメータが無効です"
@@ -257,5 +259,6 @@
     "windowLevelChanged": "マスクを常に最前面に表示"
   }
 }
+
 
 

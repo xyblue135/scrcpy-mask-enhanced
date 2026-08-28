@@ -78,6 +78,8 @@
       "startAdbAppSuccess": "Приложение успешно запущено",
     "wmSizeSuccess": "Размер экрана установлен",
     "wmDensitySuccess": "Плотность экрана установлена",
+    "wmCurrentSuccess": "get current screen param success",
+    "pmListPackagesSuccess": "get app list success",
       "noAppFound": "Запускаемые приложения не найдены",
       "noDisplayFound": "Дисплей не найден",
       "invalidStartAppParams": "Недопустимые параметры запуска приложения"
@@ -257,5 +259,6 @@
     "windowLevelChanged": "Маска всегда поверх окон"
   }
 }
+
 
 

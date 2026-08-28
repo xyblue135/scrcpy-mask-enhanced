@@ -6,7 +6,6 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import { IconFont } from "../hooks";
 
-
 export default function Sider() {
   const { t } = useTranslation();
   const location = useLocation();
@@ -17,12 +16,15 @@ export default function Sider() {
     ? "opacity-0 max-w-0"
     : "opacity-100 max-w-full ml-3";
 
+  // Devices submenu always expanded, never collapsed
+  const openKeys = ["/devices"];
+
   return (
     <Layout.Sider
       collapsed={siderCollapsed}
       onCollapse={(collapsed) => setSiderCollapsed(collapsed)}
       collapsible
-      width={175}
+      width={220}
       theme="light"
     >
       <Flex
@@ -53,42 +55,37 @@ export default function Sider() {
       </Flex>
       <Menu
         selectedKeys={[location.pathname]}
+        openKeys={siderCollapsed ? [] : openKeys}
         onSelect={({ key }) => {
           navigate(key, { replace: true });
         }}
-        items={[
-          {
-            key: "/devices",
-            label: t("sider.devices"),
-            icon: <IconFont type="icon-android" />,
-          },
-          {
-            key: "/mappings",
-            label: t("sider.mappings"),
-            icon: <IconFont type="icon-keyboard" />,
-          },
-          {
-            key: "/adb-resolution",
-            label: t("sider.adbResolution"),
-            icon: <IconFont type="icon-android" />,
-          },
-          {
-            key: "/latency-compare",
-            label: t("sider.latencyCompare"),
-            icon: <CameraOutlined />,
-          },
-          {
-            key: "/scrcpy",
-            label: t("sider.scrcpyPresets"),
-            icon: <CodeFilled />,
-          },
-          {
-            key: "/settings",
-            label: t("sider.settings"),
-            icon: <SettingFilled />,
-          },
-        ]}
-      />
+      >
+        <Menu.Item key="/scrcpy" icon={<CodeFilled />}>
+          {t("sider.scrcpyPresets")}
+        </Menu.Item>
+        <Menu.SubMenu
+          key="/devices"
+          icon={<IconFont type="icon-android" />}
+          title={t("sider.devices")}
+          onTitleClick={({ key }) => navigate(key, { replace: true })}
+        >
+          <Menu.Item key="/mappings" icon={<IconFont type="icon-keyboard" />}>
+            {t("sider.mappings")}
+          </Menu.Item>
+          <Menu.Item key="/adb-resolution" icon={<IconFont type="icon-android" />}>
+            {t("sider.adbResolution")}
+          </Menu.Item>
+          <Menu.Item key="/adb-packages" icon={<IconFont type="icon-android" />}>
+            {t("sider.adbPackages")}
+          </Menu.Item>
+          <Menu.Item key="/latency-compare" icon={<CameraOutlined />}>
+            {t("sider.latencyCompare")}
+          </Menu.Item>
+        </Menu.SubMenu>
+        <Menu.Item key="/settings" icon={<SettingFilled />}>
+          {t("sider.settings")}
+        </Menu.Item>
+      </Menu>
     </Layout.Sider>
   );
 }
