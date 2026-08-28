@@ -34,8 +34,8 @@ use crate::{
             sync_video_viewport,
         },
         window_state::{
-            MaskFullscreenState, MaskMaximizeState, apply_pending_window_restore,
-            handle_fullscreen_hotkey, is_persistable_window_position,
+            MaskFullscreenState, MaskMaximizeState, handle_fullscreen_hotkey,
+            is_persistable_window_position,
         },
     },
     utils::{ChannelSenderWS, DeviceOrientation, share::ControlledDevice},
@@ -72,7 +72,6 @@ impl Plugin for MaskPlugins {
                 (
                     record_frame_time,
                     handle_fullscreen_hotkey,
-                    apply_pending_window_restore,
                     sync_mask_size.in_set(MaskFrameSet::Resize),
                     sync_mask_position,
                     handle_mask_command,

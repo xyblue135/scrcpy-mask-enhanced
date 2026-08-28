@@ -7,10 +7,7 @@ use bevy::render::render_resource::{
 use bevy::shader::ShaderRef;
 use bevy_ui_render::prelude::{MaterialNode, UiMaterial};
 
-use crate::mask::{
-    mask_command::{MaskSize, TitlebarState},
-    window_state::{MaskFullscreenState, MaskMaximizeState},
-};
+use crate::mask::mask_command::{MaskSize, TitlebarState};
 use crate::scrcpy::media::{
     VideoFrameTrace, VideoMsg, YuvColorInfo, YuvMatrix, YuvPlaneLayout, YuvRange,
 };
@@ -53,28 +50,27 @@ impl VideoViewport {
     }
 }
 
-/// 统一计算视频显示矩形。普通窗口保持原来的等比例窗口行为；
-/// F11 全屏和普通窗口最大化时使用 contain 缩放，多余区域显示黑边而不是拉伸。
+/// 统一计算视频显示矩形。
+///
+/// 不管是普通窗口、最大化还是 F11 全屏，**总是**使用 contain 缩放保持手机源分辨率
+/// 比例（黑边而不是拉伸）。这样键位位置按 `mask_size` 渲染时和视频画面始终对齐。
+///
+/// 视频源分辨率还没到（`source_size == ZERO`，例如刚启动还没收到第一帧）时
+/// 回退到"铺满窗口"模式，避免长时间黑屏；首帧到达后自动切到 contain。
 pub fn sync_video_viewport(
     window: Single<&Window>,
     titlebar_state: Res<TitlebarState>,
-    fullscreen_state: Res<MaskFullscreenState>,
-    maximize_state: Res<MaskMaximizeState>,
     mut viewport: ResMut<VideoViewport>,
     mut mask_size: ResMut<MaskSize>,
     mut video_query: Query<&mut Node, With<VideoPlayer>>,
 ) {
     let available = Vec2::new(
         window.size().x.max(0.0),
-        if fullscreen_state.active {
-            window.size().y.max(0.0)
-        } else {
-            (window.size().y - titlebar_state.offset()).max(0.0)
-        },
+        (window.size().y - titlebar_state.offset()).max(0.0),
     );
 
-    let letterbox = fullscreen_state.active || maximize_state.active;
-    let (offset, size) = if letterbox {
+    let source_ready = viewport.source_size.x > 0.0 && viewport.source_size.y > 0.0;
+    let (offset, size) = if source_ready {
         VideoViewport::contain(viewport.source_size, available)
     } else {
         (Vec2::ZERO, available)

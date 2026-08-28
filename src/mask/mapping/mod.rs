@@ -7,6 +7,10 @@ pub mod executor;
 pub mod fire;
 pub mod movement_assist;
 pub mod observation;
+// `override` 是 Rust 关键字，无法直接作为模块名；用 `#[path]` 指定源文件，
+// 模块名采用 `preset_override`，调用方写 `crate::mask::mapping::preset_override::xxx`。
+#[path = "override.rs"]
+pub mod preset_override;
 pub mod quick_switch;
 pub mod raw_input;
 pub mod script;
@@ -134,8 +138,11 @@ impl Plugin for MappingPlugins {
                     observation::handle_observation_trigger,
                     observation::handle_observation_focus_lost,
                     fire::handle_fps,
-                    // raw input won't work in fps mode
-                    raw_input::handle_raw_input.run_if(not(in_state(CursorState::Fps))),
+                    // raw_input 仍然在 FPS 模式下转发按键：FPS 模式下也需要把
+                    // ESC/TAB 等转发到手机（用于弹出游戏内菜单/暂停等）。raw_input
+                    // 只把按键直传给手机，不参与任何映射逻辑，所以不会和 fire /
+                    // direction_pad / cast_spell 等摇杆绑定冲突。
+                    raw_input::handle_raw_input,
                 )
                     .in_set(CursorFrameSet::HandleMappings)
                     .run_if(in_state(MappingState::Normal)),

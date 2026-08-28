@@ -1,20 +1,10 @@
 use bevy::{
-    math::{IVec2, Vec2},
+    math::IVec2,
     prelude::{ButtonInput, KeyCode, Res, ResMut, Resource, Single},
-    window::{MonitorSelection, Window, WindowMode, WindowPosition},
+    window::{Window, WindowMode},
 };
 
-use crate::mask::mask_command::TitlebarState;
-
-#[derive(Clone, Copy)]
-struct WindowedSnapshot {
-    position: Option<IVec2>,
-    size: Vec2,
-    titlebar_visible: bool,
-    resizable: bool,
-}
-
-/// 普通“窗口最大化”状态：仍然是 Windowed 模式，因此 Windows 任务栏会保留。
+/// 普通"窗口最大化"状态：仍然是 Windowed 模式，因此 Windows 任务栏会保留。
 #[derive(Resource, Default)]
 pub struct MaskMaximizeState {
     pub active: bool,
@@ -26,20 +16,22 @@ impl MaskMaximizeState {
     }
 }
 
-/// 投屏窗口的无边框全屏状态。
+/// 投屏窗口的全屏状态。
 ///
-/// F11 使用 BorderlessFullscreen，占满当前显示器；退出后恢复进入全屏前的窗口状态。
+/// 之前 F11 会进入 `BorderlessFullscreen`（无边框全屏），但全屏下视频源比例
+/// 与显示器不一致时键位会错位。现在所有状态都用 contain 缩放保留手机源比例，
+/// 所以 F11 改成和右上角「最大化」按钮等价，不再进入 BorderlessFullscreen。
+///
+/// `MaskFullscreenState` 保留下来只是因为有历史代码会读 `active` 字段
+/// （实际不会进入 `active=true`，但保留避免大改调用方）。
 #[derive(Resource, Default)]
 pub struct MaskFullscreenState {
     pub active: bool,
-    transitioning: bool,
-    restore_after_frames: u8,
-    snapshot: Option<WindowedSnapshot>,
 }
 
 impl MaskFullscreenState {
     pub fn suppress_window_persistence(&self) -> bool {
-        self.active || self.transitioning
+        self.active
     }
 }
 
@@ -56,109 +48,33 @@ pub fn is_persistable_window_position(pos: IVec2) -> bool {
     true
 }
 
-/// F11 在普通窗口/普通最大化和“当前显示器无边框全屏”之间切换。
+/// F11 现在和右上角「最大化」按钮行为一致：在普通窗口和最大化之间切换。
+///
+/// 之前 F11 进入的是 BorderlessFullscreen（无边框全屏），会让视频被拉伸
+/// 且键位错位；现在任何状态下都用 contain 缩放保持手机源比例，所以最大化
+/// 时直接按比例放大就够了，不再需要无边框全屏。
 pub fn handle_fullscreen_hotkey(
     keys: Res<ButtonInput<KeyCode>>,
     mut window: Single<&mut Window>,
-    mut state: ResMut<MaskFullscreenState>,
     mut maximize_state: ResMut<MaskMaximizeState>,
-    mut titlebar_state: ResMut<TitlebarState>,
+    fullscreen_state: Res<MaskFullscreenState>,
 ) {
     if !keys.just_pressed(KeyCode::F11) {
         return;
     }
-
-    if state.active {
-        leave_fullscreen(&mut window, &mut state, &mut titlebar_state);
-    } else if !state.transitioning {
-        enter_fullscreen(
-            &mut window,
-            &mut state,
-            &mut maximize_state,
-            &mut titlebar_state,
-        );
-    }
+    toggle_window_maximized(&mut window, &mut maximize_state, &fullscreen_state);
 }
 
-fn enter_fullscreen(
-    window: &mut Window,
-    state: &mut MaskFullscreenState,
-    maximize_state: &mut MaskMaximizeState,
-    titlebar_state: &mut TitlebarState,
-) {
-    state.snapshot = Some(WindowedSnapshot {
-        position: match window.position {
-            WindowPosition::At(pos) if is_persistable_window_position(pos) => Some(pos),
-            _ => None,
-        },
-        size: window.size(),
-        titlebar_visible: titlebar_state.visible,
-        resizable: window.resizable,
-    });
-
-    // 先离开普通最大化，再进入 F11 无边框全屏，避免两种窗口状态互相打架。
-    if maximize_state.active {
-        window.set_maximized(false);
-        maximize_state.active = false;
-    }
-
-    state.active = true;
-    titlebar_state.visible = false;
-    window.resizable = false;
-    window.mode = WindowMode::BorderlessFullscreen(MonitorSelection::Current);
-}
-
-fn leave_fullscreen(
-    window: &mut Window,
-    state: &mut MaskFullscreenState,
-    titlebar_state: &mut TitlebarState,
-) {
-    state.active = false;
-    state.transitioning = true;
-    state.restore_after_frames = 2;
-    window.mode = WindowMode::Windowed;
-
-    if let Some(snapshot) = state.snapshot {
-        titlebar_state.visible = snapshot.titlebar_visible;
-        window.resizable = snapshot.resizable;
-    }
-}
-
-/// 退出全屏后等待 Winit 完成 Windowed 切换，再恢复之前的窗口 geometry/最大化状态。
-pub fn apply_pending_window_restore(
-    mut window: Single<&mut Window>,
-    mut state: ResMut<MaskFullscreenState>,
-    mut maximize_state: ResMut<MaskMaximizeState>,
-) {
-    if !state.transitioning || state.active {
-        return;
-    }
-
-    if state.restore_after_frames > 0 {
-        state.restore_after_frames -= 1;
-        return;
-    }
-
-    // 退出 F11 全屏后统一回到普通窗口（Windowed），不再恢复"最大化"状态，
-    // 使 F11 的行为始终是：进入全屏 <-> 退出回普通窗口，避免"时而是全屏时而是最大化"的困惑。
-    if let Some(snapshot) = state.snapshot.take() {
-        maximize_state.active = false;
-        window.resolution.set(snapshot.size.x, snapshot.size.y);
-        if let Some(position) = snapshot.position {
-            window.position = WindowPosition::At(position);
-        }
-    }
-
-    state.transitioning = false;
-}
-
-/// 普通窗口最大化：保留标题栏和 Windows 任务栏，不等同于 F11 全屏。
+/// 普通窗口最大化：保留标题栏和 Windows 任务栏。
+///
+/// `video.rs::sync_video_viewport` 在最大化时启用 contain 缩放，所以最大化后
+/// 视频保持手机源比例（黑边而不是拉伸），键位位置和视频始终对齐。
 pub fn toggle_window_maximized(
     window: &mut Window,
     maximize_state: &mut MaskMaximizeState,
     fullscreen_state: &MaskFullscreenState,
 ) {
-    if fullscreen_state.active || fullscreen_state.suppress_window_persistence() {
+    if fullscreen_state.active {
         return;
     }
 
