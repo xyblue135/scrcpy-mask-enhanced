@@ -1,5 +1,4 @@
 import {
-  Alert,
   Button,
   Card,
   Collapse,
@@ -294,12 +293,7 @@ export default function ScrcpyModulePage() {
     setDraft((current) => ({ ...current, activePresetId: presets[0].id, presets }));
   }
 
-  function addParameter() {
-    updateActive((preset) => ({
-      ...preset,
-      parameters: [...preset.parameters, { id: id("parameter"), enabled: true, key: "custom_option", value: "", scope: "server" }],
-    }));
-  }
+  const [commandHistory, setCommandHistory] = useState<string[]>([]);
 
   function updateParameter(parameterId: string, patch: Partial<ScrcpyParameter>) {
     updateActive((preset) => ({
@@ -334,7 +328,43 @@ export default function ScrcpyModulePage() {
   }
 
   const customParameters = activePreset?.parameters.filter((parameter) => !SCRCPY_OPTION_BY_KEY.has(parameter.key)) ?? [];
-  const parameterPanels = SCRCPY_OPTION_GROUPS.map((group) => {
+  const parameterPanels = [
+    {
+      key: "media",
+      label: "媒体通道",
+      children: (
+        <Flex gap="middle" align="center" wrap>
+          <Space><Typography.Text>视频</Typography.Text><Switch checked={activePreset?.video ?? false} onChange={(video) => activePreset && updateActive((preset) => ({ ...preset, video }))} /></Space>
+          <Space><Typography.Text>音频</Typography.Text><Switch checked={activePreset?.audio ?? false} onChange={(audio) => activePreset && updateActive((preset) => ({ ...preset, audio }))} /></Space>
+        </Flex>
+      ),
+    },
+    {
+      key: "virtual",
+      label: "虚拟屏幕与应用启动",
+      children: (
+        <Flex vertical gap="small">
+          <Flex gap="middle" align="center" wrap>
+            <Space><Typography.Text>启用虚拟屏</Typography.Text><Switch checked={activePreset?.virtualDisplay.enabled ?? false} onChange={(enabled) => activePreset && updateVirtualDisplay({ enabled })} /></Space>
+            <Space><Typography.Text>跟随主屏尺寸</Typography.Text><Switch disabled={!activePreset?.virtualDisplay.enabled} checked={activePreset?.virtualDisplay.useMainSize ?? false} onChange={(useMainSize) => activePreset && updateVirtualDisplay({ useMainSize })} /></Space>
+            <Space><Typography.Text>保持活动</Typography.Text><Switch disabled={!activePreset?.virtualDisplay.enabled} checked={activePreset?.virtualDisplay.keepActive ?? false} onChange={(keepActive) => activePreset && updateVirtualDisplay({ keepActive })} /></Space>
+            <Space><Typography.Text>销毁内容</Typography.Text><Switch disabled={!activePreset?.virtualDisplay.enabled} checked={activePreset?.virtualDisplay.destroyContent ?? false} onChange={(destroyContent) => activePreset && updateVirtualDisplay({ destroyContent })} /></Space>
+            <Space><Typography.Text>系统装饰</Typography.Text><Switch disabled={!activePreset?.virtualDisplay.enabled} checked={activePreset?.virtualDisplay.systemDecorations ?? false} onChange={(systemDecorations) => activePreset && updateVirtualDisplay({ systemDecorations })} /></Space>
+          </Flex>
+          <Flex gap="small" align="center" wrap>
+            <InputNumber addonBefore="宽" min={1} max={16384} disabled={!activePreset?.virtualDisplay.enabled || activePreset?.virtualDisplay.useMainSize} value={activePreset?.virtualDisplay.width} onChange={(width) => width !== null && activePreset && updateVirtualDisplay({ width })} />
+            <InputNumber addonBefore="高" min={1} max={16384} disabled={!activePreset?.virtualDisplay.enabled || activePreset?.virtualDisplay.useMainSize} value={activePreset?.virtualDisplay.height} onChange={(height) => height !== null && activePreset && updateVirtualDisplay({ height })} />
+            <InputNumber addonBefore="DPI" min={1} max={2000} disabled={!activePreset?.virtualDisplay.enabled || activePreset?.virtualDisplay.useMainSize} value={activePreset?.virtualDisplay.dpi} onChange={(dpi) => dpi !== null && activePreset && updateVirtualDisplay({ dpi })} />
+          </Flex>
+          <Flex gap="small" align="center" wrap>
+            <Space><Typography.Text>启动指定应用</Typography.Text><Switch disabled={!activePreset?.virtualDisplay.enabled} checked={activePreset?.virtualDisplay.startAppEnabled ?? false} onChange={(startAppEnabled) => activePreset && updateVirtualDisplay({ startAppEnabled })} /></Space>
+            <Input style={{ width: 330 }} placeholder="com.example.game" disabled={!activePreset?.virtualDisplay.enabled || !activePreset?.virtualDisplay.startAppEnabled} value={activePreset?.virtualDisplay.startAppPackage} onChange={(event) => activePreset && updateVirtualDisplay({ startAppPackage: event.target.value })} />
+            <Space><Typography.Text>启动前强制停止</Typography.Text><Switch disabled={!activePreset?.virtualDisplay.enabled || !activePreset?.virtualDisplay.startAppEnabled} checked={activePreset?.virtualDisplay.startAppForceStop ?? false} onChange={(startAppForceStop) => activePreset && updateVirtualDisplay({ startAppForceStop })} /></Space>
+          </Flex>
+        </Flex>
+      ),
+    },
+    ...SCRCPY_OPTION_GROUPS.map((group) => {
     const definitions = SCRCPY_OPTIONS.filter((definition) => definition.group === group.key);
     const enabledCount = definitions.filter((definition) => activePreset?.parameters.some((parameter) => parameter.key === definition.key && parameter.enabled)).length;
     return {
@@ -350,37 +380,17 @@ export default function ScrcpyModulePage() {
         </div>
       ),
     };
-  });
+  }),
+];
 
   return (
     <div className="page-container">
       <Flex justify="space-between" align="center" gap="middle" wrap className="mb-4">
-        <div>
-          <h2 className="title-with-line" style={{ marginBottom: 4 }}>Scrcpy 预设</h2>
-          <Typography.Text type="secondary">完整参数、虚拟屏与命令粘贴调试中心</Typography.Text>
-        </div>
+        <h2 className="title-with-line" style={{ marginBottom: 0 }}>Scrcpy 预设</h2>
         <Space>
-          <Button onClick={() => setDraft(normalizeModule(value))}>放弃未保存修改</Button>
-          <Button onClick={() => save()}>保存</Button>
-          <Button type="primary" onClick={() => save(true)}>保存并启用当前预设</Button>
+          <Button type="primary" onClick={() => save()}>保存</Button>
         </Space>
       </Flex>
-      <Alert showIcon type="info" message="参数以 scrcpy 4.0 server Options.java 为基线。Server 参数真实应用；Client Only 仅用于记录官方 scrcpy.exe 参数。连接标识、传输元数据和控制通道由 LowCast 管理，避免调试时破坏协议。" />
-      <Alert
-        showIcon
-        type="warning"
-        message="低延迟使用建议"
-        description={
-          <div style={{ whiteSpace: "pre-line" }}>
-            {`· 强烈建议使用 USB3.0 及以上接口进行数据传输，传输带宽直接决定码率上限与延迟表现。
-· 强烈建议使用高刷新率，高刷新率可以显著降低延迟。
-· 作者 xyblue135 使用的手机是红米 Redmi K100 Pro Max，配置了指定编码器低延迟 H.265 格式。
-· 在性能足够的情况下不建议使用虚拟屏幕（小米等厂商限制虚拟屏幕最大刷新率为 60fps，高刷需要 root 权限）。
-· 可以视情况降低分辨率来使用，例如改为 1600*900 分辨率。`}
-          </div>
-        }
-        style={{ marginBottom: 12 }}
-      />
 
       <Flex className="mt-4" gap="middle" align="center" wrap>
         <Typography.Text strong>启用参数模块</Typography.Text>
@@ -398,71 +408,47 @@ export default function ScrcpyModulePage() {
 
       {activePreset && (
         <>
-          <Card className="mt-4" size="small" title="预设与媒体通道">
-            <Flex gap="large" align="center" wrap>
-              <Input style={{ width: 300 }} addonBefore="名称" value={activePreset.name} onChange={(event) => updateActive((preset) => ({ ...preset, name: event.target.value }))} />
-              <Space><Typography.Text>视频</Typography.Text><Switch checked={activePreset.video} onChange={(video) => updateActive((preset) => ({ ...preset, video }))} /></Space>
-              <Space><Typography.Text>音频</Typography.Text><Switch checked={activePreset.audio} onChange={(audio) => updateActive((preset) => ({ ...preset, audio }))} /></Space>
-            </Flex>
-          </Card>
+          <Collapse className="mt-3" items={parameterPanels} defaultActiveKey={[]} />
 
-          <Card className="mt-3" size="small" title="虚拟屏幕与应用启动">
-            <Flex gap="large" align="center" wrap>
-              <Space><Typography.Text>启用虚拟屏</Typography.Text><Switch checked={activePreset.virtualDisplay.enabled} onChange={(enabled) => updateVirtualDisplay({ enabled })} /></Space>
-              <Space><Typography.Text>跟随主屏尺寸</Typography.Text><Switch disabled={!activePreset.virtualDisplay.enabled} checked={activePreset.virtualDisplay.useMainSize} onChange={(useMainSize) => updateVirtualDisplay({ useMainSize })} /></Space>
-              <Space><Typography.Text>保持活动</Typography.Text><Switch disabled={!activePreset.virtualDisplay.enabled} checked={activePreset.virtualDisplay.keepActive} onChange={(keepActive) => updateVirtualDisplay({ keepActive })} /></Space>
-              <Space><Typography.Text>销毁内容</Typography.Text><Switch disabled={!activePreset.virtualDisplay.enabled} checked={activePreset.virtualDisplay.destroyContent} onChange={(destroyContent) => updateVirtualDisplay({ destroyContent })} /></Space>
-              <Space><Typography.Text>系统装饰</Typography.Text><Switch disabled={!activePreset.virtualDisplay.enabled} checked={activePreset.virtualDisplay.systemDecorations} onChange={(systemDecorations) => updateVirtualDisplay({ systemDecorations })} /></Space>
-            </Flex>
-            <Flex className="mt-3" gap="small" align="center" wrap>
-              <InputNumber addonBefore="宽" min={1} max={16384} disabled={!activePreset.virtualDisplay.enabled || activePreset.virtualDisplay.useMainSize} value={activePreset.virtualDisplay.width} onChange={(width) => width !== null && updateVirtualDisplay({ width })} />
-              <InputNumber addonBefore="高" min={1} max={16384} disabled={!activePreset.virtualDisplay.enabled || activePreset.virtualDisplay.useMainSize} value={activePreset.virtualDisplay.height} onChange={(height) => height !== null && updateVirtualDisplay({ height })} />
-              <InputNumber addonBefore="DPI" min={1} max={2000} disabled={!activePreset.virtualDisplay.enabled || activePreset.virtualDisplay.useMainSize} value={activePreset.virtualDisplay.dpi} onChange={(dpi) => dpi !== null && updateVirtualDisplay({ dpi })} />
-            </Flex>
-            <Flex className="mt-3" gap="small" align="center" wrap>
-              <Space><Typography.Text>启动指定应用</Typography.Text><Switch disabled={!activePreset.virtualDisplay.enabled} checked={activePreset.virtualDisplay.startAppEnabled} onChange={(startAppEnabled) => updateVirtualDisplay({ startAppEnabled })} /></Space>
-              <Input style={{ width: 330 }} placeholder="com.example.game" disabled={!activePreset.virtualDisplay.enabled || !activePreset.virtualDisplay.startAppEnabled} value={activePreset.virtualDisplay.startAppPackage} onChange={(event) => updateVirtualDisplay({ startAppPackage: event.target.value })} />
-              <Space><Typography.Text>启动前强制停止</Typography.Text><Switch disabled={!activePreset.virtualDisplay.enabled || !activePreset.virtualDisplay.startAppEnabled} checked={activePreset.virtualDisplay.startAppForceStop} onChange={(startAppForceStop) => updateVirtualDisplay({ startAppForceStop })} /></Space>
-            </Flex>
-          </Card>
-
-          <Divider orientation="left">scrcpy 4.0 参数目录</Divider>
-          <Collapse items={parameterPanels} defaultActiveKey={["video", "display"]} />
-
-          <Divider orientation="left">自定义参数</Divider>
-          <Space direction="vertical" size="small" style={{ width: "100%" }}>
-            {customParameters.map((parameter) => (
-              <Card key={parameter.id} size="small">
-                <Flex gap="small" align="center" wrap>
-                  <Switch checked={parameter.enabled} onChange={(enabled) => updateParameter(parameter.id, { enabled })} />
-                  <Select style={{ width: 135 }} value={parameter.scope} options={[{ value: "server", label: "Server 参数" }, { value: "clientOnly", label: "Client Only" }]} onChange={(scope) => updateParameter(parameter.id, { scope })} />
-                  <Input style={{ flex: "1 1 220px" }} addonBefore="--" value={parameter.key} placeholder="custom_option" onChange={(event) => updateParameter(parameter.id, { key: event.target.value })} />
-                  <Input style={{ flex: "1 1 260px" }} addonBefore="=" value={parameter.value} placeholder="value" onChange={(event) => updateParameter(parameter.id, { value: event.target.value })} />
-                  <Button danger type="text" icon={<DeleteOutlined />} onClick={() => deleteParameter(parameter.id)} />
-                </Flex>
-              </Card>
-            ))}
-            <Button block type="dashed" icon={<PlusOutlined />} onClick={addParameter}>添加自定义参数</Button>
-          </Space>
+          {customParameters.length > 0 && (
+            <Collapse className="mt-3" items={[{ key: "custom", label: "自定义参数", children: <Space direction="vertical" size="small" style={{ width: "100%" }}>
+              {customParameters.map((parameter) => (
+                <Card key={parameter.id} size="small">
+                  <Flex gap="small" align="center" wrap>
+                    <Switch checked={parameter.enabled} onChange={(enabled) => updateParameter(parameter.id, { enabled })} />
+                    <Select style={{ width: 135 }} value={parameter.scope} options={[{ value: "server", label: "Server 参数" }, { value: "clientOnly", label: "Client Only" }]} onChange={(scope) => updateParameter(parameter.id, { scope })} />
+                    <Input style={{ flex: "1 1 220px" }} addonBefore="--" value={parameter.key} placeholder="custom_option" onChange={(event) => updateParameter(parameter.id, { key: event.target.value })} />
+                    <Input style={{ flex: "1 1 260px" }} addonBefore="=" value={parameter.value} placeholder="value" onChange={(event) => updateParameter(parameter.id, { value: event.target.value })} />
+                    <Button danger type="text" icon={<DeleteOutlined />} onClick={() => deleteParameter(parameter.id)} />
+                  </Flex>
+                </Card>
+              ))}
+            </Space> }]} defaultActiveKey={[]} />
+          )}
 
           <Divider orientation="left">命令编辑 / 预览</Divider>
           <Input.TextArea
             value={commandDraft}
             autoSize={{ minRows: 3, maxRows: 8 }}
             placeholder="可直接粘贴 scrcpy --video-codec=h265 ..."
-            onChange={(event) => setCommandDraft(event.target.value)}
+            onChange={(event) => {
+              setCommandDraft(event.target.value);
+              setCommandHistory((prev) => [...prev, event.target.value]);
+            }}
           />
           <Flex className="mt-2" gap="small" wrap>
             <Button type="primary" onClick={applyCommand}>解析命令到当前预设</Button>
-            <Button onClick={() => setCommandDraft(generatedCommand)}>恢复当前预设生成的命令</Button>
-            <Typography.Text copyable={{ text: commandDraft }}>复制当前命令</Typography.Text>
+            <Button
+              disabled={commandHistory.length < 2}
+              onClick={() => {
+                const prev = commandHistory.slice(0, -1);
+                setCommandHistory(prev);
+                setCommandDraft(prev[prev.length - 1] ?? generatedCommand);
+              }}
+            >
+              撤销
+            </Button>
           </Flex>
-          <Space wrap>
-            <Tag color="blue">Server 参数会真实应用</Tag>
-            <Tag color="purple">虚拟屏与应用启动属于当前预设</Tag>
-            <Tag color="gold">Client Only 不会传给 Android</Tag>
-            <Tag color="green">下次连接或重新连接生效</Tag>
-          </Space>
         </>
       )}
     </div>

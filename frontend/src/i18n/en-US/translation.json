@@ -11,9 +11,16 @@
     "mappings": "Mappings",
     "adbResolution": "ADB Resolution",
     "adbPackages": "ADB Packages",
+    "deviceParams": "Device Params",
+    "startupSize": "Startup Size",
     "latencyCompare": "Performance & Latency",
     "scrcpyPresets": "Scrcpy Presets",
+    "usageGuide": "Usage Guide",
     "settings": "Settings"
+  },
+  "usageGuide": {
+    "title": "Usage Guide",
+    "content": "Edit this file to add your usage instructions.\n\nFile path: frontend/src/components/UsageGuide.tsx\n\nBasic usage:\n1. Connect a device from the Devices page\n2. Create and manage keyboard mappings in Mappings\n3. Adjust display parameters via ADB Resolution\n4. Configure streaming in Scrcpy Presets"
   },
   "welcome": {
     "main": "Welcome to Scrcpy Mask 👏🏻"
@@ -437,13 +444,6 @@
       "clearAllPrompt": "Are you sure you want to clear all presets? (The active preset will not be deleted)",
       "migrationTitle": "Migrate the config",
       "size": "Size",
-      "presetResolution": "Preset: {w} x {h}",
-      "phoneResolution": "Phone: {w} x {h}{dpi}",
-      "phoneResolutionLabel": "Phone",
-      "resolutionMatch": "Resolution matches",
-      "resolutionMismatch": "Resolution mismatch",
-      "adaptToPhone": "Adapt to phone resolution",
-      "adaptToPhoneConfirm": "Adapt this preset to the phone resolution? This will create a new copy migrated to the phone resolution; the original file is left untouched. Note: the migrated copy may still misalign if DPI / aspect ratio does not exactly match the in-game canvas — please review before activating.",
       "differentName": "The new config name cannot be the same as the current config!",
       "duplicateTitle": "Duplicate the config",
       "showGuides": "Guides",
@@ -451,19 +451,10 @@
       "rotatePreview": "Rotate preview",
       "hideIcons": "Hide icons",
       "customResolution": "Custom template resolution",
-      "keyboardMappingResolution": "Keyboard mapping resolution",
-      "scrcpyResolution": "Scrcpy Stream",
-      "mappingResolution": "Mapping Resolution",
       "noMainDeviceShort": "No main device",
       "unknown": "Unknown",
       "activeFile": "Active",
       "none": "None",
-      "resolutionMustPositive": "Width and height must be greater than 0",
-      "resolutionApplied": "Resolution applied",
-      "applyResolution": "Apply resolution",
-      "resolutionMustMatch": "Set the resolution manually; it MUST match your phone's screen resolution (no longer auto-synced from the device)",
-      "resolutionMismatchWarning": "A mismatched resolution will cause buttons to be misaligned!",
-      "resolutionMismatchDetail": "The custom resolution changes the coordinate basis for button positions. If it differs from the phone's actual resolution, buttons will be offset from where you placed them after streaming, causing mis-taps. Confirm the phone's current resolution before changing it (see the main device size on the Devices page).",
       "maskOverlay": "Mask overlay image",
       "maskOverlayDesc": "Overlay an image (map/floating) on the mask window. Put the image under assets/overlay/ and enter a relative path (e.g. overlay/map.png).",
       "overlayEnabled": "Enable overlay",
@@ -505,7 +496,8 @@
       "windowShotPath": "Saved to: ",
       "unbound": "Unbound",
       "quickSwitchUpdated": "Preset switching settings updated",
-      "macroPresetUpdated": "Macro preset settings updated"
+      "macroPresetUpdated": "Macro preset settings updated",
+      "more": "More"
     },
     "override": {
       "tag": "Sub-preset",
@@ -591,10 +583,7 @@
     "webBindAddr": "Web bind address",
     "controllerPort": "Controller port",
     "adbPath": "Adb path",
-    "horizontalMaskWidth": "Horizontal mask width",
-    "horizontalMaskPosition": "Horizontal mask position",
-    "verticalMaskHeight": "Vertical mask height",
-    "verticalMaskPosition": "Vertical mask position",
+    "language": "Language",
     "mappingLabelOpacity": "Mapping label opacity",
     "mappingButtonScale": "Mapping button display size",
     "mappingButtonScaleTip": "Only adjusts the visual size of the mapping button. The actual adb tap point stays at the button center, so operation accuracy is unaffected.",
@@ -642,8 +631,8 @@
     "devicePlaceholder": "Select a device",
     "selectPreset": "Select Preset",
     "presetPlaceholder": "Select a preset",
-    "width": "Width",
-    "height": "Height",
+    "width": "Short side",
+    "height": "Long side",
     "density": "Density",
     "commandPreview": "Command Preview",
     "noCommand": "No command",
@@ -680,5 +669,14 @@
     "searchPlaceholder": "Filter package names",
     "packageCount": "{{total}} packages, {{filtered}} after filter",
     "noMatch": "No matching packages"
+  },
+  "startupSize": {
+    "title": "Startup Size",
+    "desc": "These parameters control the initial window size and position at startup. They only exist to ensure the program launches smoothly. Once connected, drag the window to auto-adjust — no manual changes needed.",
+    "verticalMaskHeight": "Portrait mask height",
+    "horizontalMaskWidth": "Landscape mask width",
+    "verticalMaskPosition": "Portrait mask position",
+    "horizontalMaskPosition": "Landscape mask position"
   }
 }
+

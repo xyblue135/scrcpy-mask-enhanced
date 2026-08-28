@@ -393,9 +393,6 @@
       "hideIcons": "Ocultar ícones",
       "customResolution": "Resolução de modelo personalizada",
       "applyResolution": "Aplicar resolução",
-      "resolutionMustMatch": "Defina a resolução manualmente; ela DEVE ser igual à resolução da tela do celular (não há mais sincronização automática com o dispositivo)",
-      "resolutionMismatchWarning": "Resolução incompatível fará os botões ficarem desalinhados!",
-      "resolutionMismatchDetail": "A resolução personalizada muda a base de conversão das coordenadas dos botões. Se for diferente da resolução real do celular, os botões ficarão deslocados após a transmissão, causando toques errados. Antes de alterar, confirme a resolução atual do celular (veja o tamanho do dispositivo principal na página Dispositivos).",
       "maskOverlay": "Sobrepor imagem",
       "maskOverlayDesc": "Sobreponha uma imagem (mapa/flutuante) na janela de máscara. Coloque a imagem em assets/overlay/ e insira um caminho relativo (ex.: overlay/map.png).",
       "overlayEnabled": "Ativar sobreposição",
@@ -498,3 +495,4 @@
     }
   }
 }
+

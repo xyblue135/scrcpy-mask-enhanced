@@ -1,29 +1,28 @@
 import { Flex, Menu, Layout } from "antd";
 import { useState } from "react";
 import logo from "../assets/128x128.png";
-import { CameraOutlined, CodeFilled, SettingFilled } from "@ant-design/icons";
+import { BookOutlined, CameraOutlined, CodeFilled, SettingFilled } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import { IconFont } from "../hooks";
+
+const deviceParamRoutes = [
+  "/startup-size",
+  "/adb-resolution",
+  "/adb-packages",
+];
 
 export default function Sider() {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const [siderCollapsed, setSiderCollapsed] = useState(true);
-
-  const brandClass = siderCollapsed
-    ? "opacity-0 max-w-0"
-    : "opacity-100 max-w-full ml-3";
-
-  // Devices submenu always expanded, never collapsed
-  const openKeys = ["/devices"];
+  const isOnDeviceParam = deviceParamRoutes.includes(location.pathname);
+  const [openKeys, setOpenKeys] = useState<string[]>(
+    isOnDeviceParam ? ["/device-params"] : [],
+  );
 
   return (
     <Layout.Sider
-      collapsed={siderCollapsed}
-      onCollapse={(collapsed) => setSiderCollapsed(collapsed)}
-      collapsible
       width={220}
       theme="light"
     >
@@ -42,35 +41,38 @@ export default function Sider() {
           }}
         ></i>
         <div
-          className={brandClass}
-          style={{
-            transition: "1s ease-in-out",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
+          className="ml-3"
         >
           <span className="color-text font-bold text-4">Scrcpy Mask</span>
         </div>
       </Flex>
       <Menu
         selectedKeys={[location.pathname]}
-        openKeys={siderCollapsed ? [] : openKeys}
+        openKeys={openKeys}
+        onOpenChange={(keys) => setOpenKeys(keys)}
         onSelect={({ key }) => {
           navigate(key, { replace: true });
         }}
       >
+        <Menu.Item key="/usage-guide" icon={<BookOutlined />}>
+          {t("sider.usageGuide")}
+        </Menu.Item>
         <Menu.Item key="/scrcpy" icon={<CodeFilled />}>
           {t("sider.scrcpyPresets")}
         </Menu.Item>
+        <Menu.Item key="/devices" icon={<IconFont type="icon-android" />}>
+          {t("sider.devices")}
+        </Menu.Item>
+        <Menu.Item key="/mappings" icon={<IconFont type="icon-keyboard" />}>
+          {t("sider.mappings")}
+        </Menu.Item>
         <Menu.SubMenu
-          key="/devices"
+          key="/device-params"
           icon={<IconFont type="icon-android" />}
-          title={t("sider.devices")}
-          onTitleClick={({ key }) => navigate(key, { replace: true })}
+          title={t("sider.deviceParams")}
         >
-          <Menu.Item key="/mappings" icon={<IconFont type="icon-keyboard" />}>
-            {t("sider.mappings")}
+          <Menu.Item key="/startup-size" icon={<IconFont type="icon-android" />}>
+            {t("sider.startupSize")}
           </Menu.Item>
           <Menu.Item key="/adb-resolution" icon={<IconFont type="icon-android" />}>
             {t("sider.adbResolution")}
@@ -78,10 +80,10 @@ export default function Sider() {
           <Menu.Item key="/adb-packages" icon={<IconFont type="icon-android" />}>
             {t("sider.adbPackages")}
           </Menu.Item>
-          <Menu.Item key="/latency-compare" icon={<CameraOutlined />}>
-            {t("sider.latencyCompare")}
-          </Menu.Item>
         </Menu.SubMenu>
+        <Menu.Item key="/latency-compare" icon={<CameraOutlined />}>
+          {t("sider.latencyCompare")}
+        </Menu.Item>
         <Menu.Item key="/settings" icon={<SettingFilled />}>
           {t("sider.settings")}
         </Menu.Item>

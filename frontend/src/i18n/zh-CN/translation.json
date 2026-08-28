@@ -11,9 +11,16 @@
     "mappings": "映射",
     "adbResolution": "ADB 分辨率",
     "adbPackages": "ADB 包列表",
+    "deviceParams": "设备参数",
+    "startupSize": "启动时的大小",
     "latencyCompare": "性能监测和延迟对比",
     "scrcpyPresets": "Scrcpy 预设",
+    "usageGuide": "使用说明",
     "settings": "设置"
+  },
+  "usageGuide": {
+    "title": "使用说明",
+    "content": "这里是使用说明，你可以编辑此文件来添加内容。\n\n文件路径：frontend/src/components/UsageGuide.tsx\n\n基础用法：\n1. 连接设备后，在\"设备\"页面选择要控制的设备\n2. 在\"映射\"页面创建和管理键盘映射\n3. 使用\"ADB 分辨率\"调整设备显示参数\n4. 在\"Scrcpy 预设\"中配置串流参数"
   },
   "welcome": {
     "main": "欢迎来到 Scrcpy Mask 👏🏻"
@@ -437,13 +444,6 @@
       "clearAllPrompt": "确定要清空所有预设吗？（当前激活的预设不会被删除）",
       "migrationTitle": "迁移配置",
       "size": "尺寸",
-      "presetResolution": "预设：{w} × {h}",
-      "phoneResolution": "手机：{w} × {h}{dpi}",
-      "phoneResolutionLabel": "手机",
-      "resolutionMatch": "分辨率一致",
-      "resolutionMismatch": "分辨率不一致",
-      "adaptToPhone": "适配手机分辨率",
-      "adaptToPhoneConfirm": "是否将此预设改为适配手机分辨率？此操作会新建一份按手机分辨率迁移的副本，原文件不变。注意：迁移后的副本仍可能因 DPI / 比例与实际游戏画布不完全匹配而错位，请检查后再启用。",
       "differentName": "新配置名不能与当前文件名相同！",
       "duplicateTitle": "复制配置",
       "showGuides": "显示辅助线",
@@ -451,19 +451,10 @@
       "rotatePreview": "旋转预览",
       "hideIcons": "隐藏图标",
       "customResolution": "自定义模板分辨率",
-      "keyboardMappingResolution": "键盘映射分辨率",
-      "scrcpyResolution": "Scrcpy 流分辨率",
-      "mappingResolution": "映射分辨率",
       "noMainDeviceShort": "无主设备",
       "unknown": "未知",
       "activeFile": "当前激活",
       "none": "无",
-      "resolutionMustPositive": "宽高必须大于 0",
-      "resolutionApplied": "分辨率已应用",
-      "applyResolution": "应用分辨率",
-      "resolutionMustMatch": "分辨率需手动设置，且必须与手机屏幕分辨率一致（不再自动同步手机分辨率）",
-      "resolutionMismatchWarning": "分辨率不一致会导致按键位置错位！",
-      "resolutionMismatchDetail": "自定义分辨率会改变键位坐标的换算基准，如果与手机实际分辨率不一致，投屏后按键会偏离摆放位置，导致点击错位。修改前请先确认手机的当前分辨率（可在「设备」页查看主设备尺寸）。",
       "maskOverlay": "蒙版叠加图片",
       "maskOverlayDesc": "在蒙版窗口上叠加一张图片（地图/悬浮图）。图片放在程序 assets/overlay/ 目录下，填相对路径（如 overlay/map.png）。",
       "overlayEnabled": "启用叠加",
@@ -505,7 +496,8 @@
       "windowShotPath": "已保存到：",
       "unbound": "未绑定",
       "quickSwitchUpdated": "预设切换设置已更新",
-      "macroPresetUpdated": "宏预设设置已更新"
+      "macroPresetUpdated": "宏预设设置已更新",
+      "more": "更多"
     },
     "override": {
       "tag": "子预设",
@@ -591,10 +583,7 @@
     "webBindAddr": "Web 监听地址",
     "controllerPort": "控制服务端口",
     "adbPath": "Adb 路径",
-    "horizontalMaskWidth": "横屏蒙版宽度",
-    "horizontalMaskPosition": "横屏蒙版位置",
-    "verticalMaskHeight": "竖屏蒙版高度",
-    "verticalMaskPosition": "竖屏蒙版位置",
+    "language": "语言",
     "mappingLabelOpacity": "映射标签不透明度",
     "mappingButtonScale": "映射按钮显示大小",
     "mappingButtonScaleTip": "仅调整可视化按钮的显示大小，adb 实际点击位置始终是按钮中心，不影响操作精度。",
@@ -642,8 +631,8 @@
     "devicePlaceholder": "请选择设备",
     "selectPreset": "选择预设",
     "presetPlaceholder": "请选择预设",
-    "width": "宽",
-    "height": "高",
+    "width": "手机短边",
+    "height": "手机长边",
     "density": "密度",
     "commandPreview": "命令预览",
     "noCommand": "无命令",
@@ -680,5 +669,14 @@
     "searchPlaceholder": "输入关键词过滤包名",
     "packageCount": "共 {{total}} 个包，过滤后 {{filtered}} 个",
     "noMatch": "没有匹配的包"
+  },
+  "startupSize": {
+    "title": "启动时的大小",
+    "desc": "这些参数控制窗口启动时的初始大小和位置，仅用于确保程序能顺利启动。连接设备后拖拽窗口即可自动调整，无需手动修改。",
+    "verticalMaskHeight": "竖屏蒙版高度",
+    "horizontalMaskWidth": "横屏蒙版宽度",
+    "verticalMaskPosition": "竖屏蒙版位置",
+    "horizontalMaskPosition": "横屏蒙版位置"
   }
 }
+

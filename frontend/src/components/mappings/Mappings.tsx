@@ -49,11 +49,9 @@ import {
   ThunderboltOutlined,
   FileAddOutlined,
   FileSyncOutlined,
-  FileTextOutlined,
   RollbackOutlined,
   SaveOutlined,
   SettingOutlined,
-  SnippetsOutlined,
   SwapOutlined,
   EyeInvisibleOutlined,
 } from "@ant-design/icons";
@@ -239,24 +237,18 @@ function Manager({
   mappingList,
   mappingMeta,
   displayedMapping,
-  onActiveAction,
-  onDisplayAction,
   onDuplicateAction,
   onDeleteAction,
   onCreateAction,
   onRenameAction,
-  onMigrateAction,
   quickSwitches,
   onQuickSwitchChange,
-  onClearAllAction,
 }: {
   open: boolean;
   onCancel: () => void;
   mappingList: string[];
   mappingMeta: MappingMeta[];
   displayedMapping: string;
-  onActiveAction: (file: string) => void;
-  onDisplayAction: (file: string) => void;
   onDuplicateAction: (file: string, newFile: string) => void;
   onDeleteAction: (file: string) => void;
   onCreateAction: (
@@ -264,12 +256,6 @@ function Manager({
     size: { width: number; height: number },
   ) => void;
   onRenameAction: (file: string, newFile: string) => void;
-  onClearAllAction: () => void;
-  onMigrateAction: (
-    file: string,
-    newFile: string,
-    size: { width: number; height: number },
-  ) => void;
   quickSwitches: MappingQuickSwitch[];
   onQuickSwitchChange: (
     file: string,
@@ -312,19 +298,6 @@ function Manager({
       title: (
         <Space size="large">
           {t("mappings.home.file")}
-          <Popconfirm
-            title={t("mappings.home.clearAllTitle")}
-            description={t("mappings.home.clearAllPrompt")}
-            onConfirm={onClearAllAction}
-            okText={t("mappings.home.confirmYes")}
-            cancelText={t("mappings.home.confirmNo")}
-          >
-            <IconButton
-              color="error"
-              tooltip={t("mappings.home.clearAll")}
-              icon={<DeleteOutlined />}
-            />
-          </Popconfirm>
           <Confirm
             title={t("mappings.home.createTitle")}
             onConfirm={(newFile) => onCreateAction(newFile, newSize)}
@@ -377,44 +350,15 @@ function Manager({
       dataIndex: "file",
       key: "file",
       render: (_, record) => {
-        const mainDevice = controlledDevices.find((d) => d.main);
-        const phoneSize: [number, number] = mainDevice?.device_size ?? [0, 0];
-        const presetSize = record.originalSize;
-        const resolutionMatch =
-          presetSize !== null &&
-          presetSize.width === phoneSize[0] &&
-          presetSize.height === phoneSize[1];
         return (
           <Flex align="center" justify="space-between" className="p-r-3">
             <Space size={6} wrap={false}>
               <span>{record.file}</span>
-              {presetSize && (
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  {t("mappings.home.presetResolution", {
-                    w: presetSize.width,
-                    h: presetSize.height,
-                  })}
-                  {presetSize.dpi > 0
-                    ? ` / ${presetSize.dpi}dpi`
-                    : ""}
-                </Typography.Text>
+              {record.originalSize && (
+                <span className="text-3.5 color-gray">
+                  {record.originalSize.width}×{record.originalSize.height}
+                </span>
               )}
-              {resolutionMatch ? (
-                <Typography.Text type="success" style={{ fontSize: 12 }}>
-                  {t("mappings.home.resolutionMatch")}
-                </Typography.Text>
-              ) : (
-                <Typography.Text type="warning" style={{ fontSize: 12 }}>
-                  {t("mappings.home.resolutionMismatch")}
-                </Typography.Text>
-              )}
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                {t("mappings.home.phoneResolution", {
-                  w: phoneSize[0],
-                  h: phoneSize[1],
-                  dpi: mainDevice?.device_dpi && mainDevice.device_dpi > 0 ? ` / ${mainDevice.device_dpi}dpi` : "",
-                })}
-              </Typography.Text>
             </Space>
             {record.active && (
               <Badge status="success" text={t("mappings.home.inUse")} />
@@ -498,54 +442,25 @@ function Manager({
       align: "center",
       width: 1,
       render: (_, record) => {
-        const mainDevice = controlledDevices.find((d) => d.main);
-        const phoneSize: [number, number] = mainDevice?.device_size ?? [0, 0];
-        const presetSize = record.originalSize;
-        const resolutionMatch =
-          presetSize !== null &&
-          presetSize.width === phoneSize[0] &&
-          presetSize.height === phoneSize[1];
-
-        const handleUseThis = () => {
-          if (resolutionMatch) {
-            // 分辨率一致：直接使用
-            onActiveAction(record.file);
-            onDisplayAction(record.file);
-            return;
-          }
-          // 分辨率不一致：弹窗确认是否迁移为适配手机分辨率的副本
-          const baseName = record.file.replace(/\.json$/i, "");
-          const newFile = `${baseName}_adapted.json`;
-          Modal.confirm({
-            title: t("mappings.home.adaptToPhone"),
-            content: t("mappings.home.adaptToPhoneConfirm"),
-            okText: t("mappings.home.confirmYes"),
-            cancelText: t("mappings.home.confirmNo"),
-            onOk: async () => {
-              await onMigrateAction(record.file, newFile, {
-                width: phoneSize[0],
-                height: phoneSize[1],
-              });
-              onActiveAction(newFile);
-              onDisplayAction(newFile);
-            },
-          });
-        };
-
         return (
           <Space size="middle" className="text-4">
-            <IconButton
-              color={record.active ? "success" : "info"}
-              icon={
-                record.active ? <CheckCircleOutlined /> : <FileTextOutlined />
-              }
-              tooltip={
-                record.active
-                  ? t("mappings.home.inUse")
-                  : t("mappings.home.useThis")
-              }
-              onClick={handleUseThis}
-            />
+            <Confirm
+              title={t("mappings.home.duplicateTitle")}
+              onConfirm={(newFile) => {
+                if (newFile === record.file) {
+                  messageApi?.warning(t("mappings.home.differentName"));
+                } else {
+                  onDuplicateAction(record.file, newFile);
+                }
+              }}
+              defaultValue={record.file}
+            >
+              <IconButton
+                color="info"
+                tooltip={t("mappings.home.duplicate")}
+                icon={<CopyOutlined />}
+              />
+            </Confirm>
             <Confirm
               title={t("mappings.home.renameTitle")}
               onConfirm={(newFile) => {
@@ -577,75 +492,6 @@ function Manager({
                 icon={<DeleteOutlined />}
               />
             </Popconfirm>
-            <Confirm
-              title={t("mappings.home.duplicateTitle")}
-              onConfirm={(newFile) => {
-                if (newFile === record.file) {
-                  messageApi?.warning(t("mappings.home.differentName"));
-                } else {
-                  onDuplicateAction(record.file, newFile);
-                }
-              }}
-              defaultValue={record.file}
-            >
-              <IconButton
-                color="info"
-                tooltip={t("mappings.home.duplicate")}
-                icon={<CopyOutlined />}
-              />
-            </Confirm>
-            <Confirm
-              title={t("mappings.home.migrationTitle")}
-              onConfirm={(newFile) => {
-                if (newFile === record.file) {
-                  messageApi?.warning(t("mappings.home.differentName"));
-                } else {
-                  onMigrateAction(record.file, newFile, newSize);
-                }
-              }}
-              defaultValue={record.file}
-              extral={
-                <ItemBox label={t("mappings.home.size")}>
-                  <Space.Compact className="w-full">
-                    <InputNumber
-                      className="w-full"
-                      prefix="W:"
-                      value={newSize.width}
-                      min={1}
-                      onChange={(v) =>
-                        v !== null && setNewSize({ ...newSize, width: v })
-                      }
-                    />
-                    <InputNumber
-                      className="w-full"
-                      prefix="H:"
-                      value={newSize.height}
-                      min={1}
-                      onChange={(v) =>
-                        v !== null && setNewSize({ ...newSize, height: v })
-                      }
-                    />
-                  </Space.Compact>
-                </ItemBox>
-              }
-            >
-              <IconButton
-                color="warning"
-                tooltip={t("mappings.home.migration")}
-                icon={<SnippetsOutlined />}
-                onClick={() => {
-                  if (mainDevice && mainDevice.device_size[0] > 0 && mainDevice.device_size[1] > 0) {
-                    setNewSize({
-                      width: mainDevice.device_size[0],
-                      height: mainDevice.device_size[1],
-                    });
-                  } else {
-                    setNewSize({ width: 1280, height: 720 });
-                    messageApi?.warning(t("mappings.common.noMainDevice"));
-                  }
-                }}
-              />
-            </Confirm>
           </Space>
         );
       },
@@ -660,63 +506,6 @@ function Manager({
       onCancel={onCancel}
       footer={null}
     >
-      <Flex
-        vertical
-        gap={2}
-        className="mb-3 px-3 py-2 bg-[var(--ant-color-bg-layout)] rounded text-xs"
-      >
-        <Flex align="center" gap={8}>
-          <span className="font-bold whitespace-nowrap text-color-primary">
-            {t("mappings.home.phoneResolutionLabel")}:
-          </span>
-          <span>
-            {(() => {
-              const mainDevice = controlledDevices.find((d) => d.main);
-              if (!mainDevice) return t("mappings.home.noMainDeviceShort");
-              const size = mainDevice.device_size;
-              return `${size[0]} × ${size[1]}${
-                mainDevice.device_dpi > 0
-                  ? ` / ${mainDevice.device_dpi}dpi`
-                  : ""
-              }`;
-            })()}
-          </span>
-          <span className="color-text-secondary">|</span>
-          <span className="font-bold whitespace-nowrap text-color-primary">
-            {t("mappings.home.scrcpyResolution")}:
-          </span>
-          <span>
-            {controlledDevices.find((d) => d.main)?.device_size
-              ? (() => {
-                  const s = controlledDevices.find((d) => d.main)!.device_size;
-                  return `${s[0]} × ${s[1]}`;
-                })()
-              : t("mappings.home.noMainDeviceShort")}
-          </span>
-        </Flex>
-        <Flex align="center" gap={8}>
-          <span className="font-bold whitespace-nowrap text-color-primary">
-            {t("mappings.home.mappingResolution")}:
-          </span>
-          <span>
-            {activeMappingFile && mappingList.includes(activeMappingFile)
-              ? (() => {
-                  const meta = mappingMeta.find(
-                    (m) => m.file === activeMappingFile,
-                  );
-                  if (!meta?.original_size) return t("mappings.home.unknown");
-                  const os = meta.original_size;
-                  return `${os.width} × ${os.height}${
-                    os.dpi > 0 ? ` / ${os.dpi}dpi` : ""
-                  }`;
-                })()
-              : t("mappings.home.unknown")}
-          </span>
-          <span className="text-color-secondary text-xs ml-2">
-            ({t("mappings.home.activeFile")}: {activeMappingFile || t("mappings.home.none")})
-          </span>
-        </Flex>
-      </Flex>
       <Table<MappingFileTabelItem>
         size="small"
         rowKey={(record) => record.file}
@@ -875,7 +664,6 @@ function Displayer({
   const dispatch = useAppDispatch();
   const maskArea = useAppSelector((state) => state.other.maskArea);
   const { t } = useTranslation();
-  const messageApi = useMessageContext();
 
   const cursorPosRef = useRef<HTMLDivElement>(null);
   const displayerRef = useRef<HTMLDivElement>(null);
@@ -888,35 +676,6 @@ function Displayer({
   const [rotated, setRotated] = useState(false);
   // 隐藏映射按键图标：隐藏画布上的按键图标，便于查看背景
   const [hideIcons, setHideIcons] = useState(false);
-  // 设备参考图（@image:image.png）尺寸与键盘映射分辨率（原弹窗逻辑移至内联）
-  const [sizeW, setSizeW] = useState(0);
-  const [sizeH, setSizeH] = useState(0);
-
-  // 切换预设或重置时，把当前 original_size 同步进本地编辑值
-  useEffect(() => {
-    setSizeW(state.current.original_size.width);
-    setSizeH(state.current.original_size.height);
-  }, [state.current.original_size.width, state.current.original_size.height]);
-
-  function applyResolution() {
-    if (sizeW <= 0 || sizeH <= 0) {
-      messageApi?.warning(t("mappings.home.resolutionMustPositive"));
-      return;
-    }
-    setState((prev) =>
-      prev
-        ? {
-            ...prev,
-            edited: true,
-            current: {
-              ...prev.current,
-              original_size: { width: sizeW, height: sizeH },
-            },
-          }
-        : prev,
-    );
-    messageApi?.success(t("mappings.home.resolutionApplied"));
-  }
 
   const getMappingContainerScroll = useCallback(() => {
     const mappingContainer = document.getElementById("mappings-container");
@@ -1103,38 +862,7 @@ function Displayer({
         style={ratioStyle}
         onMouseMove={handleMouseMove}
       >
-        <Flex
-          align="center"
-          gap={4}
-          wrap
-          className="absolute top-2 right-2 z-100 bg-[var(--ant-color-bg-container)] bg-opacity-90 px-2 py-1 rounded shadow-sm text-xs"
-        >
-          <span className="font-bold whitespace-nowrap text-color-primary">
-            {t("mappings.home.keyboardMappingResolution")}
-          </span>
-          <InputNumber
-            size="small"
-            min={1}
-            value={sizeW}
-            onChange={(v) => setSizeW(v ?? 0)}
-            style={{ width: 72 }}
-          />
-          <span className="text-color-secondary">×</span>
-          <InputNumber
-            size="small"
-            min={1}
-            value={sizeH}
-            onChange={(v) => setSizeH(v ?? 0)}
-            style={{ width: 72 }}
-          />
-          <Button
-            size="small"
-            type="primary"
-            onClick={applyResolution}
-          >
-            {t("mappings.home.applyResolution")}
-          </Button>
-        </Flex>
+        
         <DeviceBackground />
         <Dropdown
           menu={{
@@ -1422,7 +1150,7 @@ export default function Mappings() {
   const [mappingQuickSwitches, setMappingQuickSwitches] = useState<MappingQuickSwitch[]>([]);
   const [quickSwitchEnabled, setQuickSwitchEnabled] = useState(true);
   const [macroPresetEnabled, setMacroPresetEnabled] = useState(true);
-  const [showAllMappingGuides, setShowAllMappingGuides] = useState(false);
+  const showAllMappingGuides = false;
   const [showRandomRanges, _setShowRandomRanges] = useState(false);
   const [positionUnlocked, setPositionUnlocked] = useState(false);
   const [isMacroManagerOpen, setIsMacroManagerOpen] = useState(false);
@@ -1770,18 +1498,6 @@ export default function Mappings() {
     dispatch(setIsLoading(false));
   }
 
-  async function clearAllMappingFiles() {
-    dispatch(setIsLoading(true));
-    try {
-      const res = await requestPost("/api/mapping/clear_all_mappings", {});
-      await loadMappingList(true);
-      messageApi?.success(res.message);
-    } catch (error) {
-      messageApi?.error(error as string);
-    }
-    dispatch(setIsLoading(false));
-  }
-
   async function createMappingFile(
     file: string,
     size: { width: number; height: number },
@@ -1810,30 +1526,6 @@ export default function Mappings() {
       const res = await requestPost("/api/mapping/rename_mapping", {
         file,
         new_file: newFile,
-      });
-      await loadMappingList(true);
-      messageApi?.success(res.message);
-    } catch (error) {
-      messageApi?.error(error as string);
-    }
-    dispatch(setIsLoading(false));
-  }
-
-  async function migrateMappingFile(
-    file: string,
-    newFile: string,
-    size: {
-      width: number;
-      height: number;
-    },
-  ) {
-    dispatch(setIsLoading(true));
-    try {
-      const res = await requestPost("/api/mapping/migrate_mapping", {
-        file,
-        new_file: newFile,
-        width: size.width,
-        height: size.height,
       });
       await loadMappingList(true);
       messageApi?.success(res.message);
@@ -1886,67 +1578,67 @@ export default function Mappings() {
         mappingList={mappingList}
         mappingMeta={mappingMeta}
         displayedMapping={displayedMappingFile}
-        onActiveAction={changeActiveMapping}
-        onDisplayAction={changeDisplayedMapping}
         onDuplicateAction={duplicateMappingFile}
         onDeleteAction={deleteMappingFile}
         onCreateAction={createMappingFile}
         onRenameAction={renameMappingFile}
-        onMigrateAction={migrateMappingFile}
         quickSwitches={mappingQuickSwitches}
         onQuickSwitchChange={updateMappingQuickSwitch}
-        onClearAllAction={clearAllMappingFiles}
       />
       <section>
-        <Flex justify="space-between" align="center">
-          <Space.Compact>
-            <Select
-              className="w-80"
-              showSearch
-              value={displayedMappingFile}
-              onChange={(value) => changeDisplayedMapping(value)}
-              options={mappingListOptions}
-            />
-            <Button
-              type="primary"
-              disabled={editState === null || editState.edited === false}
-              icon={<SaveOutlined />}
-              onClick={updateMappingFile}
-            >
-              {t("mappings.home.save")}
-            </Button>
-            <Button
-              type="primary"
-              disabled={editState === null || editState.edited === false}
-              icon={<RollbackOutlined />}
-              onClick={restoreMappingFile}
-            >
-              {t("mappings.home.restore")}
-            </Button>
-            <Button
-              disabled={activeMappingFile === displayedMappingFile}
-              type="primary"
-              icon={<CheckCircleOutlined />}
-              onClick={() => changeActiveMapping(displayedMappingFile)}
-            >
-              {t("mappings.home.activate")}
-            </Button>
-            <Button
-              type="primary"
-              icon={<FileSyncOutlined />}
-              onClick={() => loadMappingList()}
-            >
-              {t("mappings.home.refresh")}
-            </Button>
-            <Button
-              type="primary"
-              icon={<SettingOutlined />}
-              onClick={() => setIsManagerOpen(true)}
-            >
-              {t("mappings.home.manage")}
-            </Button>
-          </Space.Compact>
-          <Space>
+        <Flex vertical gap={8}>
+          {/* Row 1: 文件操作 */}
+          <Flex wrap>
+            <Space.Compact>
+              <Select
+                className="w-80"
+                showSearch
+                value={displayedMappingFile}
+                onChange={(value) => changeDisplayedMapping(value)}
+                options={mappingListOptions}
+              />
+              <Button
+                type="primary"
+                disabled={editState === null || editState.edited === false}
+                icon={<SaveOutlined />}
+                onClick={updateMappingFile}
+              >
+                {t("mappings.home.save")}
+              </Button>
+              <Button
+                type="primary"
+                disabled={editState === null || editState.edited === false}
+                icon={<RollbackOutlined />}
+                onClick={restoreMappingFile}
+              >
+                {t("mappings.home.restore")}
+              </Button>
+              <Button
+                disabled={activeMappingFile === displayedMappingFile}
+                type="primary"
+                icon={<CheckCircleOutlined />}
+                onClick={() => changeActiveMapping(displayedMappingFile)}
+              >
+                {t("mappings.home.activate")}
+              </Button>
+              <Button
+                type="primary"
+                icon={<FileSyncOutlined />}
+                onClick={() => loadMappingList()}
+              >
+                {t("mappings.home.refresh")}
+              </Button>
+              <Button
+                type="primary"
+                icon={<SettingOutlined />}
+                onClick={() => setIsManagerOpen(true)}
+              >
+                {t("mappings.home.manage")}
+              </Button>
+            </Space.Compact>
+          </Flex>
+          {/* Row 2: 编辑工具 */}
+          <Flex wrap align="center" gap={8}>
             <Button
               type={positionUnlocked ? "primary" : "default"}
               icon={positionUnlocked ? <UnlockOutlined /> : <LockOutlined />}
@@ -1967,31 +1659,45 @@ export default function Mappings() {
             >
               {t("mappings.home.macroPreset")}
             </Button>
-            <Tooltip title={t("mappings.home.quickSwitchEnabled")}>
-              <Switch
-                checked={quickSwitchEnabled}
-                onChange={(v) => updateGlobalToggle("quick_switch_enabled", v)}
-                checkedChildren={t("mappings.home.quickSwitchOn")}
-                unCheckedChildren={t("mappings.home.quickSwitchOff")}
-              />
-            </Tooltip>
-            <Tooltip title={t("mappings.home.macroPresetEnabled")}>
-              <Switch
-                checked={macroPresetEnabled}
-                onChange={(v) => updateGlobalToggle("macro_preset_enabled", v)}
-                checkedChildren={t("mappings.home.macroPresetOn")}
-                unCheckedChildren={t("mappings.home.macroPresetOff")}
-              />
-            </Tooltip>
-            <Button
-              type={showAllMappingGuides ? "primary" : "default"}
-              icon={<EyeOutlined />}
-              onClick={() => setShowAllMappingGuides((value) => !value)}
-            >
-              {t("mappings.home.showGuides")}
-            </Button>
             <RefreshImageButton />
-          </Space>
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: "quick-switch",
+                    label: (
+                      <Flex gap={8} align="center" style={{ minWidth: 160 }}>
+                        <span>{t("mappings.home.quickSwitchEnabled")}</span>
+                        <Switch
+                          size="small"
+                          checked={quickSwitchEnabled}
+                          onChange={(v) => updateGlobalToggle("quick_switch_enabled", v)}
+                        />
+                      </Flex>
+                    ),
+                  },
+                  {
+                    key: "macro-preset",
+                    label: (
+                      <Flex gap={8} align="center" style={{ minWidth: 160 }}>
+                        <span>{t("mappings.home.macroPresetEnabled")}</span>
+                        <Switch
+                          size="small"
+                          checked={macroPresetEnabled}
+                          onChange={(v) => updateGlobalToggle("macro_preset_enabled", v)}
+                        />
+                      </Flex>
+                    ),
+                  },
+                ],
+              }}
+              trigger={["click"]}
+            >
+              <Button icon={<SettingOutlined />}>
+                {t("mappings.home.more")}
+              </Button>
+            </Dropdown>
+          </Flex>
         </Flex>
       </section>
       <section className="flex-grow-1 flex-shrink-0 pb-4">
@@ -2013,7 +1719,7 @@ export default function Mappings() {
             <Splitter.Panel
               style={{ overflowY: "auto" }}
               min="180px"
-              defaultSize="260px"
+              defaultSize="340px"
             >
               <KeyBindingList
                 mappings={editState.current.mappings}

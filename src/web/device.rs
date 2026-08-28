@@ -62,6 +62,7 @@ pub fn routers(
         .route("/adb_wm_size", post(adb_wm_size))
         .route("/adb_wm_density", post(adb_wm_density))
         .route("/adb_wm_current", get(adb_wm_current))
+        .route("/adb_exec", post(adb_exec))
         .route("/adb_pm_list_packages", post(adb_pm_list_packages))
         .route("/control/set_display_power", post(set_display_power))
         .route("/control/set_pointer_location", post(set_pointer_location))
@@ -1364,4 +1365,35 @@ async fn send_key(
 
     device_action::inject_keycode(&state.cs_tx, payload.keycode);
     Ok(JsonResponse::success(t!("web.device.sendKeySuccess"), None))
+}
+
+#[derive(Deserialize)]
+struct PostDataAdbExec {
+    device_id: String,
+    command: String,
+}
+
+async fn adb_exec(
+    Json(payload): Json<PostDataAdbExec>,
+) -> Result<JsonResponse, WebServerError> {
+    ensure_device_controlled(&payload.device_id).await?;
+    let device_id = &payload.device_id;
+    let command = payload.command.trim().to_string();
+
+    let args: Vec<String> = command.split_whitespace().map(|s| s.to_string()).collect();
+    if args.is_empty() {
+        return Err(WebServerError::bad_request("command is empty"));
+    }
+
+    let mut output = Vec::<u8>::new();
+    Device::shell(device_id, &args, &mut output)
+        .map_err(WebServerError::bad_request)?;
+    let raw = String::from_utf8_lossy(&output).trim().to_string();
+
+    log::info!("[WebServe] adb exec: {} -> {}", device_id, command);
+
+    Ok(JsonResponse::success(
+        t!("web.device.adbExecSuccess"),
+        Some(json!({ "output": raw })),
+    ))
 }

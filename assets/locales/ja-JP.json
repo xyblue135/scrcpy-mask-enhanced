@@ -79,6 +79,7 @@
     "wmSizeSuccess": "画面サイズを設定しました",
     "wmDensitySuccess": "画面密度を設定しました",
     "wmCurrentSuccess": "get current screen param success",
+    "adbExecSuccess": "Command executed successfully",
     "pmListPackagesSuccess": "get app list success",
       "noAppFound": "起動可能なアプリが見つかりません",
       "noDisplayFound": "ディスプレイが見つかりません",

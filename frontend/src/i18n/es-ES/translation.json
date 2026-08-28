@@ -393,9 +393,6 @@
       "hideIcons": "Ocultar iconos",
       "customResolution": "Resolución de plantilla personalizada",
       "applyResolution": "Aplicar resolución",
-      "resolutionMustMatch": "Configure la resolución manualmente; DEBE coincidir con la resolución de pantalla del teléfono (ya no se sincroniza automáticamente con el dispositivo)",
-      "resolutionMismatchWarning": "¡Una resolución diferente hará que los botones queden desalineados!",
-      "resolutionMismatchDetail": "La resolución personalizada cambia la base de conversión de coordenadas de los botones. Si difiere de la resolución real del teléfono, los botones se desplazarán de donde los colocó tras la transmisión, provocando toques incorrectos. Antes de cambiar, confirme la resolución actual del teléfono (consulte el tamaño del dispositivo principal en la página Dispositivos).",
       "maskOverlay": "Superponer imagen",
       "maskOverlayDesc": "Superponga una imagen (mapa/flotante) en la ventana de máscara. Coloque la imagen en assets/overlay/ e ingrese una ruta relativa (p. ej. overlay/map.png).",
       "overlayEnabled": "Habilitar superposición",
@@ -498,3 +495,4 @@
     }
   }
 }
+

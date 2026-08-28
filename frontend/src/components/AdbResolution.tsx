@@ -304,16 +304,16 @@ export default function AdbResolution() {
                     label: t("adbResolution.groupSystem"),
                     options: presetOptions.filter((o) => o.group === "system"),
                   },
-                  {
-                    label: t("adbResolution.groupBuiltin"),
-                    options: presetOptions.filter((o) => o.group === "builtin"),
-                  },
                   ...(presetOptions.some((o) => o.group === "user")
                     ? [{
                         label: t("adbResolution.groupUser"),
                         options: presetOptions.filter((o) => o.group === "user"),
                       }]
                     : []),
+                  {
+                    label: t("adbResolution.groupBuiltin"),
+                    options: presetOptions.filter((o) => o.group === "builtin"),
+                  },
                 ]}
               />
             </Flex>

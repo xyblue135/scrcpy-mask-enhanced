@@ -13,7 +13,6 @@ import {
   InputNumber,
   Select,
   Slider,
-  Space,
   Switch,
   Typography,
 } from "antd";
@@ -22,17 +21,13 @@ import {
   setAdbPath,
   setClipboardSync,
   setControllerPort,
-  setHorizontalPosition,
   setLanguage,
   setMappingEnabled,
   setMappingLabelOpacity,
   setMappingButtonScale,
   setTitlebarVisible,
-  setVerticalPosition,
   setWebBindAddr,
   setWebPort,
-  sethorizontalMaskWidth,
-  setverticalMaskHeight,
 } from "../store/localConfig";
 import { setIsLoading, setShowUpdateDialog, setUpdateInfo } from "../store/other";
 import { requestGet } from "../utils";
@@ -149,10 +144,6 @@ export default function Settings() {
             <ItemBox label={t("settings.language")}><Select className="w-sm" value={localConfig.language} options={languageOptions} onChange={(value) => dispatch(setLanguage(value))} /></ItemBox>
             <ItemBox label={t("settings.clipboardSync")}><Switch checked={localConfig.clipboardSync} onChange={(value) => dispatch(setClipboardSync(value))} /></ItemBox>
             <ItemBox label={t("settings.titlebarVisible")}><Switch checked={localConfig.titlebarVisible} onChange={(value) => dispatch(setTitlebarVisible(value))} /></ItemBox>
-            <ItemBox label={t("settings.verticalMaskHeight")}><InputNumber className="w-sm" min={1} value={localConfig.verticalMaskHeight} onChange={(value) => value !== null && dispatch(setverticalMaskHeight(value))} /></ItemBox>
-            <ItemBox label={t("settings.horizontalMaskWidth")}><InputNumber className="w-sm" min={1} value={localConfig.horizontalMaskWidth} onChange={(value) => value !== null && dispatch(sethorizontalMaskWidth(value))} /></ItemBox>
-            <ItemBox label={t("settings.verticalMaskPosition")}><Space.Compact><InputNumber value={localConfig.verticalPosition[0]} onChange={(value) => value !== null && dispatch(setVerticalPosition([value, localConfig.verticalPosition[1]]))} /><InputNumber value={localConfig.verticalPosition[1]} onChange={(value) => value !== null && dispatch(setVerticalPosition([localConfig.verticalPosition[0], value]))} /></Space.Compact></ItemBox>
-            <ItemBox label={t("settings.horizontalMaskPosition")}><Space.Compact><InputNumber value={localConfig.horizontalPosition[0]} onChange={(value) => value !== null && dispatch(setHorizontalPosition([value, localConfig.horizontalPosition[1]]))} /><InputNumber value={localConfig.horizontalPosition[1]} onChange={(value) => value !== null && dispatch(setHorizontalPosition([localConfig.horizontalPosition[0], value]))} /></Space.Compact></ItemBox>
           </ItemBoxContainer>
           <Alert className="mt-3" type="info" showIcon message={ui.windowTip} />
         </Section>

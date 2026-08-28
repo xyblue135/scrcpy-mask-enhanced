@@ -1,18 +1,13 @@
 import {
   Badge,
   Button,
-  Checkbox,
-  Descriptions,
-  Dropdown,
   Flex,
   Input,
   Modal,
-  Popover,
   Select,
   Space,
   Table,
   Tag,
-  type DropdownProps,
   type TableProps,
 } from "antd";
 import { useTranslation } from "react-i18next";
@@ -20,43 +15,38 @@ import {
   requestGet,
   requestPost,
   type AdbDevice,
-  type AndroidApp,
-  type AndroidDisplay,
   type ControlledDevice,
 } from "../utils";
-import {
-  AimOutlined,
-  AppstoreOutlined,
-  BorderOutlined,
-  BulbFilled,
-  BulbOutlined,
-  DisconnectOutlined,
-  DownOutlined,
-  EnterOutlined,
-  InfoCircleOutlined,
-  LinkOutlined,
-  ReloadOutlined,
-  SwitcherOutlined,
-  SyncOutlined,
-  UnorderedListOutlined,
-  UpOutlined,
-} from "@ant-design/icons";
-import IconButton from "./common/IconButton";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { ReloadOutlined, SyncOutlined, DisconnectOutlined, PlayCircleOutlined } from "@ant-design/icons";
+import { useEffect, useMemo, useState } from "react";
 import { ItemBox, ItemBoxContainer } from "./common/ItemBox";
 import { setAdbDevices, setControlledDevices, setIsLoading } from "../store/other";
 import { useMessageContext } from "../hooks";
 import { useAppDispatch, useAppSelector } from "../store/store";
 import { useLocation } from "react-router-dom";
-import { setAdbConnectAddress } from "../store/localConfig";
+import { setActiveMappingFile } from "../store/localConfig";
 
-function ControlledDevices({
-  isVideo,
-  isAudio,
-}: {
-  isVideo: boolean;
-  isAudio: boolean;
-}) {
+function MappingSelectCell({ mappingList: list }: { mappingList: string[] }) {
+  const dispatch = useAppDispatch();
+  const activeMappingFile = useAppSelector(
+    (state) => state.localConfig.activeMappingFile,
+  );
+  return (
+    <Select
+      style={{ minWidth: 180 }}
+      size="small"
+      allowClear
+      placeholder="选择映射预设"
+      value={activeMappingFile || undefined}
+      onChange={(val) => {
+        dispatch(setActiveMappingFile(val ?? ""));
+      }}
+      options={list.map((f) => ({ value: f, label: f }))}
+    />
+  );
+}
+
+function ControlledDevices() {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const messageApi = useMessageContext();
@@ -66,225 +56,19 @@ function ControlledDevices({
   const deviceRotations = useAppSelector(
     (state) => state.other.deviceRotations,
   );
-  const displayId = useAppSelector((state) => state.localConfig.displayId);
-  const [actionMenuOpen, setActionMenuOpen] = useState(false);
-  const [startAppDevice, setStartAppDevice] = useState<ControlledDevice | null>(
-    null,
-  );
-  const [startAppLoading, setStartAppLoading] = useState(false);
-  const [startAppSubmitting, setStartAppSubmitting] = useState(false);
-  const [startAppForceStop, setStartAppForceStop] = useState(false);
-  const [apps, setApps] = useState<AndroidApp[]>([]);
-  const [displays, setDisplays] = useState<AndroidDisplay[]>([]);
-  const [selectedComponent, setSelectedComponent] = useState<string>();
-  const [selectedDisplayId, setSelectedDisplayId] = useState<number>();
-  const actionMessageKey = "controlled-device-action";
 
-  const handleMenuOpenChange: DropdownProps["onOpenChange"] = (
-    nextOpen,
-    info,
-  ) => {
-    if (info.source === "trigger" || nextOpen) {
-      setActionMenuOpen(nextOpen);
-    }
-  };
+  const [mappingList, setMappingList] = useState<string[]>([]);
+  const [scriptModalDevice, setScriptModalDevice] = useState<ControlledDevice | null>(null);
+  const [scriptText, setScriptText] = useState("");
+  const [scriptOutput, setScriptOutput] = useState("");
+  const [scriptRunning, setScriptRunning] = useState(false);
 
-  async function runDeviceAction(
-    label: string,
-    request: () => Promise<unknown>,
-  ) {
-    messageApi?.open({
-      key: actionMessageKey,
-      type: "loading",
-      content: t("devices.actions.executing", { action: label }),
-      duration: 0,
-    });
-
-    try {
-      await request();
-      messageApi?.open({
-        key: actionMessageKey,
-        type: "success",
-        content: t("devices.actions.executed", { action: label }),
-        duration: 2,
-      });
-    } catch (error) {
-      messageApi?.open({
-        key: actionMessageKey,
-        type: "error",
-        content: error as string,
-        duration: 4,
-      });
-    }
-  }
-
-  function getDefaultDisplayId(displayList: AndroidDisplay[]) {
-    return (
-      displayList.find((item) => item.display_id === displayId)?.display_id ??
-      displayList.find((item) => item.display_id === 0)?.display_id ??
-      displayList[0]?.display_id
-    );
-  }
-
-  function formatDisplayLabel(display: AndroidDisplay) {
-    const size =
-      display.width !== undefined && display.height !== undefined
-        ? `${display.width}x${display.height}`
-        : t("devices.startApp.unknownSize");
-    const density =
-      display.density !== undefined
-        ? `${display.density} dpi`
-        : t("devices.startApp.unknownDensity");
-    const rotation =
-      display.rotation !== undefined
-        ? `${t("devices.startApp.rotation")} ${display.rotation}`
-        : t("devices.startApp.unknownRotation");
-    const name = display.name ? ` - ${display.name}` : "";
-    return `${display.display_id}${name} - ${size} / ${density} / ${rotation}`;
-  }
-
-  async function openStartAppModal(device: ControlledDevice) {
-    setStartAppDevice(device);
-    setStartAppLoading(true);
-    setStartAppForceStop(false);
-    setSelectedComponent(undefined);
-    setSelectedDisplayId(undefined);
-    setApps([]);
-    setDisplays([]);
-
-    try {
-      const [appsRes, displaysRes] = await Promise.all([
-        requestPost<{ apps: AndroidApp[] }>("/api/device/adb_apps", {
-          device_id: device.device_id,
-        }),
-        requestPost<{ displays: AndroidDisplay[] }>("/api/device/adb_displays", {
-          device_id: device.device_id,
-        }),
-      ]);
-
-      setApps(appsRes.data.apps);
-      setDisplays(displaysRes.data.displays);
-      setSelectedComponent(appsRes.data.apps[0]?.component);
-      setSelectedDisplayId(getDefaultDisplayId(displaysRes.data.displays));
-    } catch (error) {
-      messageApi?.error(error as string);
-    } finally {
-      setStartAppLoading(false);
-    }
-  }
-
-  async function startSelectedApp() {
-    if (!startAppDevice || !selectedComponent || selectedDisplayId === undefined) {
-      return;
-    }
-
-    const app = apps.find((item) => item.component === selectedComponent);
-    if (!app) {
-      messageApi?.error(t("devices.startApp.noSelectedApp"));
-      return;
-    }
-
-    setStartAppSubmitting(true);
-    try {
-      const res = await requestPost("/api/device/adb_start_app", {
-        device_id: startAppDevice.device_id,
-        package_name: app.package_name,
-        component: app.component,
-        display_id: selectedDisplayId,
-        force_stop: startAppForceStop,
-      });
-      messageApi?.success(res.message);
-      setStartAppDevice(null);
-    } catch (error) {
-      messageApi?.error(error as string);
-    } finally {
-      setStartAppSubmitting(false);
-    }
-  }
-
-  const deviceActionItems = [
-    {
-      key: "SetDisplayPowerOff",
-      icon: <BulbOutlined />,
-      label: t("devices.actions.setDisplayPowerOff"),
-      request: () =>
-        requestPost("/api/device/control/set_display_power", {
-          mode: false,
-        }),
-    },
-    {
-      key: "SetDisplayPowerOn",
-      icon: <BulbFilled />,
-      label: t("devices.actions.setDisplayPowerOn"),
-      request: () =>
-        requestPost("/api/device/control/set_display_power", {
-          mode: true,
-        }),
-    },
-    {
-      key: "EnablePointerDebug",
-      icon: <AimOutlined />,
-      label: t("devices.actions.enablePointerDebug"),
-      request: () =>
-        requestPost("/api/device/control/set_pointer_location", {
-          mode: true,
-        }),
-    },
-    {
-      key: "DisablePointerDebug",
-      icon: <AimOutlined />,
-      label: t("devices.actions.disablePointerDebug"),
-      request: () =>
-        requestPost("/api/device/control/set_pointer_location", {
-          mode: false,
-        }),
-    },
-    {
-      key: "VolumeUp",
-      icon: <UpOutlined />,
-      label: t("devices.actions.volumeUp"),
-      request: () =>
-        requestPost("/api/device/control/send_key", {
-          keycode: "VolumeUp",
-        }),
-    },
-    {
-      key: "VolumeDown",
-      icon: <DownOutlined />,
-      label: t("devices.actions.volumeDown"),
-      request: () =>
-        requestPost("/api/device/control/send_key", {
-          keycode: "VolumeDown",
-        }),
-    },
-    {
-      key: "Back",
-      icon: <EnterOutlined />,
-      label: t("devices.actions.back"),
-      request: () =>
-        requestPost("/api/device/control/send_key", {
-          keycode: "Back",
-        }),
-    },
-    {
-      key: "Home",
-      icon: <BorderOutlined />,
-      label: t("devices.actions.home"),
-      request: () =>
-        requestPost("/api/device/control/send_key", {
-          keycode: "Home",
-        }),
-    },
-    {
-      key: "AppSwitch",
-      icon: <SwitcherOutlined />,
-      label: t("devices.actions.appSwitch"),
-      request: () =>
-        requestPost("/api/device/control/send_key", {
-          keycode: "AppSwitch",
-        }),
-    },
-  ];
+  // 加载映射列表
+  useEffect(() => {
+    requestGet<{ mapping_list: string[] }>("/api/mapping/get_mapping_list")
+      .then((res) => setMappingList(res.data.mapping_list))
+      .catch(() => {});
+  }, []);
 
   async function decontrolDevice(device_id: string) {
     dispatch(setIsLoading(true));
@@ -299,19 +83,31 @@ function ControlledDevices({
     dispatch(setIsLoading(false));
   }
 
-  async function reconnectDevice(device_id: string) {
-    dispatch(setIsLoading(true));
-    try {
-      const res = await requestPost("/api/device/reconnect_device", {
-        device_id,
-        video: isVideo,
-        audio: isAudio,
-      });
-      messageApi?.success(res.message);
-    } catch (error) {
-      messageApi?.error(error as string);
+  async function executeScript() {
+    if (!scriptModalDevice) return;
+    setScriptRunning(true);
+    setScriptOutput("");
+
+    const lines = scriptText
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0);
+
+    let output = "";
+    for (const line of lines) {
+      try {
+        const res = await requestPost<{ output: string }>("/api/device/adb_exec", {
+          device_id: scriptModalDevice.device_id,
+          command: line,
+        });
+        output += `$ ${line}\n${res.data.output || ""}\n\n`;
+      } catch (error) {
+        output += `$ ${line}\nError: ${error}\n\n`;
+      }
     }
-    dispatch(setIsLoading(false));
+
+    setScriptOutput(output);
+    setScriptRunning(false);
   }
 
   const columns: TableProps<ControlledDevice>["columns"] = [
@@ -362,101 +158,35 @@ function ControlledDevices({
       },
     },
     {
-      title: (
-        <Flex align="center" gap="middle" justify="center">
-          <div>{t("devices.controlledDevices.action")}</div>
-          <Dropdown
-            trigger={["click"]}
-            menu={{
-              style: {
-                userSelect: "none",
-              },
-              onClick: async ({ key }) => {
-                const action = deviceActionItems.find(
-                  (item) => item.key === key,
-                );
-                if (action) {
-                  await runDeviceAction(action.label, action.request);
-                }
-              },
-              items: deviceActionItems.map((item) => ({
-                key: item.key,
-                icon: item.icon,
-                label: item.label,
-              })),
-            }}
-            onOpenChange={handleMenuOpenChange}
-            open={actionMenuOpen}
-          >
-            <div>
-              <IconButton
-                size={18}
-                color="primary"
-                icon={<UnorderedListOutlined />}
-              />
-            </div>
-          </Dropdown>
-        </Flex>
-      ),
+      title: "键盘映射",
+      key: "mapping",
+      align: "center",
+      render: () => <MappingSelectCell mappingList={mappingList} />,
+    },
+    {
+      title: t("devices.controlledDevices.action"),
       key: "action",
       align: "center",
       render: (_, record) => (
-        <Space size="middle" className="text-4">
-          <Popover
-            trigger="click"
-            content={
-              <Descriptions
-                className="w-15rem"
-                column={1}
-                items={[
-                  {
-                    key: "scid",
-                    label: "SCID",
-                    children: record.scid,
-                  },
-                  {
-                    key: "sockets",
-                    label: "Sockets",
-                    children: (
-                      <Space direction="vertical" size={2}>
-                        {record.socket_ids.map((socket_id) => (
-                          <span key={socket_id}>{socket_id}</span>
-                        ))}
-                      </Space>
-                    ),
-                  },
-                ]}
-              />
-            }
-          >
-            <IconButton
-              tooltip={t("devices.controlledDevices.actionInfo")}
-              size={18}
-              color="info"
-              icon={<InfoCircleOutlined />}
-            />
-          </Popover>
-          <IconButton
-            tooltip={t("devices.controlledDevices.actionReconnect")}
-            size={18}
-            color="warning"
-            icon={<ReloadOutlined />}
-            onClick={() => reconnectDevice(record.device_id)}
-          />
-          <IconButton
-            tooltip={t("devices.controlledDevices.actionStartApp")}
-            size={18}
-            color="success"
-            icon={<AppstoreOutlined />}
-            onClick={() => openStartAppModal(record)}
-          />
-          <IconButton
-            tooltip={t("devices.controlledDevices.actionClose")}
-            size={18}
-            color="primary"
+        <Space size="middle">
+          <Button
+            type="primary"
+            danger
             icon={<DisconnectOutlined />}
             onClick={() => decontrolDevice(record.device_id)}
-          />
+          >
+            断开
+          </Button>
+          <Button
+            icon={<PlayCircleOutlined />}
+            onClick={() => {
+              setScriptModalDevice(record);
+              setScriptText("");
+              setScriptOutput("");
+            }}
+          >
+            输入脚本
+          </Button>
         </Space>
       ),
     },
@@ -471,91 +201,62 @@ function ControlledDevices({
         dataSource={controlledDevices}
       />
       <Modal
-        title={t("devices.startApp.title")}
-        open={startAppDevice !== null}
-        onCancel={() => setStartAppDevice(null)}
-        onOk={startSelectedApp}
-        okText={t("devices.startApp.start")}
-        cancelText={t("devices.startApp.cancel")}
-        confirmLoading={startAppSubmitting}
-        okButtonProps={{
-          disabled:
-            startAppLoading ||
-            !selectedComponent ||
-            selectedDisplayId === undefined,
-        }}
+        title={`输入脚本 - ${scriptModalDevice?.device_id ?? ""}`}
+        open={scriptModalDevice !== null}
+        onCancel={() => setScriptModalDevice(null)}
+        footer={null}
+        width={700}
       >
         <Space direction="vertical" size="middle" className="w-full">
-          <Select
-            showSearch
-            loading={startAppLoading}
-            disabled={startAppLoading}
-            className="w-full"
-            placeholder={t("devices.startApp.appPlaceholder")}
-            value={selectedComponent}
-            onChange={setSelectedComponent}
-            filterOption={(input, option) =>
-              String(option?.label ?? "")
-                .toLowerCase()
-                .includes(input.toLowerCase())
-            }
-            options={apps.map((app) => ({
-              value: app.component,
-              label: app.component,
-            }))}
+          <Input.TextArea
+            rows={6}
+            placeholder="逐行输入 adb shell 命令，如：&#10;input tap 500 1000&#10;input swipe 300 500 300 100&#10;input text hello"
+            value={scriptText}
+            onChange={(e) => setScriptText(e.target.value)}
           />
-          <Select
-            loading={startAppLoading}
-            disabled={startAppLoading}
-            className="w-full"
-            placeholder={t("devices.startApp.displayPlaceholder")}
-            value={selectedDisplayId}
-            onChange={setSelectedDisplayId}
-            options={displays.map((display) => ({
-              value: display.display_id,
-              label: formatDisplayLabel(display),
-            }))}
-          />
-          <Checkbox
-            checked={startAppForceStop}
-            onChange={(event) => setStartAppForceStop(event.target.checked)}
-          >
-            {t("devices.startApp.forceStop")}
-          </Checkbox>
+          <Flex gap="small">
+            <Button
+              type="primary"
+              loading={scriptRunning}
+              onClick={executeScript}
+              disabled={!scriptText.trim()}
+            >
+              执行
+            </Button>
+            <Button onClick={() => setScriptOutput("")}>
+              清空输出
+            </Button>
+          </Flex>
+          {scriptOutput && (
+            <Input.TextArea
+              rows={8}
+              readOnly
+              value={scriptOutput}
+              style={{ fontFamily: "monospace", fontSize: 12 }}
+            />
+          )}
         </Space>
       </Modal>
     </>
   );
 }
 
-function OtherDevices({
+function PendingDevices({
   otherDevices,
-  videoState,
-  audioState,
 }: {
   otherDevices: AdbDevice[];
-  videoState: [boolean, React.Dispatch<React.SetStateAction<boolean>>];
-  audioState: [boolean, React.Dispatch<React.SetStateAction<boolean>>];
 }) {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const messageApi = useMessageContext();
-
-  const [isVideo, setIsVideo] = videoState;
-  const [isAudio, setIsAudio] = audioState;
-  const scrcpyModule = useAppSelector((state) => state.localConfig.scrcpyModule);
-  const activeScrcpyPreset = scrcpyModule.presets.find(
-    (preset) => preset.id === scrcpyModule.activePresetId,
-  );
-  const presetActive = scrcpyModule.enabled && activeScrcpyPreset !== undefined;
 
   async function controlDevice(device: AdbDevice) {
     dispatch(setIsLoading(true));
     try {
       const res = await requestPost("/api/device/control_device", {
         device_id: device.id,
-        video: isVideo,
-        audio: isAudio,
+        video: true,
+        audio: true,
       });
       messageApi?.success(res.message);
     } catch (error) {
@@ -576,40 +277,17 @@ function OtherDevices({
       key: "status",
     },
     {
-      title: (
-        <Flex vertical align="center" gap={4}>
-          <Space size="small">
-            <Checkbox
-              checked={presetActive ? (activeScrcpyPreset?.video ?? isVideo) : isVideo}
-              disabled={presetActive}
-              onChange={(e) => setIsVideo(e.target.checked)}
-            >
-              {t("devices.otherDevices.video")}
-            </Checkbox>
-            <Checkbox
-              checked={presetActive ? (activeScrcpyPreset?.audio ?? isAudio) : isAudio}
-              disabled={presetActive}
-              onChange={(e) => setIsAudio(e.target.checked)}
-            >
-              {t("devices.otherDevices.audio")}
-            </Checkbox>
-            {presetActive && <Tag color="blue">scrcpy: {activeScrcpyPreset?.name}</Tag>}
-          </Space>
-        </Flex>
-      ),
+      title: t("devices.otherDevices.action"),
       key: "action",
       align: "center",
-      width: "18.5%",
       render: (_, record) => (
-        <Space size="middle" className="text-4">
-          <IconButton
-            color="primary"
-            tooltip={t("devices.otherDevices.actionControl")}
-            size={18}
-            icon={<LinkOutlined />}
-            onClick={() => controlDevice(record)}
-          />
-        </Space>
+        <Button
+          type="primary"
+          icon={<SyncOutlined />}
+          onClick={() => controlDevice(record)}
+        >
+          控制
+        </Button>
       ),
     },
   ];
@@ -630,14 +308,6 @@ export default function Devices() {
   const dispatch = useAppDispatch();
   const location = useLocation();
 
-  const savedConnectAddr = useAppSelector(
-    (state) => state.localConfig.adbConnectAddress,
-  );
-  const [connectAddr, setConnectAddr] = useState("");
-  const [pairAddr, setPairAddr] = useState("");
-  const [pairCode, setPairCode] = useState("");
-  const connectAddrEditedRef = useRef(false);
-
   const controlledDevices = useAppSelector(
     (state) => state.other.controlledDevices,
   );
@@ -647,23 +317,9 @@ export default function Devices() {
     return adbDevices.filter((d) => !controlledIdSet.has(d.id));
   }, [controlledDevices, adbDevices]);
 
-  const videoState = useState(false);
-  const audioState = useState(false);
-
   useEffect(() => {
     if (location.pathname === "/devices") refreshDevices();
   }, [location.pathname]);
-
-  useEffect(() => {
-    if (!connectAddrEditedRef.current) {
-      setConnectAddr(savedConnectAddr);
-    }
-  }, [savedConnectAddr]);
-
-  function changeConnectAddr(value: string) {
-    connectAddrEditedRef.current = true;
-    setConnectAddr(value);
-  }
 
   async function refreshDevices() {
     dispatch(setIsLoading(true));
@@ -675,39 +331,6 @@ export default function Devices() {
       dispatch(setControlledDevices(res.data.controlled_devices));
       dispatch(setAdbDevices(res.data.adb_devices));
       messageApi?.success(res.message);
-    } catch (error) {
-      messageApi?.error(error as string);
-    }
-    dispatch(setIsLoading(false));
-  }
-
-  async function pairDevice() {
-    dispatch(setIsLoading(true));
-    try {
-      const res = await requestPost("/api/device/adb_pair", {
-        address: pairAddr,
-        code: pairCode,
-      });
-      messageApi?.success(res.message);
-      setTimeout(refreshDevices, 1000);
-    } catch (error) {
-      messageApi?.error(error as string);
-    }
-    dispatch(setIsLoading(false));
-  }
-
-  async function connectDevice() {
-    const address = connectAddr.trim();
-    dispatch(setIsLoading(true));
-    try {
-      const res = await requestPost("/api/device/adb_connect", {
-        address,
-      });
-      messageApi?.success(res.message);
-      connectAddrEditedRef.current = false;
-      setConnectAddr(address);
-      dispatch(setAdbConnectAddress(address));
-      setTimeout(refreshDevices, 1000);
     } catch (error) {
       messageApi?.error(error as string);
     }
@@ -733,53 +356,27 @@ export default function Devices() {
   return (
     <div className="page-container">
       <section>
-        <h2 className="title-with-line">{t("devices.adbTools.title")}</h2>
+        <h2 className="title-with-line">ADB 设备</h2>
         <ItemBoxContainer className="mb-6">
-          <ItemBox label={t("devices.adbTools.pair.label")}>
-            <Space.Compact>
-              <Input
-                placeholder="ip:port"
-                value={pairAddr}
-                onChange={(e) => setPairAddr(e.target.value)}
-              />
-              <Input
-                placeholder="code"
-                value={pairCode}
-                onChange={(e) => setPairCode(e.target.value)}
-              />
-              <Button type="primary" onClick={pairDevice}>
-                {t("devices.adbTools.pair.btn")}
+          <ItemBox label="ADB 服务">
+            <Flex gap="small" align="center">
+              <Button
+                type="primary"
+                icon={<ReloadOutlined />}
+                onClick={restartAdbServer}
+              >
+                {t("devices.adbTools.server.restart")}
               </Button>
-            </Space.Compact>
-          </ItemBox>
-          <ItemBox label={t("devices.adbTools.connect.label")}>
-            <Space.Compact>
-              <Input
-                placeholder="ip:port"
-                value={connectAddr}
-                onChange={(e) => changeConnectAddr(e.target.value)}
-              />
-              <Button type="primary" onClick={connectDevice}>
-                {t("devices.adbTools.connect.btn")}
-              </Button>
-            </Space.Compact>
-          </ItemBox>
-          <ItemBox label={t("devices.adbTools.server.label")}>
-            <Button
-              type="primary"
-              icon={<ReloadOutlined />}
-              onClick={restartAdbServer}
-            >
-              {t("devices.adbTools.server.restart")}
-            </Button>
+              <span className="text-sm text-color-secondary">
+                {t("devices.otherDevices.title")} ({adbDevices.length} 台设备)
+              </span>
+            </Flex>
           </ItemBox>
         </ItemBoxContainer>
       </section>
       <section>
         <Flex justify="space-between" align="start">
-          <h2 className="title-with-line">
-            {t("devices.controlledDevices.title")}
-          </h2>
+          <h2 className="title-with-line">待控设备</h2>
           <Button
             type="primary"
             icon={<SyncOutlined />}
@@ -788,18 +385,13 @@ export default function Devices() {
             {t("devices.common.refresh")}
           </Button>
         </Flex>
-        <ControlledDevices
-          isVideo={videoState[0]}
-          isAudio={audioState[0]}
-        />
+        <PendingDevices otherDevices={otherDevices} />
       </section>
       <section className="mt-4">
-        <h2 className="title-with-line">{t("devices.otherDevices.title")}</h2>
-        <OtherDevices
-          otherDevices={otherDevices}
-          videoState={videoState}
-          audioState={audioState}
-        />
+        <Flex justify="space-between" align="start">
+          <h2 className="title-with-line">受控设备</h2>
+        </Flex>
+        <ControlledDevices />
       </section>
     </div>
   );

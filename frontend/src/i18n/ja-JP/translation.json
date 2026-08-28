@@ -393,9 +393,6 @@
       "hideIcons": "アイコンを隠す",
       "customResolution": "テンプレート解像度をカスタマイズ",
       "applyResolution": "解像度を適用",
-      "resolutionMustMatch": "解像度は手動で設定し、スマホの画面解像度と一致させる必要があります（デバイス解像度との自動同期は行いません）",
-      "resolutionMismatchWarning": "解像度が一致しないと、ボタンの位置がずれます！",
-      "resolutionMismatchDetail": "カスタム解像度はボタン座標の換算基準を変えます。スマホの実際の解像度と異なると、投写後にボタンが配置位置からずれ、誤操作の原因になります。変更前にスマホの現在の解像度を確認してください（「デバイス」画面でメインデバイスのサイズを確認できます）。",
       "maskOverlay": "マスクに画像を重ねる",
       "maskOverlayDesc": "マスクウィンドウに画像（マップ/浮遊）を重ねます。assets/overlay/ に画像を置き、相対パス（例 overlay/map.png）を入力します。",
       "overlayEnabled": "重ね表示を有効",
@@ -498,3 +495,4 @@
     }
   }
 }
+

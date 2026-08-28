@@ -4,11 +4,13 @@ import LoadingWrapper from "./components/common/LoadingWrapper";
 import App from "./App";
 import NotFound from "./components/NotFound";
 
+const UsageGuide = lazy(() => import("./components/UsageGuide"));
 const Welcome = lazy(() => import("./components/Welcome"));
 const Devices = lazy(() => import("./components/Devices"));
 const Mappings = lazy(() => import("./components/mappings/Mappings"));
 const AdbResolution = lazy(() => import("./components/AdbResolution"));
 const AdbPackages = lazy(() => import("./components/AdbPackages"));
+const StartupSize = lazy(() => import("./components/StartupSize"));
 const LatencyCompare = lazy(() => import("./components/LatencyCompare"));
 const ScrcpyPresets = lazy(() => import("./components/ScrcpyModuleModal"));
 const Settings = lazy(() => import("./components/Settings"));
@@ -23,6 +25,14 @@ const router = createBrowserRouter([
         element: (
           <LoadingWrapper>
             <Welcome />
+          </LoadingWrapper>
+        ),
+      },
+      {
+        path: "usage-guide",
+        element: (
+          <LoadingWrapper>
+            <UsageGuide />
           </LoadingWrapper>
         ),
       },
@@ -55,6 +65,14 @@ const router = createBrowserRouter([
         element: (
           <LoadingWrapper>
             <AdbPackages />
+          </LoadingWrapper>
+        ),
+      },
+      {
+        path: "startup-size",
+        element: (
+          <LoadingWrapper>
+            <StartupSize />
           </LoadingWrapper>
         ),
       },

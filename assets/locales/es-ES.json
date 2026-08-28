@@ -79,6 +79,7 @@
     "wmSizeSuccess": "Tamaño de pantalla establecido",
     "wmDensitySuccess": "Densidad de pantalla establecida",
     "wmCurrentSuccess": "get current screen param success",
+    "adbExecSuccess": "Command executed successfully",
     "pmListPackagesSuccess": "get app list success",
       "noAppFound": "No se encontró ninguna app iniciable",
       "noDisplayFound": "No se encontró ninguna pantalla",

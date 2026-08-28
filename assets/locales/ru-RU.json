@@ -79,6 +79,7 @@
     "wmSizeSuccess": "Размер экрана установлен",
     "wmDensitySuccess": "Плотность экрана установлена",
     "wmCurrentSuccess": "get current screen param success",
+    "adbExecSuccess": "Command executed successfully",
     "pmListPackagesSuccess": "get app list success",
       "noAppFound": "Запускаемые приложения не найдены",
       "noDisplayFound": "Дисплей не найден",
