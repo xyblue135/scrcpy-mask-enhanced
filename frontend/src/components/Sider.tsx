@@ -68,6 +68,11 @@ export default function Sider() {
             icon: <IconFont type="icon-keyboard" />,
           },
           {
+            key: "/adb-resolution",
+            label: t("sider.adbResolution"),
+            icon: <IconFont type="icon-android" />,
+          },
+          {
             key: "/latency-compare",
             label: t("sider.latencyCompare"),
             icon: <CameraOutlined />,

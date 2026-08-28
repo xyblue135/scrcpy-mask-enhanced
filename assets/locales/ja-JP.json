@@ -76,6 +76,8 @@
       "getAdbAppsSuccess": "アプリ一覧を取得しました",
       "getAdbDisplaysSuccess": "ディスプレイ一覧を取得しました",
       "startAdbAppSuccess": "アプリを起動しました",
+    "wmSizeSuccess": "画面サイズを設定しました",
+    "wmDensitySuccess": "画面密度を設定しました",
       "noAppFound": "起動可能なアプリが見つかりません",
       "noDisplayFound": "ディスプレイが見つかりません",
       "invalidStartAppParams": "アプリ起動パラメータが無効です"
@@ -255,3 +257,5 @@
     "windowLevelChanged": "マスクを常に最前面に表示"
   }
 }
+
+

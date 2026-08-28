@@ -75,6 +75,7 @@ export function useDeviceWebSocket() {
         controlled_devices: Array<{
           device_id: string;
           device_size: [number, number];
+          device_dpi: number;
           main: boolean;
           name: string;
           scid: string;

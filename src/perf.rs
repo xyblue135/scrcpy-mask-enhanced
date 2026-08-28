@@ -269,4 +269,9 @@ pub fn register_all() {
         "Move 事件被距离阈值过滤掉的次数（per pointer_id）",
         "高 = 抖动/高频微移明显；与 touch_probe.jsonl 行数对比可估算降噪比例",
     );
+    register(
+        "touch.move_adaptive_filtered",
+        "Move 事件被自适应阈值（>1x 用户基线）过滤掉的次数",
+        "这部分意味着在静止/抖动场景下系统已自动把阈值放大，命中真实误判的可能性低",
+    );
 }

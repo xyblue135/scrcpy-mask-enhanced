@@ -150,6 +150,14 @@ pub struct LocalConfig {
     /// 对同一 pointer_id 的连续 Move 事件，若 dx² + dy² < threshold² 则直接丢弃，
     /// 显著减少网络消息 / 日志体积 / CPU 调度，对实际手感影响很小。
     pub move_distance_threshold: f32,
+    /// Move 事件距离阈值自适应开关（默认开启）。开启后，当同一 pointer_id
+    /// 连续出现 N 个被丢弃的小移动时，自动把该 pointer 的有效阈值翻倍（封顶 2x），
+    /// 一旦出现真实大移动立即复位。在 FPS 视角等"长时间小幅抖动"场景下收益最明显：
+    /// 既不会在用户主动瞄准时漏掉真实位移，又能在静止握持时彻底过滤掉手抖。
+    pub move_adaptive_enabled: bool,
+    /// 自适应阈值触发窗口（连续多少个小移动后开始提升阈值）。默认 8。
+    /// 真实使用中不必修改：阈值小于等于 0 时自适应关闭，>= 1 时生效。
+    pub move_adaptive_window: u32,
     pub mapping_label_opacity: f32,
     // 键盘映射按钮的显示大小倍数（仅影响可视化按钮大小，adb 点击仍为按钮中心）
     pub mapping_button_scale: f32,
@@ -210,6 +218,8 @@ impl Default for LocalConfig {
             button_randomization_enabled: true,
             touch_probe_enabled: true,
             move_distance_threshold: 0.0,
+            move_adaptive_enabled: true,
+            move_adaptive_window: 8,
             mapping_label_opacity: 0.3,
             mapping_button_scale: 1.0,
             language: DEFAULT_LANGUAGE.to_string(),
@@ -398,6 +408,18 @@ impl LocalConfig {
         if raw.is_finite() && raw > 0.0 { raw } else { 0.0 }
     }
 
+    /// Move 距离阈值自适应开关。开启后，连续小移动会让该 pointer 的有效阈值翻倍。
+    pub fn get_move_adaptive_enabled() -> bool {
+        CONFIG.read().unwrap().move_adaptive_enabled
+    }
+
+    /// 自适应阈值触发窗口（连续多少个被丢弃的小移动后把有效阈值拉满 2x）。
+    /// 0 或过小（例如 1）会让自适应基本失效；建议 4~16。
+    pub fn get_move_adaptive_window() -> u32 {
+        let raw = CONFIG.read().unwrap().move_adaptive_window;
+        if raw == 0 { 1 } else { raw }
+    }
+
     define_setter!(
         (web_port, u16),
         (web_bind_addr, Ipv4Addr),
@@ -419,6 +441,8 @@ impl LocalConfig {
         (button_randomization_enabled, bool),
         (touch_probe_enabled, bool),
         (move_distance_threshold, f32),
+        (move_adaptive_enabled, bool),
+        (move_adaptive_window, u32),
         (mapping_label_opacity, f32),
         (mapping_button_scale, f32),
         (language, String),

@@ -564,6 +564,31 @@ async fn update_config(
                 "move_distance_threshold must be a number (pixels, 0 = off)",
             ));
         }
+        "move_adaptive_enabled" => {
+            if let Some(value) = payload.value.as_bool() {
+                LocalConfig::set_move_adaptive_enabled(value);
+                return Ok(JsonResponse::success(
+                    format!("move adaptive threshold enabled set to {value}"),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(
+                "move_adaptive_enabled must be a boolean",
+            ));
+        }
+        "move_adaptive_window" => {
+            if let Some(value) = payload.value.as_u64() {
+                let value = value.min(64) as u32;
+                LocalConfig::set_move_adaptive_window(value);
+                return Ok(JsonResponse::success(
+                    format!("move adaptive window set to {value}"),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(
+                "move_adaptive_window must be a non-negative integer",
+            ));
+        }
         "scrcpy_module" => {
             let module: ScrcpyModuleConfig =
                 serde_json::from_value(payload.value).map_err(|error| {

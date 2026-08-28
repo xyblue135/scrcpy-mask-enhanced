@@ -50,6 +50,7 @@ pub fn routers(
             post(update_mapping_quick_switch),
         )
         .route("/migrate_mapping", post(migrate_mapping))
+        .route("/clear_all_mappings", post(clear_all_mappings))
         .with_state(AppStatMapping { m_tx })
 }
 
@@ -259,6 +260,62 @@ async fn delete_mapping(
             payload.file
         ),
         None,
+    ))
+}
+
+async fn clear_all_mappings(
+    State(state): State<AppStatMapping>,
+) -> Result<JsonResponse, WebServerError> {
+    let dir_path = relate_to_data_path(["mapping"]);
+    if !dir_path.exists() {
+        return Ok(JsonResponse::success(
+            t!("web.mapping.clearAllMappingsSuccess"),
+            Some(json!({"deleted_count": 0})),
+        ));
+    }
+
+    // Get active mapping file to avoid deleting it
+    let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
+    state
+        .m_tx
+        .send((MaskCommand::GetActiveMapping, oneshot_tx))
+        .unwrap();
+    let active_file = oneshot_rx.await.unwrap().unwrap();
+
+    let mut deleted_count = 0u32;
+    let entries = fs::read_dir(&dir_path).map_err(|e| {
+        WebServerError::bad_request(format!(
+            "{}: {}",
+            t!("web.mapping.unableReadMappingConfigDir"),
+            e
+        ))
+    })?;
+
+    for entry in entries.filter_map(Result::ok) {
+        let path = entry.path();
+        if path.is_file() && path.extension().map_or(false, |ext| ext == "json") {
+            if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
+                if file_name == active_file {
+                    continue; // skip active mapping
+                }
+                fs::remove_file(&path).ok();
+                deleted_count += 1;
+            }
+        }
+    }
+
+    let mut quick_switches = LocalConfig::get_mapping_quick_switches();
+    quick_switches.retain(|config| config.file != active_file);
+    LocalConfig::set_mapping_quick_switches(quick_switches);
+
+    log::info!(
+        "[WebServer] {}: {} deleted",
+        t!("web.mapping.clearAllMappings"),
+        deleted_count
+    );
+    Ok(JsonResponse::success(
+        t!("web.mapping.clearAllMappingsSuccess"),
+        Some(json!({"deleted_count": deleted_count})),
     ))
 }
 
@@ -519,6 +576,29 @@ async fn update_mapping(
     }
 }
 
+/// 从单个 mapping JSON 文件中安全地读取 original_size，不解析 mappings。
+/// 用于"分辨率 / DPI 对齐"提示，不引入 validation 开销。
+fn read_mapping_original_size(file_name: &str) -> Option<serde_json::Value> {
+    if !is_safe_file_name(file_name) {
+        return None;
+    }
+    let path = relate_to_data_path(["mapping", file_name]);
+    if !path.exists() {
+        return None;
+    }
+    let raw = std::fs::read_to_string(&path).ok()?;
+    let value: serde_json::Value = serde_json::from_str(&raw).ok()?;
+    let original_size = value.get("original_size")?;
+    if !original_size.is_object() {
+        return None;
+    }
+    Some(json!({
+        "width": original_size.get("width").and_then(|v| v.as_u64()).unwrap_or(0),
+        "height": original_size.get("height").and_then(|v| v.as_u64()).unwrap_or(0),
+        "dpi": original_size.get("dpi").and_then(|v| v.as_u64()).unwrap_or(0),
+    }))
+}
+
 async fn get_mapping_list(
     State(state): State<AppStatMapping>,
 ) -> Result<JsonResponse, WebServerError> {
@@ -559,10 +639,23 @@ async fn get_mapping_list(
         .filter(|config| mapping_files.contains(&config.file))
         .collect();
 
+    // 为每个预设读取 original_size（不解析 mappings），用于前端显示分辨率后缀
+    // 和"与手机分辨率是否一致"的提示。
+    let mapping_meta: Vec<serde_json::Value> = mapping_files
+        .iter()
+        .map(|name| {
+            json!({
+                "file": name,
+                "original_size": read_mapping_original_size(name),
+            })
+        })
+        .collect();
+
     Ok(JsonResponse::success(
         t!("web.mapping.readMappingListSuccess"),
         Some(json!({
             "mapping_list": mapping_files,
+            "mapping_meta": mapping_meta,
             "active_mapping": file,
             "mapping_quick_switches": quick_switches,
             "quick_switch_enabled": LocalConfig::get_quick_switch_enabled(),

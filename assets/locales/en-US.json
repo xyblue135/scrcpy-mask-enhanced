@@ -46,7 +46,9 @@
       "mappingReadSuccess": "Successfully read mapping config",
       "invalidSize": "Invalid size",
       "migrateMappingConfig": "Migrate mapping config from %{file} to %{newFile}",
-      "deleteMappingConfig": "Delete mapping config"
+      "deleteMappingConfig": "Delete mapping config",
+      "clearAllMappings": "Clear all mappings",
+      "clearAllMappingsSuccess": "Successfully cleared all mapping configs"
     },
     "device": {
       "deviceListObtained": "Successfully obtained device list",
@@ -76,6 +78,8 @@
       "getAdbAppsSuccess": "Obtained app list successfully",
       "getAdbDisplaysSuccess": "Obtained display list successfully",
       "startAdbAppSuccess": "Started app successfully",
+    "wmSizeSuccess": "Screen size set successfully",
+    "wmDensitySuccess": "Screen density set successfully",
       "noAppFound": "No launchable app found",
       "noDisplayFound": "No display found",
       "invalidStartAppParams": "Invalid start app parameters"
@@ -255,3 +259,5 @@
     "windowLevelChanged": "Mask always on top"
   }
 }
+
+

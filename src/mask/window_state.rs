@@ -16,25 +16,6 @@ impl MaskMaximizeState {
     }
 }
 
-/// 投屏窗口的全屏状态。
-///
-/// 之前 F11 会进入 `BorderlessFullscreen`（无边框全屏），但全屏下视频源比例
-/// 与显示器不一致时键位会错位。现在所有状态都用 contain 缩放保留手机源比例，
-/// 所以 F11 改成和右上角「最大化」按钮等价，不再进入 BorderlessFullscreen。
-///
-/// `MaskFullscreenState` 保留下来只是因为有历史代码会读 `active` 字段
-/// （实际不会进入 `active=true`，但保留避免大改调用方）。
-#[derive(Resource, Default)]
-pub struct MaskFullscreenState {
-    pub active: bool,
-}
-
-impl MaskFullscreenState {
-    pub fn suppress_window_persistence(&self) -> bool {
-        self.active
-    }
-}
-
 /// Windows 最小化普通顶层窗口时，系统可能临时把窗口移动到
 /// (-32000, -32000) 附近。这个坐标不是用户真实的桌面位置。
 pub fn is_persistable_window_position(pos: IVec2) -> bool {
@@ -57,27 +38,18 @@ pub fn handle_fullscreen_hotkey(
     keys: Res<ButtonInput<KeyCode>>,
     mut window: Single<&mut Window>,
     mut maximize_state: ResMut<MaskMaximizeState>,
-    fullscreen_state: Res<MaskFullscreenState>,
 ) {
     if !keys.just_pressed(KeyCode::F11) {
         return;
     }
-    toggle_window_maximized(&mut window, &mut maximize_state, &fullscreen_state);
+    toggle_window_maximized(&mut window, &mut maximize_state);
 }
 
 /// 普通窗口最大化：保留标题栏和 Windows 任务栏。
 ///
-/// `video.rs::sync_video_viewport` 在最大化时启用 contain 缩放，所以最大化后
+/// `video.rs::sync_video_viewport` 总是启用 contain 缩放，所以最大化后
 /// 视频保持手机源比例（黑边而不是拉伸），键位位置和视频始终对齐。
-pub fn toggle_window_maximized(
-    window: &mut Window,
-    maximize_state: &mut MaskMaximizeState,
-    fullscreen_state: &MaskFullscreenState,
-) {
-    if fullscreen_state.active {
-        return;
-    }
-
+pub fn toggle_window_maximized(window: &mut Window, maximize_state: &mut MaskMaximizeState) {
     maximize_state.active = !maximize_state.active;
     window.mode = WindowMode::Windowed;
     window.resizable = true;

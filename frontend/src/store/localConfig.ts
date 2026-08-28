@@ -242,6 +242,10 @@ export interface LocalConfigState {
   /** Move 事件距离阈值（mask 坐标系下像素），0 = 关闭。
    *  对同一 pointer_id 的连续 Move，若 dx² + dy² < threshold² 则直接丢弃。 */
   moveDistanceThreshold: number;
+  /** Move 距离阈值自适应开关：开启后连续小移动会自动放大阈值。 */
+  moveAdaptiveEnabled: boolean;
+  /** 自适应阈值触发窗口：连续多少个小移动后把有效阈值拉到 2x。 */
+  moveAdaptiveWindow: number;
 }
 
 const initialState: LocalConfigState = {
@@ -290,6 +294,8 @@ const initialState: LocalConfigState = {
   buttonRandomizationEnabled: true,
   touchProbeEnabled: true,
   moveDistanceThreshold: 0,
+  moveAdaptiveEnabled: true,
+  moveAdaptiveWindow: 8,
 };
 
 const localConfigSlice = createSlice({
@@ -358,6 +364,15 @@ const localConfigSlice = createSlice({
       state.moveDistanceThreshold = v;
       updateLocalConfig("move_distance_threshold", v, 300);
     },
+    setMoveAdaptiveEnabled: (state, action: PayloadAction<boolean>) => {
+      state.moveAdaptiveEnabled = action.payload;
+      updateLocalConfig("move_adaptive_enabled", action.payload, 0);
+    },
+    setMoveAdaptiveWindow: (state, action: PayloadAction<number>) => {
+      const v = Math.max(1, Math.min(64, Math.floor(action.payload) || 8));
+      state.moveAdaptiveWindow = v;
+      updateLocalConfig("move_adaptive_window", v, 300);
+    },
   },
 });
 
@@ -408,5 +423,7 @@ export const {
   setButtonRandomizationEnabled,
   setTouchProbeEnabled,
   setMoveDistanceThreshold,
+  setMoveAdaptiveEnabled,
+  setMoveAdaptiveWindow,
 } = localConfigSlice.actions;
 export default localConfigSlice.reducer;

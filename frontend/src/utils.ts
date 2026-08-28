@@ -87,6 +87,7 @@ export async function requestUpload<D = any>(
 export interface ControlledDevice {
   device_id: string;
   device_size: [number, number];
+  device_dpi: number;
   main: boolean;
   name: string;
   scid: string;

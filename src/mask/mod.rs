@@ -33,10 +33,7 @@ use crate::{
             handle_video_snapshot_requests,
             sync_video_viewport,
         },
-        window_state::{
-            MaskFullscreenState, MaskMaximizeState, handle_fullscreen_hotkey,
-            is_persistable_window_position,
-        },
+        window_state::{MaskMaximizeState, handle_fullscreen_hotkey, is_persistable_window_position},
     },
     utils::{ChannelSenderWS, DeviceOrientation, share::ControlledDevice},
     web::ws::WebSocketNotification,
@@ -55,7 +52,6 @@ impl Plugin for MaskPlugins {
             .add_plugins((ui::UiPlugins, mapping::MappingPlugins))
             .init_resource::<PendingWindowFocus>()
             .init_resource::<MaskResizeState>()
-            .init_resource::<MaskFullscreenState>()
             .init_resource::<MaskMaximizeState>()
             .init_resource::<VideoViewport>()
             .init_resource::<VideoAttributes>()
@@ -215,7 +211,6 @@ fn sync_mask_size(
     time: Res<Time>,
     mouse_input: Res<ButtonInput<MouseButton>>,
     mut resize_state: ResMut<MaskResizeState>,
-    fullscreen_state: Res<MaskFullscreenState>,
     maximize_state: Res<MaskMaximizeState>,
     ws_tx: Res<ChannelSenderWS>,
 ) {
@@ -226,28 +221,17 @@ fn sync_mask_size(
             continue;
         }
 
-        // 退出全屏的 Windowed 过渡阶段会产生中间 resize 事件，直接忽略。
-        if fullscreen_state.suppress_window_persistence() && !fullscreen_state.active {
-            continue;
-        }
-
-        let h = if fullscreen_state.active {
-            e.height
-        } else {
-            (e.height - titlebar_state.offset()).max(0.0)
-        };
+        let h = (e.height - titlebar_state.offset()).max(0.0);
         mask_size.0 = Vec2::new(e.width, h);
 
-        if !fullscreen_state.active && !maximize_state.active {
+        if !maximize_state.active {
             resize_state.mark_resized();
         }
     }
 
-    // 无边框全屏使用当前显示器分辨率，不执行普通窗口宽高比修正，
-    // 也不把全屏尺寸写回 horizontal_mask_width / vertical_mask_height。
-    if fullscreen_state.suppress_window_persistence()
-        || maximize_state.suppress_window_persistence()
-    {
+    // 最大化时使用显示器分辨率，跳过普通窗口宽高比修正，
+    // 也不把窗口尺寸写回 horizontal_mask_width / vertical_mask_height。
+    if maximize_state.suppress_window_persistence() {
         return;
     }
 
@@ -324,7 +308,6 @@ fn sync_mask_position(
     titlebar_state: Res<TitlebarState>,
     time: Res<Time>,
     mut debounce: Local<MoveDebounce>,
-    fullscreen_state: Res<MaskFullscreenState>,
     maximize_state: Res<MaskMaximizeState>,
     ws_tx: Res<ChannelSenderWS>,
 ) {
@@ -335,11 +318,8 @@ fn sync_mask_position(
         debounce.pending = true;
     }
 
-    // 全屏和退出全屏的恢复阶段都会产生系统级 WindowMoved，
-    // 这些位置不能覆盖普通窗口的保存位置。
-    if fullscreen_state.suppress_window_persistence()
-        || maximize_state.suppress_window_persistence()
-    {
+    // 最大化时使用显示器分辨率，跳过普通窗口位置保存（最大化用显示器默认位置）。
+    if maximize_state.suppress_window_persistence() {
         debounce.pending = false;
         return;
     }

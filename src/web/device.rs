@@ -59,6 +59,8 @@ pub fn routers(
         .route("/adb_apps", post(adb_apps))
         .route("/adb_displays", post(adb_displays))
         .route("/adb_start_app", post(adb_start_app))
+        .route("/adb_wm_size", post(adb_wm_size))
+        .route("/adb_wm_density", post(adb_wm_density))
         .route("/control/set_display_power", post(set_display_power))
         .route("/control/set_pointer_location", post(set_pointer_location))
         .route("/control/send_key", post(send_key))
@@ -221,6 +223,22 @@ async fn _control_device(
     }
 
     ControlledDevice::add_device(device_id.clone(), scid.clone(), main, socket_id).await;
+
+    // 异步获取设备 DPI 并更新
+    let dpi_device_id = device_id.clone();
+    let dpi_scid = scid.clone();
+    tokio::spawn(async move {
+        match Device::screen_dpi(&dpi_device_id) {
+            Ok(dpi) => {
+                ControlledDevice::update_device_dpi(dpi_scid, dpi).await;
+                log::info!("[WebServe] 获取设备 DPI: {}", dpi);
+            }
+            Err(e) => {
+                log::warn!("[WebServe] 获取设备 DPI 失败: {}", e);
+            }
+        }
+    });
+
     // send command to controller server
     for cmd in commands {
         d_tx.send(cmd).unwrap();
@@ -717,6 +735,68 @@ async fn adb_start_app(
 
     Ok(JsonResponse::success(
         t!("web.device.startAdbAppSuccess"),
+        None,
+    ))
+}
+
+#[derive(Deserialize)]
+struct PostDataWmSize {
+    device_id: String,
+    value: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct PostDataWmDensity {
+    device_id: String,
+    value: Option<String>,
+}
+
+async fn adb_wm_size(
+    Json(payload): Json<PostDataWmSize>,
+) -> Result<JsonResponse, WebServerError> {
+    ensure_device_controlled(&payload.device_id).await?;
+    let device_id = &payload.device_id;
+
+    match payload.value {
+        Some(value) if !value.trim().is_empty() => {
+            Device::shell_logged(device_id, ["wm", "size", value.trim()])
+                .map_err(WebServerError::bad_request)?;
+            log::info!("[WebServe] 设置屏幕尺寸: {} -> {}", device_id, value);
+        }
+        _ => {
+            Device::shell_logged(device_id, ["wm", "size", "reset"])
+                .map_err(WebServerError::bad_request)?;
+            log::info!("[WebServe] 重置屏幕尺寸: {}", device_id);
+        }
+    }
+
+    Ok(JsonResponse::success(
+        t!("web.device.wmSizeSuccess"),
+        None,
+    ))
+}
+
+async fn adb_wm_density(
+    Json(payload): Json<PostDataWmDensity>,
+) -> Result<JsonResponse, WebServerError> {
+    ensure_device_controlled(&payload.device_id).await?;
+    let device_id = &payload.device_id;
+
+    match payload.value {
+        Some(value) if !value.trim().is_empty() => {
+            Device::shell_logged(device_id, ["wm", "density", value.trim()])
+                .map_err(WebServerError::bad_request)?;
+            log::info!("[WebServe] 设置屏幕密度: {} -> {}", device_id, value);
+        }
+        _ => {
+            Device::shell_logged(device_id, ["wm", "density", "reset"])
+                .map_err(WebServerError::bad_request)?;
+            log::info!("[WebServe] 重置屏幕密度: {}", device_id);
+        }
+    }
+
+    Ok(JsonResponse::success(
+        t!("web.device.wmDensitySuccess"),
         None,
     ))
 }

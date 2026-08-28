@@ -46,7 +46,9 @@
       "mappingReadSuccess": "成功读取映射配置",
       "invalidSize": "无效的尺寸",
       "migrateMappingConfig": "将映射配置从 %{file} 迁移到 %{newFile}",
-      "deleteMappingConfig": "删除映射配置"
+      "deleteMappingConfig": "删除映射配置",
+      "clearAllMappings": "清空所有预设",
+      "clearAllMappingsSuccess": "成功清空所有预设"
     },
     "device": {
       "deviceListObtained": "成功获取设备列表",
@@ -76,6 +78,8 @@
       "getAdbAppsSuccess": "成功获取应用列表",
       "getAdbDisplaysSuccess": "成功获取显示列表",
       "startAdbAppSuccess": "成功启动应用",
+    "wmSizeSuccess": "屏幕尺寸设置成功",
+    "wmDensitySuccess": "屏幕密度设置成功",
       "noAppFound": "未找到可启动应用",
       "noDisplayFound": "未找到显示",
       "invalidStartAppParams": "启动应用参数无效"
@@ -255,3 +259,5 @@
     "windowLevelChanged": "蒙版置顶"
   }
 }
+
+

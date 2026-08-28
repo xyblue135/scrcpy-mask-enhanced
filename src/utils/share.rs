@@ -59,6 +59,16 @@ impl ControlledDevice {
         }
     }
 
+    pub async fn update_device_dpi(scid: String, dpi: u32) {
+        let mut device_list = CONTROLLED_DEVICES.write().await;
+        for device in device_list.iter_mut() {
+            if device.scid == scid {
+                device.device_dpi = dpi;
+                return;
+            }
+        }
+    }
+
     // Blocking variants for use from sync contexts (e.g. Bevy systems)
 
     pub fn get_main_device_blocking() -> Option<ScrcpyDevice> {

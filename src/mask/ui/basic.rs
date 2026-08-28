@@ -14,7 +14,7 @@ use crate::{
         mask_command::TitlebarState,
         mapping::config::ActiveMappingConfig,
         video::{VideoPlayer, YuvVideoMaterial, create_initial_yuv_material},
-        window_state::{MaskFullscreenState, MaskMaximizeState, toggle_window_maximized},
+        window_state::{MaskMaximizeState, toggle_window_maximized},
     },
     scrcpy::{constant::Keycode, controller::ControllerCommand, device_action},
     utils::{ChannelSenderCS, ChannelSenderD, share::ControlledDevice},
@@ -592,7 +592,6 @@ fn handle_titlebar_buttons(
     pushpin_query: Query<&Interaction, (With<PushpinButton>, Changed<Interaction>)>,
     close_query: Query<&Interaction, (With<CloseButton>, Changed<Interaction>)>,
     mut maximize_state: ResMut<MaskMaximizeState>,
-    fullscreen_state: Res<MaskFullscreenState>,
     d_tx: Res<ChannelSenderD>,
 ) {
     for interaction in minimize_query.iter() {
@@ -602,7 +601,7 @@ fn handle_titlebar_buttons(
     }
     for interaction in maximize_query.iter() {
         if *interaction == Interaction::Pressed {
-            toggle_window_maximized(&mut window, &mut maximize_state, &fullscreen_state);
+            toggle_window_maximized(&mut window, &mut maximize_state);
         }
     }
     for interaction in pushpin_query.iter() {
@@ -762,11 +761,10 @@ fn resize_handle_priority(handle: CompassOctant) -> u8 {
 fn handle_resize(
     mut window: Single<&mut Window>,
     mut resize_state: ResMut<MaskResizeState>,
-    fullscreen_state: Res<MaskFullscreenState>,
     maximize_state: Res<MaskMaximizeState>,
     query: Query<(&ResizeHandle, &Interaction), Changed<Interaction>>,
 ) {
-    if fullscreen_state.suppress_window_persistence() || maximize_state.active {
+    if maximize_state.active {
         return;
     }
     let Some(handle) = query
@@ -796,11 +794,10 @@ fn active_resize_handle(
 
 fn sync_resize_cursor(
     resize_query: Query<(&ResizeHandle, &Interaction)>,
-    fullscreen_state: Res<MaskFullscreenState>,
     maximize_state: Res<MaskMaximizeState>,
     mut cursor_query: Single<&mut CursorIcon, With<Window>>,
 ) {
-    let resize_cursor = if fullscreen_state.suppress_window_persistence() || maximize_state.active {
+    let resize_cursor = if maximize_state.active {
         SystemCursorIcon::Default
     } else {
         active_resize_handle(resize_query)

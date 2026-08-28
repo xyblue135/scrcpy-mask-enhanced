@@ -223,6 +223,28 @@ impl Device {
         }
         Err(t!("adb.getScreenSizeFailed").to_string())
     }
+
+    pub fn screen_dpi(id: &str) -> Result<u32, String> {
+        let mut device = Device::new_server_device(id);
+
+        let mut output: Vec<u8> = Vec::new();
+        let mut cursor = Cursor::new(&mut output);
+        device
+            .shell_command(&"wm density", Some(&mut cursor), None)
+            .map_err(|e| format!("{}: {}", t!("adb.adbShellCommandFailed"), e))?;
+
+        let stdout = String::from_utf8_lossy(&output);
+        for line in stdout.lines() {
+            if let Some(rest) = line.strip_prefix("Physical density: ") {
+                let dpi = rest
+                    .trim()
+                    .parse::<u32>()
+                    .map_err(|e| format!("{}: {}", t!("adb.parseDensityFailed"), e))?;
+                return Ok(dpi);
+            }
+        }
+        Err(t!("adb.getDensityFailed").to_string())
+    }
 }
 
 pub struct Adb {

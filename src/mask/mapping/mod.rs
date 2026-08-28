@@ -7,10 +7,6 @@ pub mod executor;
 pub mod fire;
 pub mod movement_assist;
 pub mod observation;
-// `override` 是 Rust 关键字，无法直接作为模块名；用 `#[path]` 指定源文件，
-// 模块名采用 `preset_override`，调用方写 `crate::mask::mapping::preset_override::xxx`。
-#[path = "override.rs"]
-pub mod preset_override;
 pub mod quick_switch;
 pub mod raw_input;
 pub mod script;

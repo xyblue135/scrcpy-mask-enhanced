@@ -18,6 +18,7 @@ pub struct ScrcpyDevice {
     pub name: String,
     pub main: bool,
     pub device_size: (u32, u32),
+    pub device_dpi: u32,
 }
 
 impl ScrcpyDevice {
@@ -29,6 +30,7 @@ impl ScrcpyDevice {
             name: "Unknow".to_string(),
             main,
             device_size: (0, 0),
+            device_dpi: 0,
         }
     }
 }

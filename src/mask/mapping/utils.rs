@@ -25,6 +25,14 @@ use crate::scrcpy::{
 static LAST_SENT_TOUCH_POS: Lazy<std::sync::Mutex<HashMap<u64, Vec2>>> =
     Lazy::new(|| std::sync::Mutex::new(HashMap::new()));
 
+/// 各 pointer_id 连续"被阈值丢弃"的小移动计数。
+/// 自适应阈值开启时，连续多个小移动会让该 pointer 的有效阈值在
+/// [1x, 2x] user_threshold 之间线性增长；遇到真实大移动立即清零。
+/// 与 LAST_SENT_TOUCH_POS 共生：Down/Up 也会清零，保证新一次的第一个 Move
+/// 一定以基线阈值比较。
+static POINTER_JITTER_COUNT: Lazy<std::sync::Mutex<HashMap<u64, u32>>> =
+    Lazy::new(|| std::sync::Mutex::new(HashMap::new()));
+
 pub const DEFAULT_SWIPE_DURATION: u64 = 25; // ms
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, Copy)]
@@ -137,24 +145,72 @@ impl ControlMsgHelper {
         // 按距离阈值降噪：同一 pointer_id 的连续 Move，若与上次发送位置距离² < threshold²
         // 直接丢弃。显著减少网络消息 / 日志体积 / CPU 调度，对实际手感影响很小。
         // Down / Up 永远不过滤，并同步更新参考点（保证后续 Move 的比较基准正确）。
-        let threshold = LocalConfig::get_move_distance_threshold();
-        if threshold > 0.0 {
-            if matches!(action, MotionEventAction::Move) {
-                let threshold_sq = threshold * threshold;
-                let should_drop = {
-                    if let Ok(map) = LAST_SENT_TOUCH_POS.lock() {
-                        map.get(&pointer_id).map(|last| {
-                            let dx = pos.x - last.x;
-                            let dy = pos.y - last.y;
-                            dx * dx + dy * dy < threshold_sq
-                        })
+        let base_threshold = LocalConfig::get_move_distance_threshold();
+        if base_threshold > 0.0 {
+            // 计算本 pointer 当前的"有效阈值"（自适应可能放大）
+            let effective_threshold = {
+                if LocalConfig::get_move_adaptive_enabled() {
+                    let window = LocalConfig::get_move_adaptive_window();
+                    if let Ok(jmap) = POINTER_JITTER_COUNT.lock() {
+                        let count = jmap.get(&pointer_id).copied().unwrap_or(0);
+                        // 比例 = count / window，clamp 到 [0,1]；倍率线性从 1x 涨到 2x
+                        let ratio = (count as f32 / window as f32).clamp(0.0, 1.0);
+                        base_threshold * (1.0 + ratio)
                     } else {
-                        Some(false)
+                        base_threshold
+                    }
+                } else {
+                    base_threshold
+                }
+            };
+            let threshold_sq = effective_threshold * effective_threshold;
+
+            if matches!(action, MotionEventAction::Move) {
+                let (should_drop, dist_sq) = {
+                    if let Ok(map) = LAST_SENT_TOUCH_POS.lock() {
+                        let drop = map
+                            .get(&pointer_id)
+                            .map(|last| {
+                                let dx = pos.x - last.x;
+                                let dy = pos.y - last.y;
+                                let d2 = dx * dx + dy * dy;
+                                (d2 < threshold_sq, d2)
+                            })
+                            .unwrap_or((false, 0.0));
+                        drop
+                    } else {
+                        (false, 0.0)
                     }
                 };
-                if should_drop == Some(true) {
+                if should_drop {
                     crate::perf::incr("touch.move_filtered");
+                    if effective_threshold > base_threshold {
+                        crate::perf::incr("touch.move_adaptive_filtered");
+                    }
+                    // 自适应：连续小移动计数 +1
+                    if LocalConfig::get_move_adaptive_enabled() {
+                        if let Ok(mut jmap) = POINTER_JITTER_COUNT.lock() {
+                            let entry = jmap.entry(pointer_id).or_insert(0);
+                            *entry = entry.saturating_add(1);
+                        }
+                    }
                     return;
+                }
+                // 真实移动：清零抖动计数，让阈值回到基线
+                if LocalConfig::get_move_adaptive_enabled()
+                    && dist_sq > 0.0
+                    && dist_sq >= base_threshold * base_threshold
+                {
+                    if let Ok(mut jmap) = POINTER_JITTER_COUNT.lock() {
+                        jmap.insert(pointer_id, 0);
+                    }
+                }
+            } else {
+                // Down / Up 永远不过滤：清零自适应计数（让下一次 Down 后的第一个 Move 用基线阈值）
+                if LocalConfig::get_move_adaptive_enabled() {
+                    if let Ok(mut jmap) = POINTER_JITTER_COUNT.lock() {
+                        jmap.insert(pointer_id, 0);
+                    }
                 }
             }
             if let Ok(mut map) = LAST_SENT_TOUCH_POS.lock() {

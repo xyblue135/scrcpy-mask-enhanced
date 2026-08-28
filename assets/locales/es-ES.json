@@ -76,6 +76,8 @@
       "getAdbAppsSuccess": "Lista de apps obtenida correctamente",
       "getAdbDisplaysSuccess": "Lista de pantallas obtenida correctamente",
       "startAdbAppSuccess": "App iniciada correctamente",
+    "wmSizeSuccess": "Tamaño de pantalla establecido",
+    "wmDensitySuccess": "Densidad de pantalla establecida",
       "noAppFound": "No se encontró ninguna app iniciable",
       "noDisplayFound": "No se encontró ninguna pantalla",
       "invalidStartAppParams": "Parámetros de inicio de app no válidos"
@@ -255,3 +257,5 @@
     "windowLevelChanged": "Máscara siempre encima"
   }
 }
+
+

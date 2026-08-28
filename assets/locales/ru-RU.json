@@ -76,6 +76,8 @@
       "getAdbAppsSuccess": "Список приложений успешно получен",
       "getAdbDisplaysSuccess": "Список дисплеев успешно получен",
       "startAdbAppSuccess": "Приложение успешно запущено",
+    "wmSizeSuccess": "Размер экрана установлен",
+    "wmDensitySuccess": "Плотность экрана установлена",
       "noAppFound": "Запускаемые приложения не найдены",
       "noDisplayFound": "Дисплей не найден",
       "invalidStartAppParams": "Недопустимые параметры запуска приложения"
@@ -255,3 +257,5 @@
     "windowLevelChanged": "Маска всегда поверх окон"
   }
 }
+
+

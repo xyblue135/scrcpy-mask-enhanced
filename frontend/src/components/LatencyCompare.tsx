@@ -2,7 +2,7 @@ import { useState, useCallback, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, Button, Flex, InputNumber, Slider, Switch, Typography, Upload } from "antd";
 import { useAppDispatch, useAppSelector } from "../store/store";
-import { setMoveDistanceThreshold, setTouchProbeEnabled } from "../store/localConfig";
+import { setMoveDistanceThreshold, setMoveAdaptiveEnabled, setMoveAdaptiveWindow, setTouchProbeEnabled } from "../store/localConfig";
 import {
   CloudUploadOutlined,
   PhoneOutlined,
@@ -46,6 +46,12 @@ export default function LatencyCompare() {
   );
   const moveThreshold = useAppSelector(
     (state) => state.localConfig.moveDistanceThreshold,
+  );
+  const moveAdaptiveEnabled = useAppSelector(
+    (state) => state.localConfig.moveAdaptiveEnabled,
+  );
+  const moveAdaptiveWindow = useAppSelector(
+    (state) => state.localConfig.moveAdaptiveWindow,
   );
   // 手机截图
   const [phoneImg, setPhoneImg] = useState<string>("");
@@ -260,6 +266,57 @@ export default function LatencyCompare() {
                 addonAfter="px"
               />
             </Flex>
+            <Flex
+              align="center"
+              justify="space-between"
+              wrap
+              gap={12}
+              style={{ marginTop: 4 }}
+            >
+              <Flex align="center" gap={8} wrap>
+                <Typography.Text style={{ fontSize: 12 }}>
+                  {t("latencyCompare.moveAdaptiveTitle")}
+                </Typography.Text>
+                <Switch
+                  size="small"
+                  checked={moveAdaptiveEnabled}
+                  onChange={(v) => dispatch(setMoveAdaptiveEnabled(v))}
+                />
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  {t("latencyCompare.moveAdaptiveUnit", {
+                    window: moveAdaptiveWindow,
+                    max: Math.max(1, moveAdaptiveWindow) * 2,
+                  })}
+                </Typography.Text>
+              </Flex>
+              <Flex align="center" gap={6} wrap style={{ minWidth: 200 }}>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  {t("latencyCompare.moveAdaptiveWindow")}
+                </Typography.Text>
+                <Slider
+                  min={2}
+                  max={32}
+                  step={1}
+                  value={moveAdaptiveWindow}
+                  onChange={(v) => dispatch(setMoveAdaptiveWindow(v as number))}
+                  style={{ flex: 1, minWidth: 100 }}
+                  tooltip={{ formatter: (v) => `${v}` }}
+                />
+                <InputNumber
+                  min={2}
+                  max={32}
+                  step={1}
+                  value={moveAdaptiveWindow}
+                  onChange={(v) =>
+                    v !== null && dispatch(setMoveAdaptiveWindow(v))
+                  }
+                  style={{ width: 70 }}
+                />
+              </Flex>
+            </Flex>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              {t("latencyCompare.moveAdaptiveDesc")}
+            </Typography.Text>
           </Flex>
         }
         style={{ marginBottom: 16 }}

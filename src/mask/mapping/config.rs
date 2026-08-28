@@ -177,6 +177,43 @@ macro_rules! impl_mapping_related {
                 }
             }
 
+            /// 提取按钮的稳定 id 和 (x, y) 位置。MultipleTap / Swipe 这类有多个位置的
+            /// 类型返回 `None`（子预设按 id 覆盖单一位置，不适用于多位置类型）。
+            pub fn extract_id_and_position(&self) -> Option<(&str, (i32, i32))> {
+                match self {
+                    BindMappingType::SingleTap(m) => Some((m.id.as_str(), (m.position.x, m.position.y))),
+                    BindMappingType::RepeatTap(m) => Some((m.id.as_str(), (m.position.x, m.position.y))),
+                    BindMappingType::DirectionPad(m) => Some((m.id.as_str(), (m.position.x, m.position.y))),
+                    BindMappingType::MouseCastSpell(m) => Some((m.id.as_str(), (m.position.x, m.position.y))),
+                    BindMappingType::PadCastSpell(m) => Some((m.id.as_str(), (m.position.x, m.position.y))),
+                    BindMappingType::CancelCast(m) => Some((m.id.as_str(), (m.position.x, m.position.y))),
+                    BindMappingType::Observation(m) => Some((m.id.as_str(), (m.position.x, m.position.y))),
+                    BindMappingType::Fps(m) => Some((m.id.as_str(), (m.position.x, m.position.y))),
+                    BindMappingType::Fire(m) => Some((m.id.as_str(), (m.position.x, m.position.y))),
+                    BindMappingType::RawInput(m) => Some((m.id.as_str(), (m.position.x, m.position.y))),
+                    BindMappingType::Script(m) => Some((m.id.as_str(), (m.position.x, m.position.y))),
+                    BindMappingType::Wheel(m) => Some((m.id.as_str(), (m.position.x, m.position.y))),
+                    BindMappingType::MultipleTap(_) | BindMappingType::Swipe(_) => None,
+                }
+            }
+
+            /// 提取按钮的备注（用于子预设 UI 展示）。
+            pub fn extract_note(&self) -> Option<&str> {
+                match self {
+                    BindMappingType::SingleTap(m) => Some(m.note.as_str()),
+                    BindMappingType::RepeatTap(m) => Some(m.note.as_str()),
+                    BindMappingType::MultipleTap(m) => Some(m.note.as_str()),
+                    BindMappingType::MouseCastSpell(m) => Some(m.note.as_str()),
+                    BindMappingType::CancelCast(m) => Some(m.note.as_str()),
+                    BindMappingType::Observation(m) => Some(m.note.as_str()),
+                    BindMappingType::Fps(m) => Some(m.note.as_str()),
+                    BindMappingType::Fire(m) => Some(m.note.as_str()),
+                    BindMappingType::RawInput(m) => Some(m.note.as_str()),
+                    BindMappingType::Script(m) => Some(m.note.as_str()),
+                    _ => None,
+                }
+            }
+
             $(
                 paste! {
                     pub fn [<as_ref_ $variant:lower>](&self) -> & [<BindMapping $variant>] {
