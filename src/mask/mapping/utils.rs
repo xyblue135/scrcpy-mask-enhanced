@@ -94,6 +94,13 @@ pub struct ControlMsgHelper;
 /// 每行一条事件，含时间戳、距上一条的间隔、action、指针与坐标，便于
 /// 分析「手机端卡顿是否由事件过密/抖动导致」。
 pub fn probe_touch(action: MotionEventAction, pointer_id: u64, pos: Vec2) {
+    probe_touch_xy(action, pointer_id, pos.x, pos.y);
+}
+
+/// `probe_touch` 的低层级版本：直接接受 x/y 两个 f32，避免在 `connection.rs`
+/// 这种已经拿到 i32 坐标的位置上再去构造一次 `bevy::math::Vec2`（Vec2 在该
+/// 模块不在直接 use 列表里，构造比较绕）。语义与 `probe_touch` 完全一致。
+pub fn probe_touch_xy(action: MotionEventAction, pointer_id: u64, x: f32, y: f32) {
     if !LocalConfig::get_touch_probe_enabled() {
         return;
     }
@@ -113,8 +120,8 @@ pub fn probe_touch(action: MotionEventAction, pointer_id: u64, pos: Vec2) {
         "since_last_ms": since_last_ms,
         "action": format!("{:?}", action),
         "pointer_id": pointer_id,
-        "x": pos.x as i32,
-        "y": pos.y as i32,
+        "x": x as i32,
+        "y": y as i32,
     });
     let mut s = serde_json::to_string(&line).unwrap();
     s.push('\n');
@@ -231,7 +238,8 @@ impl ControlMsgHelper {
         }) {
             log::warn!("[Mapping] send_touch failed: {}", e);
         }
-        probe_touch(action, pointer_id, pos);
+        // 注：触摸事件探针统一在 connection.rs::control_writer 中记录（覆盖
+        // mask 自注入 + scrcpy 原生触摸两条路径），这里不再重复调用 probe_touch。
     }
 
     pub fn send_keycode(

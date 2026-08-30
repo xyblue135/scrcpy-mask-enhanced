@@ -34,7 +34,9 @@
   },
   "usageGuide": {
     "perfMonitorTitle": "遅延プローブデータ — perf_monitor 使用説明",
-    "perfMonitorContent": "上記のスクリーンショット比較では全体の遅延を大まかに把握するだけです。メインプログラムは毎秒、各段階の所要時間（ネットワーク読み取り、ビデオデコード、UIレンダリング、オーディオデコードなど）をデータディレクトリの perf.jsonl に書き込みます。\n詳細な探針遅延グラフを見るには、perf_monitor を自分で設定してください：\n1. プロジェクトの perf_monitor ディレクトリで python monitor.py を実行（依存ゼロ、標準ライブラリのみ）；\n2. デフォルトで 127.0.0.1:8765 をリッスンし、ブラウザを自動で開きます；\n3. メインプログラム実行中は、各探針の avg / p95 / max、FPS、ドロップフレーム統計をリアルタイム表示します。\nオプション：--dir で perf.jsonl のディレクトリ指定、--port でポート変更、--host でリスンアドレス変更、--no-browser でブラウザ自動起動を無効化。"
+    "perfMonitorContent": "上記のスクリーンショット比較では全体の遅延を大まかに把握するだけです。メインプログラムは毎秒、各段階の所要時間（ネットワーク読み取り、ビデオデコード、UIレンダリング、オーディオデコードなど）をデータディレクトリの perf.jsonl に書き込みます。\n詳細な探針遅延グラフを見るには、perf_monitor を自分で設定してください：\n1. プロジェクトの perf_monitor ディレクトリで python monitor.py を実行（依存ゼロ、標準ライブラリのみ）；\n2. デフォルトで 127.0.0.1:8765 をリッスンし、ブラウザを自動で開きます；\n3. メインプログラム実行中は、各探針の avg / p95 / max、FPS、ドロップフレーム統計をリアルタイム表示します。\nオプション：--dir で perf.jsonl のディレクトリ指定、--port でポート変更、--host でリスンアドレス変更、--no-browser でブラウザ自動起動を無効化。",
+    "title": "使い方",
+    "subtitle": "完全な説明は中文 / English 版でのみ提供されています。言語を切り替えてご確認ください。\nFull instructions are only provided in Chinese / English. Please switch the language to view."
   },
   "devices": {
     "adbTools": {

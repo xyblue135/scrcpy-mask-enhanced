@@ -34,7 +34,9 @@
   },
   "usageGuide": {
     "perfMonitorTitle": "Dados de Sonda de Latência — Uso do perf_monitor",
-    "perfMonitorContent": "A comparação de capturas acima dá apenas uma noção aproximada da latência geral. O programa principal grava medições por estágio (leitura de rede, decodificação de vídeo, renderização da UI, decodificação de áudio etc.) em perf.jsonl no diretório de dados a cada segundo.\nPara ver curvas detalhadas de latência, configure o perf_monitor você mesmo:\n1. Execute python monitor.py no diretório perf_monitor do projeto (zero dependências, apenas biblioteca padrão);\n2. Por padrão escuta em 127.0.0.1:8765 e abre o navegador automaticamente;\n3. Enquanto o programa principal roda, a página exibe avg / p95 / max de cada medição, FPS e estatísticas de quadros perdidos em tempo real.\nOpções: --dir define o diretório do perf.jsonl, --port muda a porta, --host muda o endereço, --no-browser não abre o navegador."
+    "perfMonitorContent": "A comparação de capturas acima dá apenas uma noção aproximada da latência geral. O programa principal grava medições por estágio (leitura de rede, decodificação de vídeo, renderização da UI, decodificação de áudio etc.) em perf.jsonl no diretório de dados a cada segundo.\nPara ver curvas detalhadas de latência, configure o perf_monitor você mesmo:\n1. Execute python monitor.py no diretório perf_monitor do projeto (zero dependências, apenas biblioteca padrão);\n2. Por padrão escuta em 127.0.0.1:8765 e abre o navegador automaticamente;\n3. Enquanto o programa principal roda, a página exibe avg / p95 / max de cada medição, FPS e estatísticas de quadros perdidos em tempo real.\nOpções: --dir define o diretório do perf.jsonl, --port muda a porta, --host muda o endereço, --no-browser não abre o navegador.",
+    "title": "Guia de uso",
+    "subtitle": "As instruções detalhadas só estão disponíveis em chinês e inglês. Mude o idioma para visualizar.\nFull instructions are only provided in Chinese / English. Please switch the language to view."
   },
   "devices": {
     "adbTools": {

@@ -1,4 +1,4 @@
-﻿use std::{
+use std::{
     fs::File,
     net::{Ipv4Addr, SocketAddrV4},
     sync::OnceLock,
@@ -23,8 +23,8 @@ use scrcpy_mask::{
     tokio_tasks::{TokioTasksPlugin, TokioTasksRuntime},
     utils::{
         ChannelReceiverM, ChannelReceiverV, ChannelReceiverVideoSnapshot, ChannelSenderCS,
-        ChannelSenderD, ChannelSenderWS, LatestVideoFrame, VideoSnapshotResult, check_for_update,
-        relate_to_data_path, share::ControlledDevice,
+        ChannelSenderD, ChannelSenderWS, LatestVideoFrame, VideoSnapshotResult, relate_to_data_path,
+        share::ControlledDevice,
     },
     web::{self, ws::WebSocketNotification},
 };
@@ -107,11 +107,11 @@ fn main() {
     )
     .add_plugins(TokioTasksPlugin::default())
     .add_plugins(MaskPlugins)
-    .add_systems(Startup, (start_servers, check_for_update_system))
-    // ChannelReceiverV 由 start_servers 通过 Commands 延迟插入，
-    // 因此 perf_flush_system 必须放到 PostStartup（Startup 结束后资源才就绪），
-    // 否则会在 Startup 内与 start_servers 并行执行而读到不存在的资源。
-    .add_systems(PostStartup, perf_flush_system)
+    .add_systems(Startup, start_servers)
+    // perf_enabled 改成动态可切换：perf_check_system 在 Update 每秒轮询一次配置，
+    // 开关从关变开时自动启动后台写文件任务；切回关时不重复启动，per-second 落盘
+    // 任务自身通过 AtomicBool 提前返回保证不影响 CPU。
+    .add_systems(Update, perf_check_system)
     .add_systems(Update, on_app_exit);
 
     #[cfg(target_os = "macos")]
@@ -188,10 +188,56 @@ fn start_servers(mut commands: Commands) {
     controller::Controller::start(controller_addr, cs_tx, v_channel, d_rx, m_tx, ws_tx);
 }
 
-fn check_for_update_system(runtime: ResMut<TokioTasksRuntime>) {
+/// 检查 perf_enabled 状态，从关变开时启动每秒写 perf.jsonl 的后台任务。
+/// 启动后该任务常驻运行（每帧通过 `get_perf_enabled()` 提前返回），关闭开关只会停止落盘，
+/// 但已经启动的循环不会反复重启，避免资源浪费。
+fn perf_check_system(
+    runtime: ResMut<TokioTasksRuntime>,
+    v_channel: Res<ChannelReceiverV>,
+) {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    static PERF_TASK_STARTED: AtomicBool = AtomicBool::new(false);
+
+    if !LocalConfig::get_perf_enabled() {
+        return;
+    }
+    if PERF_TASK_STARTED
+        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+        .is_err()
+    {
+        return;
+    }
+
+    let v_frame = v_channel.0.clone();
     runtime.spawn_background_task(move |_ctx| async move {
-        if let Err(e) = check_for_update().await {
-            log::error!("{}", e);
+        use std::time::Duration;
+        perf::register_all();
+        let file = relate_to_data_path(["perf.jsonl"]);
+        if let Some(parent) = file.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let mut interval = tokio::time::interval(Duration::from_secs(1));
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        let mut prev_delivered = 0u64;
+        let mut prev_dropped = 0u64;
+        loop {
+            interval.tick().await;
+            // 即使任务已启动也要尊重开关：关闭后只停止落盘但保留循环（每秒空转，
+            // 重新开启无需重新注册探针和创建文件句柄）。
+            if !LocalConfig::get_perf_enabled() {
+                // 同步帧数基准，避免重新打开时首行出现巨大的 FPS 跳变
+                prev_delivered = v_frame.delivered_frames();
+                prev_dropped = v_frame.dropped_frames();
+                continue;
+            }
+            let delivered = v_frame.delivered_frames();
+            let dropped = v_frame.dropped_frames();
+            let fps = (delivered.saturating_sub(prev_delivered)) as f64;
+            let delivered_delta = delivered.saturating_sub(prev_delivered);
+            let dropped_delta = dropped.saturating_sub(prev_dropped);
+            perf::flush_to_file(&file, fps, delivered_delta, dropped_delta);
+            prev_delivered = delivered;
+            prev_dropped = dropped;
         }
     });
 }
@@ -210,35 +256,3 @@ fn on_app_exit(mut exit_events: MessageReader<AppExit>) {
     }
 }
 
-/// 每秒把性能探针快照 + 视频帧统计写入 perf.jsonl，供 perf_monitor 读取。
-fn perf_flush_system(runtime: ResMut<TokioTasksRuntime>, v_channel: Res<ChannelReceiverV>) {
-    if !LocalConfig::get_perf_enabled() {
-        return;
-    }
-    // ChannelReceiverV 内部是 Arc，克隆只是引用计数 +1，可安全 move 进 'static 后台任务。
-    let v_frame = v_channel.0.clone();
-    runtime.spawn_background_task(move |_ctx| async move {
-        use std::time::Duration;
-        perf::register_all();
-        // 探针数据写到用户数据目录 data/（与配置、日志同目录），不占用系统 AppData。
-        let file = relate_to_data_path(["perf.jsonl"]);
-        if let Some(parent) = file.parent() {
-            let _ = std::fs::create_dir_all(parent);
-        }
-        let mut interval = tokio::time::interval(Duration::from_secs(1));
-        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
-        let mut prev_delivered = 0u64;
-        let mut prev_dropped = 0u64;
-        loop {
-            interval.tick().await;
-            let delivered = v_frame.delivered_frames();
-            let dropped = v_frame.dropped_frames();
-            let fps = (delivered.saturating_sub(prev_delivered)) as f64;
-            let delivered_delta = delivered.saturating_sub(prev_delivered);
-            let dropped_delta = dropped.saturating_sub(prev_dropped);
-            perf::flush_to_file(&file, fps, delivered_delta, dropped_delta);
-            prev_delivered = delivered;
-            prev_dropped = dropped;
-        }
-    });
-}

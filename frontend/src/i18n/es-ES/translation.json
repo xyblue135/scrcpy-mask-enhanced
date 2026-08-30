@@ -34,7 +34,9 @@
   },
   "usageGuide": {
     "perfMonitorTitle": "Datos de Sonda de Latencia — Uso de perf_monitor",
-    "perfMonitorContent": "La comparación de capturas anterior solo da una idea aproximada de la latencia general. El programa principal escribe mediciones por etapa (lectura de red, decodificación de video, renderizado de UI, decodificación de audio, etc.) en perf.jsonl en el directorio de datos cada segundo.\nPara ver curvas detalladas de latencia, configura perf_monitor tú mismo:\n1. Ejecuta python monitor.py en el directorio perf_monitor del proyecto (cero dependencias, solo biblioteca estándar);\n2. Por defecto escucha en 127.0.0.1:8765 y abre el navegador automáticamente;\n3. Mientras el programa principal se ejecuta, la página muestra avg / p95 / max de cada sonda, FPS y estadísticas de fotogramas perdidos en tiempo real.\nOpciones: --dir para el directorio de perf.jsonl, --port para el puerto, --host para la dirección, --no-browser para no abrir el navegador."
+    "perfMonitorContent": "La comparación de capturas anterior solo da una idea aproximada de la latencia general. El programa principal escribe mediciones por etapa (lectura de red, decodificación de video, renderizado de UI, decodificación de audio, etc.) en perf.jsonl en el directorio de datos cada segundo.\nPara ver curvas detalladas de latencia, configura perf_monitor tú mismo:\n1. Ejecuta python monitor.py en el directorio perf_monitor del proyecto (cero dependencias, solo biblioteca estándar);\n2. Por defecto escucha en 127.0.0.1:8765 y abre el navegador automáticamente;\n3. Mientras el programa principal se ejecuta, la página muestra avg / p95 / max de cada sonda, FPS y estadísticas de fotogramas perdidos en tiempo real.\nOpciones: --dir para el directorio de perf.jsonl, --port para el puerto, --host para la dirección, --no-browser para no abrir el navegador.",
+    "title": "Guía de uso",
+    "subtitle": "Las instrucciones detalladas solo están disponibles en chino e inglés. Cambia el idioma para verlas.\nFull instructions are only provided in Chinese / English. Please switch the language to view."
   },
   "devices": {
     "adbTools": {

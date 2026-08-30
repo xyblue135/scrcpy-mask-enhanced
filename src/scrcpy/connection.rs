@@ -103,12 +103,22 @@ impl ScrcpyConnection {
                                         y,
                                         w,
                                         h,
-                                        action: _,
-                                        pointer_id: _,
+                                        action,
+                                        pointer_id,
                                         pressure: _,
                                         action_button: _,
                                         buttons: _,
                                     } => {
+                                        // 触屏探针：在写到 socket 前记录一次，确保
+                                        //   1. mask 自己注入的触摸（通过 ControlMsgHelper::send_touch）
+                                        //   2. scrcpy 原生触摸（mouse=uhid 走 uhid 通道直发的）
+                                        //   都会被记录，覆盖开关切到 ON 的实时生效路径。
+                                        crate::mask::mapping::utils::probe_touch_xy(
+                                            *action,
+                                            *pointer_id as u64,
+                                            *x as f32,
+                                            *y as f32,
+                                        );
                                         let (device_w, device_h) = watch_rx.borrow_and_update().clone();
                                         let (old_x, old_y) = (*x, *y);
                                         let (old_w, old_h) = (*w, *h);
