@@ -20,31 +20,15 @@
   },
   "usageGuide": {
     "title": "使用说明",
-    "content": "这里是使用说明，你可以编辑此文件来添加内容。\n\n文件路径：frontend/src/components/UsageGuide.tsx\n\n基础用法：\n1. 连接设备后，在\"设备\"页面选择要控制的设备\n2. 在\"映射\"页面创建和管理键盘映射\n3. 使用\"ADB 分辨率\"调整设备显示参数\n4. 在\"Scrcpy 预设\"中配置串流参数"
+    "content": "这里是使用说明，你可以编辑此文件来添加内容。\n\n文件路径：frontend/src/components/UsageGuide.tsx\n\n基础用法：\n1. 连接设备后，在\"设备\"页面选择要控制的设备\n2. 在\"映射\"页面创建和管理键盘映射\n3. 使用\"ADB 分辨率\"调整设备显示参数\n4. 在\"Scrcpy 预设\"中配置串流参数",
+    "perfMonitorTitle": "延迟探针数据 — perf_monitor 使用说明",
+    "perfMonitorContent": "上方截图对比只能粗略感知整体延迟，细分延迟请使用 perf_monitor 下的两个监控页面（零第三方依赖，仅标准库）：\n· 屏幕性能：主程序每秒把各环节耗时探针（网络读取、视频解码、UI 渲染、音频解码等）写入数据目录下的 perf.jsonl，运行 python monitor.py 查看（默认端口 8765，页面展示各探针 avg / p95 / max 曲线、帧率与丢帧统计）。\n· 映射性能：每次注入手机的触摸事件写入 data/touch_probe.jsonl，运行 python touch_monitor.py 查看（默认端口 8766，页面展示事件频率、事件间隔与事件流）。\n可选参数：--dir 指定 jsonl 所在目录，--port 修改端口，--host 修改监听地址，--no-browser 不自动打开浏览器。"
   },
   "welcome": {
     "main": "欢迎来到 Scrcpy Mask 👏🏻"
   },
   "latencyCompare": {
     "title": "性能监测和延迟对比",
-    "desc": "在手机端截取当前画面（保存到手机内部），并截取 PC 端投屏窗口（保存到本地），两者对比可感知相对延迟。也可以上传手机截图到此处查看。",
-    "phoneCard": "手机截屏（保存在手机）",
-    "saveToPhone": "截取并保存到手机",
-    "phonePath": "手机路径：",
-    "windowCard": "截取投屏窗口（保存在 PC）",
-    "captureWindow": "截取投屏窗口",
-    "pcPath": "PC 保存路径：",
-    "uploadCard": "上传图片观察",
-    "uploadImage": "上传手机截图",
-    "uploadedUrl": "已上传：",
-    "uploadedTitle": "已上传的图片",
-    "noImage": "暂无截图，点击上方按钮截取",
-    "previewNotice": "此为预览参考，并非实际环境中的瞬间延迟。",
-    "captureBoth": "同时截取手机与窗口",
-    "measureTip": "下方截图仅供参考",
-    "measureTipDetail": "要准确测量真实投屏延迟，请用另一台手机拍摄「投屏窗口」和「手机屏幕」两个画面同时对比。两张截图的游戏时钟差可作粗略参考，但它们的时间戳差异主要反映截图指令耗时，并非真实投屏延迟。",
-    "perfMonitorGuideTitle": "想查看更详细的延迟探针数据？请使用 perf_monitor",
-    "perfMonitorGuideDetail": "上方截图对比只能粗略感知整体延迟，细分延迟请使用 perf_monitor 下的两个监控页面（零第三方依赖，仅标准库）：\n· 屏幕性能：主程序每秒把各环节耗时探针（网络读取、视频解码、UI 渲染、音频解码等）写入数据目录下的 perf.jsonl，运行 python monitor.py 查看（默认端口 8765，页面展示各探针 avg / p95 / max 曲线、帧率与丢帧统计）。\n· 映射性能：每次注入手机的触摸事件写入 data/touch_probe.jsonl，运行 python touch_monitor.py 查看（默认端口 8766，页面展示事件频率、事件间隔与事件流）。\n可选参数：--dir 指定 jsonl 所在目录，--port 修改端口，--host 修改监听地址，--no-browser 不自动打开浏览器。",
     "screenPerfTitle": "屏幕性能监控（perf.jsonl）",
     "screenPerfDesc": "记录投屏链路各环节耗时（网络读取、视频解码、UI 渲染、音频解码等）与帧率/丢帧统计，每秒一行。用 perf_monitor/monitor.py 查看延迟曲线。",
     "touchProbeEnabled": "映射性能探针（触摸事件）",
@@ -53,7 +37,11 @@
     "touchProbeOff": "关",
     "moveThresholdTitle": "Move 事件距离阈值降噪",
     "moveThresholdUnit": "当前阈值：{{value}} px（0 = 关闭）",
-    "moveThresholdDesc": "对同一 pointer_id 的连续 Move 事件，若 dx² + dy² < threshold² 则直接丢弃。显著减少事件数量 / CPU 调度 / 网络消息 / 日志体积 / UI 压力，对实际手感影响很小。建议从 2~6 px 开始尝试，FPS 视角/方向轮盘等高频微移场景下收益最明显。阈值越大降噪越狠，但过大可能让游戏内的瞄准出现可见的「跳点」。"
+    "moveThresholdDesc": "对同一 pointer_id 的连续 Move 事件，若 dx² + dy² < threshold² 则直接丢弃。显著减少事件数量 / CPU 调度 / 网络消息 / 日志体积 / UI 压力，对实际手感影响很小。建议从 2~6 px 开始尝试，FPS 视角/方向轮盘等高频微移场景下收益最明显。阈值越大降噪越狠，但过大可能让游戏内的瞄准出现可见的「跳点」。",
+    "moveAdaptiveTitle": "自适应阈值",
+    "moveAdaptiveUnit": "已启用（窗口 {{window}}，最大 {{max}} px）",
+    "moveAdaptiveWindow": "自适应窗口：",
+    "moveAdaptiveDesc": "根据最近 N 个 Move 事件的移动量动态调整阈值，在低速精细操作时自动降低阈值，高速大幅度移动时自动升高阈值。"
   },
   "devices": {
     "adbTools": {
@@ -413,7 +401,7 @@
       "restore": "还原",
       "activate": "启用",
       "refresh": "刷新",
-      "manage": "管理",
+      "manage": "键盘映射设置",
       "file": "文件",
       "create": "新建",
       "edit": "编辑",
@@ -450,6 +438,7 @@
       "showRandomRanges": "随机范围",
       "rotatePreview": "旋转预览",
       "hideIcons": "隐藏图标",
+      "screenRatioTip": "如果屏幕比例异常，请调整旋转方向，或比对键盘映射分辨率与手机是否一致",
       "customResolution": "自定义模板分辨率",
       "noMainDeviceShort": "无主设备",
       "unknown": "未知",
@@ -484,20 +473,15 @@
       "configureNow": "前往配置",
       "noBoundKeys": "暂无绑定按键",
       "boundKeysTitle": "按键定位",
-      "latencyPreview": "延迟预览",
-      "saveToLocal": "保存到本地",
-      "savedToLocal": "已保存到本地",
-      "noBackground": "暂无截图，请先刷新背景",
-      "updatedAt": "更新于",
-      "latencyTip": "此图为手机当前帧截图，可与投屏窗口实际画面对比感知相对延迟。",
-      "captureWindow": "截取投屏窗口",
-      "windowShotSuccess": "投屏窗口截图已保存到本地",
-      "windowShotFail": "窗口截图失败：{{error}}",
-      "windowShotPath": "已保存到：",
       "unbound": "未绑定",
       "quickSwitchUpdated": "预设切换设置已更新",
       "macroPresetUpdated": "宏预设设置已更新",
-      "more": "更多"
+      "originalSizeTip": "创建预设时所自定义的分辨率",
+      "more": "全局设置",
+      "mappingEnabled": "启用键盘映射",
+      "labelOpacity": "映射标签不透明度",
+      "buttonScale": "映射按钮显示大小",
+      "lowcastTip": "刷新键位背景直接使用 LowCast 当前正在显示的视频帧，因此虚拟屏模式会保存实际看到的虚拟屏画面。"
     },
     "override": {
       "tag": "子预设",
@@ -578,15 +562,11 @@
       "audio": "音频",
       "advance": "高级"
     },
-    "language": "语言",
     "webPort": "Web 端口",
     "webBindAddr": "Web 监听地址",
     "controllerPort": "控制服务端口",
     "adbPath": "Adb 路径",
     "language": "语言",
-    "mappingLabelOpacity": "映射标签不透明度",
-    "mappingButtonScale": "映射按钮显示大小",
-    "mappingButtonScaleTip": "仅调整可视化按钮的显示大小，adb 实际点击位置始终是按钮中心，不影响操作精度。",
     "clipboardSync": "剪切板同步",
     "videoCodec": "视频编码",
     "videoBitRate": "视频码率",
@@ -679,4 +659,3 @@
     "horizontalMaskPosition": "横屏蒙版位置"
   }
 }
-

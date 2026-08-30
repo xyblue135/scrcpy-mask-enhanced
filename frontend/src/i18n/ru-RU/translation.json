@@ -17,25 +17,24 @@
     "main": "Добро пожаловать в Scrcpy Mask 👏🏻"
   },
   "latencyCompare": {
-    "title": "Производительность и задержка",
-    "desc": "Сделайте снимок экрана телефона (сохраняется во внутренней памяти) и снимок окна трансляции на ПК (сохраняется локально), затем сравните их, чтобы оценить относительную задержку. Также можно загрузить снимки телефона сюда.",
-    "phoneCard": "Снимок телефона (сохраняется на телефоне)",
-    "saveToPhone": "Снять и сохранить на телефон",
-    "phonePath": "Путь на телефоне: ",
-    "windowCard": "Снимок окна трансляции (сохраняется на ПК)",
-    "captureWindow": "Снять окно трансляции",
-    "pcPath": "Путь сохранения на ПК: ",
-    "uploadCard": "Загрузить изображение для просмотра",
-    "uploadImage": "Загрузить снимок телефона",
-    "uploadedUrl": "Загружено: ",
-    "uploadedTitle": "Загруженное изображение",
-    "noImage": "Снимков пока нет. Нажмите кнопку выше.",
-    "previewNotice": "Это справочная информация, а не мгновенная задержка в реальной среде.",
-    "captureBoth": "Снять телефон и окно одновременно",
-    "measureTip": "Снимки ниже только для справки",
-    "measureTipDetail": "Чтобы точно измерить реальную задержку трансляции, используйте другой телефон для одновременной съёмки окна трансляции и экрана телефона. Разница игровых часов между двумя снимками — приблизительная оценка, но разница временных меток отражает в основном время команды захвата, а не реальную задержку трансляции.",
-    "perfMonitorGuideTitle": "Хотите более детальные данные о задержке? Используйте perf_monitor",
-    "perfMonitorGuideDetail": "Сравнение скриншотов выше даёт лишь грубое представление об общей задержке. Основная программа каждую секунду записывает замеры по этапам (чтение сети, декодирование видео, рендеринг UI, декодирование аудио и т.д.) в perf.jsonl в каталоге данных.\nЧтобы увидеть детальные графики задержек, настройте perf_monitor самостоятельно:\n1. Выполните python monitor.py в каталоге perf_monitor проекта (ноль зависимостей, только стандартная библиотека);\n2. По умолчанию слушает 127.0.0.1:8765 и автоматически открывает страницу в браузере;\n3. Пока основная программа работает, страница показывает avg / p95 / max по каждому замеру, FPS и статистику потерянных кадров в реальном времени.\nПараметры: --dir указать каталог perf.jsonl, --port изменить порт, --host изменить адрес, --no-browser не открывать браузер."
+    "title": "Performance & Latency",
+    "screenPerfTitle": "Screen performance monitor (perf.jsonl)",
+    "screenPerfDesc": "Records per-stage streaming timings (network read, video decode, UI render, audio decode) plus FPS / dropped-frame stats, one row per second. View curves with perf_monitor/monitor.py.",
+    "touchProbeEnabled": "Mapping performance probe (touch events)",
+    "touchProbeDesc": "Appends every touch event injected into the phone (timestamp, interval since the last event, action, pointer, coords) to data/touch_probe.jsonl. Use it to check whether phone-side stutter is caused by event density / jitter. View with perf_monitor/touch_monitor.py. Enabled by default.",
+    "touchProbeOn": "On",
+    "touchProbeOff": "Off",
+    "moveThresholdTitle": "Move event distance threshold (denoise)",
+    "moveThresholdUnit": "Current threshold: {{value}} px (0 = off)",
+    "moveThresholdDesc": "For consecutive Move events on the same pointer_id, if dx² + dy² < threshold² the event is dropped. This significantly reduces event count, CPU scheduling, network messages, log volume and UI pressure, with very little impact on the actual feel. Start with 2~6 px; the payoff is biggest in high-frequency micro-move scenarios (FPS view / direction pad). Larger thresholds denoise harder, but going too large can produce visible \"jumps\" while aiming in games.",
+    "moveAdaptiveTitle": "Adaptive threshold",
+    "moveAdaptiveUnit": "Enabled (window {{window}}, max {{max}} px)",
+    "moveAdaptiveWindow": "Adaptive window:",
+    "moveAdaptiveDesc": "Dynamically adjusts the threshold based on the movement magnitude of the last N Move events. Lowers the threshold during slow precise operations, raises it during fast large movements."
+  },
+  "usageGuide": {
+    "perfMonitorTitle": "Данные зонда задержки — Использование perf_monitor",
+    "perfMonitorContent": "Сравнение скриншотов выше даёт лишь грубое представление об общей задержке. Основная программа каждую секунду записывает замеры по этапам (чтение сети, декодирование видео, рендеринг UI, декодирование аудио и т.д.) в perf.jsonl в каталоге данных.\nЧтобы увидеть детальные графики задержек, настройте perf_monitor самостоятельно:\n1. Выполните python monitor.py в каталоге perf_monitor проекта (ноль зависимостей, только стандартная библиотека);\n2. По умолчанию слушает 127.0.0.1:8765 и автоматически открывает страницу в браузере;\n3. Пока основная программа работает, страница показывает avg / p95 / max по каждому замеру, FPS и статистику потерянных кадров в реальном времени.\nПараметры: --dir указать каталог perf.jsonl, --port изменить порт, --host изменить адрес, --no-browser не открывать браузер."
   },
   "devices": {
     "adbTools": {
@@ -357,7 +356,9 @@
     "home": {
       "emptyBind": "Есть кнопки без конфигурации привязки!",
       "activate": "Активировать",
-      "manage": "Управлять",
+      "manage": "Раскладка клавиатуры",
+      "originalSizeTip": "Пользовательское разрешение при создании пресета",
+      "more": "Глобальные настройки",
       "refresh": "Обновить",
       "restore": "Восстановить",
       "save": "Сохранить",
@@ -391,6 +392,7 @@
       "showGuides": "Направляющие",
       "rotatePreview": "Повернуть предпросмотр",
       "hideIcons": "Скрыть значки",
+      "screenRatioTip": "Если соотношение экрана ненормальное, отрегулируйте направление поворота или проверьте, соответствует ли разрешение раскладки телефону.",
       "customResolution": "Настроить разрешение шаблона",
       "applyResolution": "Применить разрешение",
       "maskOverlay": "Наложить изображение",
@@ -398,7 +400,11 @@
       "overlayEnabled": "Включить наложение",
       "overlayPath": "Путь к изображению",
       "applyOverlay": "Применить",
-      "overlayApplied": "Наложение применено"
+      "overlayApplied": "Наложение применено",
+      "mappingEnabled": "Включить раскладку клавиатуры",
+      "labelOpacity": "Непрозрачность меток раскладок",
+      "buttonScale": "Размер отображения кнопки раскладки",
+      "lowcastTip": "Обновление фона клавиш напрямую использует текущий видеокадр, отображаемый LowCast, поэтому режим виртуального экрана сохраняет фактическое изображение виртуального экрана."
     },
     "script": {
       "setting": {
@@ -456,7 +462,6 @@
     "horizontalMaskPosition": "Позиция горизонтальной маски",
     "verticalMaskHeight": "Высота вертикальной маски",
     "verticalMaskPosition": "Позиция вертикальной маски",
-    "mappingLabelOpacity": "Непрозрачность меток раскладок",
     "clipboardSync": "Синхронизация буфера обмена",
     "videoCodec": "Видеокодек",
     "videoBitRate": "Битрейт видео",
@@ -495,4 +500,3 @@
     }
   }
 }
-

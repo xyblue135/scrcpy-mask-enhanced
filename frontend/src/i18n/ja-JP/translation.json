@@ -17,25 +17,24 @@
     "main": "Scrcpy Mask へようこそ 👏🏻"
   },
   "latencyCompare": {
-    "title": "パフォーマンスと遅延",
-    "desc": "現在の携帯画面を撮影（端末内ストレージに保存）し、PCの投写ウィンドウを撮影（ローカルに保存）して比較することで相対遅延を確認できます。携帯のスクリーンショットをここにアップロードして確認することもできます。",
-    "phoneCard": "携帯のスクリーンショット（端末に保存）",
-    "saveToPhone": "撮影して端末に保存",
-    "phonePath": "端末内パス：",
-    "windowCard": "投写ウィンドウを撮影（PCに保存）",
-    "captureWindow": "投写ウィンドウを撮影",
-    "pcPath": "PC保存パス：",
-    "uploadCard": "画像をアップロードして確認",
-    "uploadImage": "携帯スクリーンショットをアップロード",
-    "uploadedUrl": "アップロード済み：",
-    "uploadedTitle": "アップロードした画像",
-    "noImage": "まだ画像がありません。上のボタンを押してください。",
-    "previewNotice": "これはプレビュー参考であり、実際の瞬間的な遅延ではありません。",
-    "captureBoth": "携帯とウィンドウを同時に撮影",
-    "measureTip": "下のスクリーンショットは参考用です",
-    "measureTipDetail": "実際の投写遅延を正確に測定するには、別の端末で「投写ウィンドウ」と「携帯画面」の両方を同時に撮影して比較してください。2枚のスクリーンショットのゲーム時計の差は概算の参考ですが、タイムスタンプの差は主にスクリーンショット命令の時間であり、実際の投写遅延ではありません。",
-    "perfMonitorGuideTitle": "より詳細な遅延データを見るには perf_monitor を使用してください",
-    "perfMonitorGuideDetail": "上記のスクリーンショット比較では全体の遅延を大まかに把握するだけです。メインプログラムは毎秒、各段階の所要時間（ネットワーク読み取り、ビデオデコード、UIレンダリング、オーディオデコードなど）をデータディレクトリの perf.jsonl に書き込みます。\n詳細な探針遅延グラフを見るには、perf_monitor を自分で設定してください：\n1. プロジェクトの perf_monitor ディレクトリで python monitor.py を実行（依存ゼロ、標準ライブラリのみ）；\n2. デフォルトで 127.0.0.1:8765 をリッスンし、ブラウザを自動で開きます；\n3. メインプログラム実行中は、各探針の avg / p95 / max、FPS、ドロップフレーム統計をリアルタイム表示します。\nオプション：--dir で perf.jsonl のディレクトリ指定、--port でポート変更、--host でリスンアドレス変更、--no-browser でブラウザ自動起動を無効化。"
+    "title": "Performance & Latency",
+    "screenPerfTitle": "Screen performance monitor (perf.jsonl)",
+    "screenPerfDesc": "Records per-stage streaming timings (network read, video decode, UI render, audio decode) plus FPS / dropped-frame stats, one row per second. View curves with perf_monitor/monitor.py.",
+    "touchProbeEnabled": "Mapping performance probe (touch events)",
+    "touchProbeDesc": "Appends every touch event injected into the phone (timestamp, interval since the last event, action, pointer, coords) to data/touch_probe.jsonl. Use it to check whether phone-side stutter is caused by event density / jitter. View with perf_monitor/touch_monitor.py. Enabled by default.",
+    "touchProbeOn": "On",
+    "touchProbeOff": "Off",
+    "moveThresholdTitle": "Move event distance threshold (denoise)",
+    "moveThresholdUnit": "Current threshold: {{value}} px (0 = off)",
+    "moveThresholdDesc": "For consecutive Move events on the same pointer_id, if dx² + dy² < threshold² the event is dropped. This significantly reduces event count, CPU scheduling, network messages, log volume and UI pressure, with very little impact on the actual feel. Start with 2~6 px; the payoff is biggest in high-frequency micro-move scenarios (FPS view / direction pad). Larger thresholds denoise harder, but going too large can produce visible \"jumps\" while aiming in games.",
+    "moveAdaptiveTitle": "Adaptive threshold",
+    "moveAdaptiveUnit": "Enabled (window {{window}}, max {{max}} px)",
+    "moveAdaptiveWindow": "Adaptive window:",
+    "moveAdaptiveDesc": "Dynamically adjusts the threshold based on the movement magnitude of the last N Move events. Lowers the threshold during slow precise operations, raises it during fast large movements."
+  },
+  "usageGuide": {
+    "perfMonitorTitle": "遅延プローブデータ — perf_monitor 使用説明",
+    "perfMonitorContent": "上記のスクリーンショット比較では全体の遅延を大まかに把握するだけです。メインプログラムは毎秒、各段階の所要時間（ネットワーク読み取り、ビデオデコード、UIレンダリング、オーディオデコードなど）をデータディレクトリの perf.jsonl に書き込みます。\n詳細な探針遅延グラフを見るには、perf_monitor を自分で設定してください：\n1. プロジェクトの perf_monitor ディレクトリで python monitor.py を実行（依存ゼロ、標準ライブラリのみ）；\n2. デフォルトで 127.0.0.1:8765 をリッスンし、ブラウザを自動で開きます；\n3. メインプログラム実行中は、各探針の avg / p95 / max、FPS、ドロップフレーム統計をリアルタイム表示します。\nオプション：--dir で perf.jsonl のディレクトリ指定、--port でポート変更、--host でリスンアドレス変更、--no-browser でブラウザ自動起動を無効化。"
   },
   "devices": {
     "adbTools": {
@@ -357,7 +356,9 @@
     "home": {
       "emptyBind": "バインド設定のないボタンがあります！",
       "activate": "有効化",
-      "manage": "管理",
+      "manage": "キーボードマッピング設定",
+      "originalSizeTip": "プリセット作成時に設定したカスタム解像度",
+      "more": "グローバル設定",
       "refresh": "更新",
       "restore": "復元",
       "save": "保存",
@@ -391,6 +392,7 @@
       "showGuides": "ガイド",
       "rotatePreview": "プレビューを回転",
       "hideIcons": "アイコンを隠す",
+      "screenRatioTip": "画面比率が異常な場合は、回転方向を調整するか、マッピング解像度が携帯と一致しているか確認してください。",
       "customResolution": "テンプレート解像度をカスタマイズ",
       "applyResolution": "解像度を適用",
       "maskOverlay": "マスクに画像を重ねる",
@@ -398,7 +400,11 @@
       "overlayEnabled": "重ね表示を有効",
       "overlayPath": "画像パス",
       "applyOverlay": "適用",
-      "overlayApplied": "画像を適用しました"
+      "overlayApplied": "画像を適用しました",
+      "mappingEnabled": "キーボードマッピングを有効にする",
+      "labelOpacity": "マッピングラベルの不透明度",
+      "buttonScale": "マッピングボタンの表示サイズ",
+      "lowcastTip": "キー背景の更新は LowCast が現在表示しているビデオフレームを直接使用するため、仮想画面モードでは実際に表示されている仮想画面の画像が保存されます。"
     },
     "script": {
       "setting": {
@@ -456,7 +462,6 @@
     "horizontalMaskPosition": "横向きマスク位置",
     "verticalMaskHeight": "縦向きマスク高さ",
     "verticalMaskPosition": "縦向きマスク位置",
-    "mappingLabelOpacity": "マッピングラベルの不透明度",
     "clipboardSync": "クリップボード同期",
     "videoCodec": "動画 codec",
     "videoBitRate": "動画ビットレート",
@@ -495,4 +500,3 @@
     }
   }
 }
-

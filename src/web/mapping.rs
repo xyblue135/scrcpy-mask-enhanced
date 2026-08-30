@@ -224,9 +224,6 @@ async fn delete_mapping(
         .send((MaskCommand::GetActiveMapping, oneshot_tx))
         .unwrap();
     let file = oneshot_rx.await.unwrap().unwrap();
-    if file == payload.file {
-        return bad_request(t!("web.mapping.cannotDeleteActiveMapping").to_string());
-    }
     let file_path = relate_to_data_path(["mapping", &payload.file]);
     if !file_path.exists() {
         return bad_request(format!(
@@ -247,6 +244,11 @@ async fn delete_mapping(
     let mut quick_switches = LocalConfig::get_mapping_quick_switches();
     quick_switches.retain(|config| config.file != payload.file);
     LocalConfig::set_mapping_quick_switches(quick_switches);
+
+    // 如果删除的是当前激活的映射，重置为默认
+    if file == payload.file {
+        let _ = LocalConfig::set_active_mapping_file("default.json".to_string());
+    }
 
     log::info!(
         "[WebServer] {}: {}",

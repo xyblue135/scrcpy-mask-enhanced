@@ -17,25 +17,24 @@
     "main": "Bienvenido a Scrcpy Mask 👏🏻"
   },
   "latencyCompare": {
-    "title": "Rendimiento y latencia",
-    "desc": "Capture la pantalla del teléfono (guardada en el almacenamiento interno) y capture la ventana de transmisión del PC (guardada localmente), luego compárelas para medir la latencia relativa. También puede subir capturas del teléfono aquí.",
-    "phoneCard": "Captura del teléfono (guardada en el teléfono)",
-    "saveToPhone": "Capturar y guardar en el teléfono",
-    "phonePath": "Ruta en el teléfono: ",
-    "windowCard": "Capturar ventana de transmisión (guardada en PC)",
-    "captureWindow": "Capturar ventana de transmisión",
-    "pcPath": "Ruta de guardado en PC: ",
-    "uploadCard": "Subir imagen para inspeccionar",
-    "uploadImage": "Subir captura del teléfono",
-    "uploadedUrl": "Subida: ",
-    "uploadedTitle": "Imagen subida",
-    "noImage": "Sin captura todavía. Pulse un botón de arriba.",
-    "previewNotice": "Esta es una referencia de vista previa, no la latencia instantánea real.",
-    "captureBoth": "Capturar teléfono y ventana",
-    "measureTip": "Las capturas siguientes son solo de referencia",
-    "measureTipDetail": "Para medir con precisión la latencia real de la transmisión, use otro teléfono para grabar la ventana de transmisión y la pantalla del teléfono simultáneamente. La diferencia del reloj del juego entre las dos capturas es una referencia aproximada, pero su diferencia de marca de tiempo refleja principalmente la latencia del comando de captura, no la latencia real.",
-    "perfMonitorGuideTitle": "¿Quieres datos de latencia más detallados? Usa perf_monitor",
-    "perfMonitorGuideDetail": "La comparación de capturas anterior solo da una idea aproximada de la latencia general. El programa principal escribe mediciones por etapa (lectura de red, decodificación de video, renderizado de UI, decodificación de audio, etc.) en perf.jsonl en el directorio de datos cada segundo.\nPara ver curvas detalladas de latencia, configura perf_monitor tú mismo:\n1. Ejecuta python monitor.py en el directorio perf_monitor del proyecto (cero dependencias, solo biblioteca estándar);\n2. Por defecto escucha en 127.0.0.1:8765 y abre el navegador automáticamente;\n3. Mientras el programa principal se ejecuta, la página muestra avg / p95 / max de cada sonda, FPS y estadísticas de fotogramas perdidos en tiempo real.\nOpciones: --dir para el directorio de perf.jsonl, --port para el puerto, --host para la dirección, --no-browser para no abrir el navegador."
+    "title": "Performance & Latency",
+    "screenPerfTitle": "Screen performance monitor (perf.jsonl)",
+    "screenPerfDesc": "Records per-stage streaming timings (network read, video decode, UI render, audio decode) plus FPS / dropped-frame stats, one row per second. View curves with perf_monitor/monitor.py.",
+    "touchProbeEnabled": "Mapping performance probe (touch events)",
+    "touchProbeDesc": "Appends every touch event injected into the phone (timestamp, interval since the last event, action, pointer, coords) to data/touch_probe.jsonl. Use it to check whether phone-side stutter is caused by event density / jitter. View with perf_monitor/touch_monitor.py. Enabled by default.",
+    "touchProbeOn": "On",
+    "touchProbeOff": "Off",
+    "moveThresholdTitle": "Move event distance threshold (denoise)",
+    "moveThresholdUnit": "Current threshold: {{value}} px (0 = off)",
+    "moveThresholdDesc": "For consecutive Move events on the same pointer_id, if dx² + dy² < threshold² the event is dropped. This significantly reduces event count, CPU scheduling, network messages, log volume and UI pressure, with very little impact on the actual feel. Start with 2~6 px; the payoff is biggest in high-frequency micro-move scenarios (FPS view / direction pad). Larger thresholds denoise harder, but going too large can produce visible \"jumps\" while aiming in games.",
+    "moveAdaptiveTitle": "Adaptive threshold",
+    "moveAdaptiveUnit": "Enabled (window {{window}}, max {{max}} px)",
+    "moveAdaptiveWindow": "Adaptive window:",
+    "moveAdaptiveDesc": "Dynamically adjusts the threshold based on the movement magnitude of the last N Move events. Lowers the threshold during slow precise operations, raises it during fast large movements."
+  },
+  "usageGuide": {
+    "perfMonitorTitle": "Datos de Sonda de Latencia — Uso de perf_monitor",
+    "perfMonitorContent": "La comparación de capturas anterior solo da una idea aproximada de la latencia general. El programa principal escribe mediciones por etapa (lectura de red, decodificación de video, renderizado de UI, decodificación de audio, etc.) en perf.jsonl en el directorio de datos cada segundo.\nPara ver curvas detalladas de latencia, configura perf_monitor tú mismo:\n1. Ejecuta python monitor.py en el directorio perf_monitor del proyecto (cero dependencias, solo biblioteca estándar);\n2. Por defecto escucha en 127.0.0.1:8765 y abre el navegador automáticamente;\n3. Mientras el programa principal se ejecuta, la página muestra avg / p95 / max de cada sonda, FPS y estadísticas de fotogramas perdidos en tiempo real.\nOpciones: --dir para el directorio de perf.jsonl, --port para el puerto, --host para la dirección, --no-browser para no abrir el navegador."
   },
   "devices": {
     "adbTools": {
@@ -357,7 +356,9 @@
     "home": {
       "emptyBind": "Hay botones sin una configuración de vinculación.",
       "activate": "Activar",
-      "manage": "Gestionar",
+      "manage": "Mapeo del Teclado",
+      "originalSizeTip": "Resolución personalizada al crear el preset",
+      "more": "Configuración Global",
       "refresh": "Actualizar",
       "restore": "Restaurar",
       "save": "Guardar",
@@ -391,6 +392,7 @@
       "showGuides": "Guías",
       "rotatePreview": "Rotar vista previa",
       "hideIcons": "Ocultar iconos",
+      "screenRatioTip": "Si la proporción de la pantalla es anormal, ajuste la dirección de rotación o verifique que la resolución del mapeo coincida con el teléfono.",
       "customResolution": "Resolución de plantilla personalizada",
       "applyResolution": "Aplicar resolución",
       "maskOverlay": "Superponer imagen",
@@ -398,7 +400,11 @@
       "overlayEnabled": "Habilitar superposición",
       "overlayPath": "Ruta de imagen",
       "applyOverlay": "Aplicar",
-      "overlayApplied": "Imagen superpuesta aplicada"
+      "overlayApplied": "Imagen superpuesta aplicada",
+      "mappingEnabled": "Habilitar mapeo del teclado",
+      "labelOpacity": "Opacidad de etiquetas de mapeo",
+      "buttonScale": "Tamaño de visualización del botón de mapeo",
+      "lowcastTip": "Actualizar el fondo de la tecla usa directamente el fotograma de video que LowCast está mostrando actualmente, por lo que el modo de pantalla virtual guarda la imagen real de la pantalla virtual."
     },
     "script": {
       "setting": {
@@ -456,7 +462,6 @@
     "horizontalMaskPosition": "Posición de máscara horizontal",
     "verticalMaskHeight": "Altura de máscara vertical",
     "verticalMaskPosition": "Posición de máscara vertical",
-    "mappingLabelOpacity": "Opacidad de etiquetas de mapeo",
     "clipboardSync": "Sincronización del portapapeles",
     "videoCodec": "Codec de vídeo",
     "videoBitRate": "Tasa de bits de vídeo",
@@ -495,4 +500,3 @@
     }
   }
 }
-

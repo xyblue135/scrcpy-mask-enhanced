@@ -15,9 +15,9 @@ import {
   Input,
   InputNumber,
   Modal,
-  Pagination,
   Popconfirm,
   Select,
+  Slider,
   Space,
   Splitter,
   Switch,
@@ -54,6 +54,7 @@ import {
   SettingOutlined,
   SwapOutlined,
   EyeInvisibleOutlined,
+  InfoCircleOutlined,
 } from "@ant-design/icons";
 import IconButton from "../common/IconButton";
 import {
@@ -83,6 +84,9 @@ import {
   setActiveMappingFile,
   setMappingRandomizationEnabled,
   setButtonRandomizationEnabled,
+  setMappingEnabled,
+  setMappingLabelOpacity,
+  setMappingButtonScale,
 } from "../../store/localConfig";
 import { useTranslation } from "react-i18next";
 import { ItemBox, ItemBoxContainer } from "../common/ItemBox";
@@ -357,6 +361,9 @@ function Manager({
               {record.originalSize && (
                 <span className="text-3.5 color-gray">
                   {record.originalSize.width}×{record.originalSize.height}
+                  <Tooltip title={t("mappings.home.originalSizeTip")}>
+                    <InfoCircleOutlined className="ml-1 color-text-tertiary cursor-help" />
+                  </Tooltip>
                 </span>
               )}
             </Space>
@@ -852,6 +859,9 @@ function Displayer({
           >
             {t("mappings.home.hideIcons")}
           </Button>
+          <Typography.Text type="secondary" style={{ fontSize: 12, lineHeight: 1.4, maxWidth: 300 }}>
+            {t("mappings.home.screenRatioTip")}
+          </Typography.Text>
         </Flex>
       </Flex>
       <div
@@ -968,26 +978,28 @@ function mappingButtonDomPrefix(type: string): string {
     case "Wheel":
       return "mapping-wheel";
     default:
-      // SingleTap / Observation / Script / RawInput / Fire / CancelCast / Swipe
       return "mapping-single-tap";
   }
 }
 
 function pushKeys(
-  target: { key: string; type: string; index: number; label: string }[],
+  target: { key: string; type: string; index: number; label: string; elementId: string }[],
   binds: string[] | undefined,
   type: string,
   index: number,
   label: string,
 ) {
   if (Array.isArray(binds)) {
-    binds.forEach((k) => target.push({ key: k, type, index, label }));
+    const prefix = mappingButtonDomPrefix(type);
+    binds.forEach((k) =>
+      target.push({ key: k, type, index, label, elementId: `${prefix}-${index}` }),
+    );
   }
 }
 
 // 提取单个映射的所有绑定条目（含方向按键、副键、取消键等）
 function collectMappingBindings(mapping: MappingType, index: number) {
-  const results: { key: string; type: string; index: number; label: string }[] = [];
+  const results: { key: string; type: string; index: number; label: string; elementId: string }[] = [];
   const m = mapping as any;
   const label = (m.note && m.note.trim() ? m.note : (mapping.type as string));
   pushKeys(results, m.bind, mapping.type, index, label);
@@ -1032,7 +1044,7 @@ function rotateMapping(mapping: MappingType, oH: number): MappingType {
   return m;
 }
 
-// 按键定位列表：列出所有绑定按键，点击后在画布上高亮对应按钮
+// 按键定位列表：列出所有绑定按键，点击后在画布上高亮对应按钮，按 elementId 排序
 function KeyBindingList({
   mappings,
   onSelect,
@@ -1041,14 +1053,12 @@ function KeyBindingList({
   onSelect: (elementId: string) => void;
 }) {
   const { t } = useTranslation();
-  const [page, setPage] = useState(1);
-  const pageSize = 10;
   const entries = useMemo(() => {
     const all: { key: string; type: string; index: number; label: string; elementId: string }[] = [];
     mappings.forEach((mapping, index) => {
       if (isMacroScript(mapping)) return;
       collectMappingBindings(mapping, index).forEach((e) => {
-        all.push({ ...e, elementId: `${mappingButtonDomPrefix(e.type)}-${e.index}` });
+        all.push({ key: e.key, type: e.type, index: e.index, label: e.label, elementId: e.elementId });
       });
     });
     // 按按键名分组，相同按键聚合显示
@@ -1057,7 +1067,10 @@ function KeyBindingList({
       if (!groups.has(e.key)) groups.set(e.key, []);
       groups.get(e.key)!.push(e);
     });
-    return Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+    // 组内按 elementId 排序
+    return Array.from(groups.entries())
+      .map(([key, list]) => [key, list.sort((a, b) => a.elementId.localeCompare(b.elementId))] as const)
+      .sort((a, b) => a[1][0].elementId.localeCompare(b[1][0].elementId));
   }, [mappings]);
 
   if (entries.length === 0) {
@@ -1068,17 +1081,13 @@ function KeyBindingList({
     );
   }
 
-  // 每页 10 个按键分组
-  const start = (page - 1) * pageSize;
-  const pagedEntries = entries.slice(start, start + pageSize);
-
   return (
     <div className="p-3 flex flex-col gap-2">
       <Typography.Title level={5} style={{ marginTop: 0 }}>
         {t("mappings.home.boundKeysTitle")}
       </Typography.Title>
       <div className="flex flex-col gap-2 flex-grow-1">
-        {pagedEntries.map(([key, list]) => (
+        {entries.map(([key, list]) => (
           <div key={key} className="border border-text-quaternary rounded p-2">
             <Tag color="blue">{list.length > 1 ? `${key} ×${list.length}` : key}</Tag>
             <div className="flex flex-col gap-1 mt-1">
@@ -1100,15 +1109,6 @@ function KeyBindingList({
           </div>
         ))}
       </div>
-      <Pagination
-        size="small"
-        current={page}
-        pageSize={pageSize}
-        total={entries.length}
-        showSizeChanger={false}
-        onChange={setPage}
-        style={{ marginTop: 8 }}
-      />
     </div>
   );
 }
@@ -1155,6 +1155,15 @@ export default function Mappings() {
   const [positionUnlocked, setPositionUnlocked] = useState(false);
   const [isMacroManagerOpen, setIsMacroManagerOpen] = useState(false);
   const [isBoundSettingsOpen, setIsBoundSettingsOpen] = useState(false);
+  const mappingEnabled = useAppSelector(
+    (state) => state.localConfig.mappingEnabled,
+  );
+  const mappingLabelOpacity = useAppSelector(
+    (state) => state.localConfig.mappingLabelOpacity,
+  );
+  const mappingButtonScale = useAppSelector(
+    (state) => state.localConfig.mappingButtonScale,
+  );
   const [validationDiagnostics, setValidationDiagnostics] = useState<
     MappingDiagnostic[]
   >([]);
@@ -1687,6 +1696,61 @@ export default function Mappings() {
                           onChange={(v) => updateGlobalToggle("macro_preset_enabled", v)}
                         />
                       </Flex>
+                    ),
+                  },
+                  { type: "divider" },
+                  {
+                    key: "mapping-enabled",
+                    label: (
+                      <Flex gap={8} align="center" style={{ minWidth: 200 }} justify="space-between">
+                        <span>{t("mappings.home.mappingEnabled")}</span>
+                        <Switch
+                          size="small"
+                          checked={mappingEnabled}
+                          onChange={(v) => dispatch(setMappingEnabled(v))}
+                        />
+                      </Flex>
+                    ),
+                  },
+                  {
+                    key: "label-opacity",
+                    label: (
+                      <Flex vertical gap={4} style={{ minWidth: 200 }} onClick={(e) => e.stopPropagation()}>
+                        <span>{t("mappings.home.labelOpacity")}</span>
+                        <Slider
+                          min={0}
+                          max={1}
+                          step={0.05}
+                          value={mappingLabelOpacity}
+                          onChange={(v) => dispatch(setMappingLabelOpacity(v))}
+                          style={{ margin: 0 }}
+                        />
+                      </Flex>
+                    ),
+                  },
+                  {
+                    key: "button-scale",
+                    label: (
+                      <Flex vertical gap={4} style={{ minWidth: 200 }} onClick={(e) => e.stopPropagation()}>
+                        <span>{t("mappings.home.buttonScale")}</span>
+                        <Slider
+                          min={0.5}
+                          max={2}
+                          step={0.05}
+                          value={mappingButtonScale}
+                          onChange={(v) => dispatch(setMappingButtonScale(v))}
+                          style={{ margin: 0 }}
+                        />
+                      </Flex>
+                    ),
+                  },
+                  { type: "divider" },
+                  {
+                    key: "lowcast-tip",
+                    label: (
+                      <Typography.Text type="secondary" style={{ fontSize: 12, maxWidth: 260, lineHeight: 1.5, whiteSpace: "normal" }}>
+                        {t("mappings.home.lowcastTip")}
+                      </Typography.Text>
                     ),
                   },
                 ],

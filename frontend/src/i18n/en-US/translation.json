@@ -20,31 +20,15 @@
   },
   "usageGuide": {
     "title": "Usage Guide",
-    "content": "Edit this file to add your usage instructions.\n\nFile path: frontend/src/components/UsageGuide.tsx\n\nBasic usage:\n1. Connect a device from the Devices page\n2. Create and manage keyboard mappings in Mappings\n3. Adjust display parameters via ADB Resolution\n4. Configure streaming in Scrcpy Presets"
+    "content": "Edit this file to add your usage instructions.\n\nFile path: frontend/src/components/UsageGuide.tsx\n\nBasic usage:\n1. Connect a device from the Devices page\n2. Create and manage keyboard mappings in Mappings\n3. Adjust display parameters via ADB Resolution\n4. Configure streaming in Scrcpy Presets",
+    "perfMonitorTitle": "Latency Probe Data — perf_monitor Usage",
+    "perfMonitorContent": "The screenshot comparison above only gives a rough sense of overall latency. For detailed metrics, use the two monitor pages under perf_monitor (zero third-party deps, stdlib only):\n· Screen performance: the main program writes per-stage probe timings (network read, video decode, UI render, audio decode, etc.) to perf.jsonl every second. Run python monitor.py to view (default port 8765; shows avg / p95 / max curves, FPS and dropped-frame stats).\n· Mapping performance: every touch event injected into the phone is written to data/touch_probe.jsonl. Run python touch_monitor.py to view (default port 8766; shows event rate, event intervals and the event stream).\nOptions: --dir to set the jsonl directory, --port to change the port, --host to change the listen address, --no-browser to skip opening the browser."
   },
   "welcome": {
     "main": "Welcome to Scrcpy Mask 👏🏻"
   },
   "latencyCompare": {
     "title": "Performance & Latency",
-    "desc": "Capture the current phone screen (saved to the phone's internal storage) and capture the PC streaming window (saved locally), then compare them to gauge relative latency. You can also upload phone screenshots here to inspect.",
-    "phoneCard": "Phone screenshot (saved on phone)",
-    "saveToPhone": "Capture & save to phone",
-    "phonePath": "Phone path: ",
-    "windowCard": "Capture streaming window (saved on PC)",
-    "captureWindow": "Capture streaming window",
-    "pcPath": "PC save path: ",
-    "uploadCard": "Upload image to inspect",
-    "uploadImage": "Upload phone screenshot",
-    "uploadedUrl": "Uploaded: ",
-    "uploadedTitle": "Uploaded image",
-    "noImage": "No screenshot yet. Click a button above to capture.",
-    "previewNotice": "This is a preview reference, not the instantaneous latency in the real environment.",
-    "captureBoth": "Capture both phone & window",
-    "measureTip": "Screenshots below are for reference only",
-    "measureTipDetail": "To accurately measure real streaming latency, use another phone to record the streaming window and the phone screen side by side. The game clock difference between the two screenshots is a rough reference, but their timestamp difference mainly reflects screenshot command latency, not the real streaming latency.",
-    "perfMonitorGuideTitle": "Want more detailed latency data? Use perf_monitor",
-    "perfMonitorGuideDetail": "The screenshot comparison above only gives a rough sense of overall latency. For detailed metrics, use the two monitor pages under perf_monitor (zero third-party deps, stdlib only):\n· Screen performance: the main program writes per-stage probe timings (network read, video decode, UI render, audio decode, etc.) to perf.jsonl every second. Run python monitor.py to view (default port 8765; shows avg / p95 / max curves, FPS and dropped-frame stats).\n· Mapping performance: every touch event injected into the phone is written to data/touch_probe.jsonl. Run python touch_monitor.py to view (default port 8766; shows event rate, event intervals and the event stream).\nOptions: --dir to set the jsonl directory, --port to change the port, --host to change the listen address, --no-browser to skip opening the browser.",
     "screenPerfTitle": "Screen performance monitor (perf.jsonl)",
     "screenPerfDesc": "Records per-stage streaming timings (network read, video decode, UI render, audio decode) plus FPS / dropped-frame stats, one row per second. View curves with perf_monitor/monitor.py.",
     "touchProbeEnabled": "Mapping performance probe (touch events)",
@@ -53,7 +37,11 @@
     "touchProbeOff": "Off",
     "moveThresholdTitle": "Move event distance threshold (denoise)",
     "moveThresholdUnit": "Current threshold: {{value}} px (0 = off)",
-    "moveThresholdDesc": "For consecutive Move events on the same pointer_id, if dx² + dy² < threshold² the event is dropped. This significantly reduces event count, CPU scheduling, network messages, log volume and UI pressure, with very little impact on the actual feel. Start with 2~6 px; the payoff is biggest in high-frequency micro-move scenarios (FPS view / direction pad). Larger thresholds denoise harder, but going too large can produce visible \"jumps\" while aiming in games."
+    "moveThresholdDesc": "For consecutive Move events on the same pointer_id, if dx² + dy² < threshold² the event is dropped. This significantly reduces event count, CPU scheduling, network messages, log volume and UI pressure, with very little impact on the actual feel. Start with 2~6 px; the payoff is biggest in high-frequency micro-move scenarios (FPS view / direction pad). Larger thresholds denoise harder, but going too large can produce visible \"jumps\" while aiming in games.",
+    "moveAdaptiveTitle": "Adaptive threshold",
+    "moveAdaptiveUnit": "Enabled (window {{window}}, max {{max}} px)",
+    "moveAdaptiveWindow": "Adaptive window:",
+    "moveAdaptiveDesc": "Dynamically adjusts the threshold based on the movement magnitude of the last N Move events. Lowers the threshold during slow precise operations, raises it during fast large movements."
   },
   "devices": {
     "adbTools": {
@@ -410,7 +398,7 @@
     "home": {
       "emptyBind": "There are buttons without a bind configuration!",
       "activate": "Activate",
-      "manage": "Manage",
+      "manage": "Keyboard Mapping",
       "refresh": "Refresh",
       "restore": "Restore",
       "save": "Save",
@@ -450,6 +438,7 @@
       "showRandomRanges": "Random ranges",
       "rotatePreview": "Rotate preview",
       "hideIcons": "Hide icons",
+      "screenRatioTip": "If the screen ratio is abnormal, adjust the rotation direction, or check if the mapping resolution matches the phone.",
       "customResolution": "Custom template resolution",
       "noMainDeviceShort": "No main device",
       "unknown": "Unknown",
@@ -484,20 +473,15 @@
       "configureNow": "Configure",
       "noBoundKeys": "No bound keys",
       "boundKeysTitle": "Key locations",
-      "latencyPreview": "Latency Preview",
-      "saveToLocal": "Save to local",
-      "savedToLocal": "Saved to local",
-      "noBackground": "No screenshot. Refresh background first.",
-      "updatedAt": "Updated at",
-      "latencyTip": "This image is the current phone frame. Compare it with the actual window to gauge latency.",
-      "captureWindow": "Capture window",
-      "windowShotSuccess": "Window screenshot saved to local",
-      "windowShotFail": "Window capture failed: {{error}}",
-      "windowShotPath": "Saved to: ",
       "unbound": "Unbound",
       "quickSwitchUpdated": "Preset switching settings updated",
       "macroPresetUpdated": "Macro preset settings updated",
-      "more": "More"
+      "originalSizeTip": "Custom resolution set when creating the preset",
+      "more": "Global Settings",
+      "mappingEnabled": "Enable keyboard mapping",
+      "labelOpacity": "Mapping label opacity",
+      "buttonScale": "Mapping button display size",
+      "lowcastTip": "Refreshing key background directly uses the video frame currently being displayed by LowCast, so virtual screen mode saves the actual virtual screen image."
     },
     "override": {
       "tag": "Sub-preset",
@@ -578,15 +562,11 @@
       "audio": "Audio",
       "advance": "Advance"
     },
-    "language": "Language",
     "webPort": "Web port",
     "webBindAddr": "Web bind address",
     "controllerPort": "Controller port",
     "adbPath": "Adb path",
     "language": "Language",
-    "mappingLabelOpacity": "Mapping label opacity",
-    "mappingButtonScale": "Mapping button display size",
-    "mappingButtonScaleTip": "Only adjusts the visual size of the mapping button. The actual adb tap point stays at the button center, so operation accuracy is unaffected.",
     "clipboardSync": "Clipboard sync",
     "videoCodec": "Video codec",
     "videoBitRate": "Video bit rate",
@@ -679,4 +659,3 @@
     "horizontalMaskPosition": "Landscape mask position"
   }
 }
-

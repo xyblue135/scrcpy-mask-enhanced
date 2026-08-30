@@ -12,7 +12,6 @@ import {
   Input,
   InputNumber,
   Select,
-  Slider,
   Switch,
   Typography,
 } from "antd";
@@ -22,9 +21,6 @@ import {
   setClipboardSync,
   setControllerPort,
   setLanguage,
-  setMappingEnabled,
-  setMappingLabelOpacity,
-  setMappingButtonScale,
   setTitlebarVisible,
   setWebBindAddr,
   setWebPort,
@@ -69,22 +65,12 @@ export default function Settings() {
   const ui = isZh
     ? {
         basic: "基础 / 窗口",
-        mapping: "键盘映射",
         advanced: "连接 / 高级",
-        enabled: "启用",
-        mappingEnabled: "启用键盘映射",
-        mappingEnabledTip: "关闭后停止键盘/鼠标映射；设置会保存，下次启动仍保持关闭。默认开启。",
-        displayTip: "刷新键位背景直接使用 LowCast 当前正在显示的视频帧，因此虚拟屏模式会保存实际看到的虚拟屏画面。",
         windowTip: "F11 = 无边框全屏；右上角最大化 = 普通 Windows 最大化并保留任务栏。两者都保持画面宽高比。",
       }
     : {
         basic: "General / Window",
-        mapping: "Keyboard Mapping",
         advanced: "Connection / Advanced",
-        enabled: "Enabled",
-        mappingEnabled: "Enable keyboard mapping",
-        mappingEnabledTip: "Disables keyboard/mouse mappings persistently. Enabled by default.",
-        displayTip: "Mapping background refresh uses the exact frame currently displayed by LowCast, including virtual displays.",
         windowTip: "F11 is borderless fullscreen; maximize keeps the Windows taskbar visible. Both preserve aspect ratio.",
       };
 
@@ -146,15 +132,6 @@ export default function Settings() {
             <ItemBox label={t("settings.titlebarVisible")}><Switch checked={localConfig.titlebarVisible} onChange={(value) => dispatch(setTitlebarVisible(value))} /></ItemBox>
           </ItemBoxContainer>
           <Alert className="mt-3" type="info" showIcon message={ui.windowTip} />
-        </Section>
-
-        <Section title={ui.mapping} subtitle={localConfig.mappingEnabled ? ui.enabled : "OFF"}>
-          <ItemBoxContainer>
-            <ItemBox label={ui.mappingEnabled} tooltip={ui.mappingEnabledTip}><Switch checked={localConfig.mappingEnabled} onChange={(value) => dispatch(setMappingEnabled(value))} /></ItemBox>
-            <ItemBox label={t("settings.mappingLabelOpacity")}><Slider style={{ width: 240 }} min={0} max={1} step={0.05} value={localConfig.mappingLabelOpacity} onChange={(value) => dispatch(setMappingLabelOpacity(value))} /></ItemBox>
-            <ItemBox label={t("settings.mappingButtonScale")} tooltip={t("settings.mappingButtonScaleTip")}><Slider style={{ width: 240 }} min={0.5} max={2} step={0.05} value={localConfig.mappingButtonScale} onChange={(value) => dispatch(setMappingButtonScale(value))} /></ItemBox>
-          </ItemBoxContainer>
-          <Alert className="mt-3" type="info" showIcon message={ui.displayTip} />
         </Section>
 
         <Section title={ui.advanced}>
