@@ -1,4 +1,4 @@
-use std::{
+﻿use std::{
     fs::File,
     net::{Ipv4Addr, SocketAddrV4},
     sync::OnceLock,
@@ -86,7 +86,7 @@ fn main() {
             .set(WindowPlugin {
                 primary_window: Some(Window {
                     title: "scrcpy-mask".into(),
-                    has_shadow: false,
+                    has_shadow: true,
                     transparent: true, // for windows: https://github.com/bevyengine/bevy/issues/7544
                     decorations: false,
                     present_mode: PresentMode::Immediate, // LowCast: 显式 Immediate，present 完全不阻塞（可能有撕裂）
@@ -212,6 +212,9 @@ fn on_app_exit(mut exit_events: MessageReader<AppExit>) {
 
 /// 每秒把性能探针快照 + 视频帧统计写入 perf.jsonl，供 perf_monitor 读取。
 fn perf_flush_system(runtime: ResMut<TokioTasksRuntime>, v_channel: Res<ChannelReceiverV>) {
+    if !LocalConfig::get_perf_enabled() {
+        return;
+    }
     // ChannelReceiverV 内部是 Arc，克隆只是引用计数 +1，可安全 move 进 'static 后台任务。
     let v_frame = v_channel.0.clone();
     runtime.spawn_background_task(move |_ctx| async move {

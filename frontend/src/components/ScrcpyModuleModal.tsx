@@ -1,4 +1,4 @@
-import {
+﻿import {
   Button,
   Card,
   Collapse,
@@ -14,7 +14,7 @@ import {
   Tooltip,
   Typography,
 } from "antd";
-import { CopyOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import { CopyOutlined, DeleteOutlined, MobileOutlined, PlusOutlined } from "@ant-design/icons";
 import { useEffect, useMemo, useState } from "react";
 import {
   defaultScrcpyVirtualDisplay,
@@ -236,6 +236,7 @@ export default function ScrcpyModulePage() {
   const messageApi = useMessageContext();
   const value = useAppSelector((state) => state.localConfig.scrcpyModule);
   const [draft, setDraft] = useState<ScrcpyModuleConfig>(() => normalizeModule(value));
+  const controlledDevices = useAppSelector((state) => state.other.controlledDevices);
   const [commandDraft, setCommandDraft] = useState("");
 
   useEffect(() => {
@@ -355,6 +356,19 @@ export default function ScrcpyModulePage() {
             <InputNumber addonBefore="宽" min={1} max={16384} disabled={!activePreset?.virtualDisplay.enabled || activePreset?.virtualDisplay.useMainSize} value={activePreset?.virtualDisplay.width} onChange={(width) => width !== null && activePreset && updateVirtualDisplay({ width })} />
             <InputNumber addonBefore="高" min={1} max={16384} disabled={!activePreset?.virtualDisplay.enabled || activePreset?.virtualDisplay.useMainSize} value={activePreset?.virtualDisplay.height} onChange={(height) => height !== null && activePreset && updateVirtualDisplay({ height })} />
             <InputNumber addonBefore="DPI" min={1} max={2000} disabled={!activePreset?.virtualDisplay.enabled || activePreset?.virtualDisplay.useMainSize} value={activePreset?.virtualDisplay.dpi} onChange={(dpi) => dpi !== null && activePreset && updateVirtualDisplay({ dpi })} />
+          <Button
+            size="small"
+            icon={<MobileOutlined />}
+            disabled={!activePreset?.virtualDisplay.enabled || activePreset?.virtualDisplay.useMainSize || controlledDevices.length === 0}
+            onClick={() => {
+              const main = controlledDevices.find((d) => d.main);
+              if (main) {
+                updateVirtualDisplay({ width: main.device_size[0], height: main.device_size[1], dpi: main.device_dpi });
+              }
+            }}
+          >
+            使用手机分辨率
+          </Button>
           </Flex>
           <Flex gap="small" align="center" wrap>
             <Space><Typography.Text>启动指定应用</Typography.Text><Switch disabled={!activePreset?.virtualDisplay.enabled} checked={activePreset?.virtualDisplay.startAppEnabled ?? false} onChange={(startAppEnabled) => activePreset && updateVirtualDisplay({ startAppEnabled })} /></Space>

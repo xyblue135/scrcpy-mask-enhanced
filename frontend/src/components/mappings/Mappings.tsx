@@ -87,6 +87,9 @@ import {
   setMappingEnabled,
   setMappingLabelOpacity,
   setMappingButtonScale,
+  setMoveDistanceThreshold,
+  setMoveAdaptiveEnabled,
+  setMoveAdaptiveWindow,
 } from "../../store/localConfig";
 import { useTranslation } from "react-i18next";
 import { ItemBox, ItemBoxContainer } from "../common/ItemBox";
@@ -1164,6 +1167,15 @@ export default function Mappings() {
   const mappingButtonScale = useAppSelector(
     (state) => state.localConfig.mappingButtonScale,
   );
+  const moveThreshold = useAppSelector(
+    (state) => state.localConfig.moveDistanceThreshold,
+  );
+  const moveAdaptiveEnabled = useAppSelector(
+    (state) => state.localConfig.moveAdaptiveEnabled,
+  );
+  const moveAdaptiveWindow = useAppSelector(
+    (state) => state.localConfig.moveAdaptiveWindow,
+  );
   const [validationDiagnostics, setValidationDiagnostics] = useState<
     MappingDiagnostic[]
   >([]);
@@ -1740,6 +1752,61 @@ export default function Mappings() {
                           value={mappingButtonScale}
                           onChange={(v) => dispatch(setMappingButtonScale(v))}
                           style={{ margin: 0 }}
+                        />
+                      </Flex>
+                    ),
+                  },
+                  { type: "divider" },
+                  {
+                    key: "move-threshold",
+                    label: (
+                      <Flex vertical gap={4} style={{ minWidth: 220 }} onClick={(e) => e.stopPropagation()}>
+                        <Flex align="center" justify="space-between">
+                          <span style={{ fontSize: 13 }}>{t("latencyCompare.moveThresholdTitle")}</span>
+                          <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+                            {moveThreshold > 0 ? `${moveThreshold} px` : t("latencyCompare.moveThresholdOff")}
+                          </span>
+                        </Flex>
+                        <Slider
+                          min={0}
+                          max={64}
+                          step={1}
+                          value={moveThreshold}
+                          onChange={(v) => dispatch(setMoveDistanceThreshold(v as number))}
+                          style={{ margin: "0 6px" }}
+                        />
+                        <Flex align="center" gap={6} style={{ marginTop: 2 }}>
+                          <Switch
+                            size="small"
+                            checked={moveAdaptiveEnabled}
+                            onChange={(v) => dispatch(setMoveAdaptiveEnabled(v))}
+                          />
+                          <span style={{ fontSize: 12 }}>{t("latencyCompare.moveAdaptiveTitle")}</span>
+                          <span style={{ fontSize: 12, color: "var(--text-secondary)", marginLeft: "auto" }}>
+                            {t("latencyCompare.moveAdaptiveUnit", {
+                              window: moveAdaptiveWindow,
+                              max: Math.max(1, moveAdaptiveWindow) * 2,
+                            })}
+                          </span>
+                        </Flex>
+                      </Flex>
+                    ),
+                  },
+                  {
+                    key: "move-adaptive-window",
+                    label: (
+                      <Flex vertical gap={4} style={{ minWidth: 220 }} onClick={(e) => e.stopPropagation()}>
+                        <Flex align="center" justify="space-between">
+                          <span style={{ fontSize: 13 }}>{t("latencyCompare.moveAdaptiveWindow")}</span>
+                          <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>{moveAdaptiveWindow}</span>
+                        </Flex>
+                        <Slider
+                          min={2}
+                          max={32}
+                          step={1}
+                          value={moveAdaptiveWindow}
+                          onChange={(v) => dispatch(setMoveAdaptiveWindow(v as number))}
+                          style={{ margin: "0 6px" }}
                         />
                       </Flex>
                     ),

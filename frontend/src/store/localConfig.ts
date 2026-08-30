@@ -1,4 +1,4 @@
-import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+﻿import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import { requestPost, toCamelCase } from "../utils";
 import i18n from "../i18n";
 import { staticStore } from "./store";
@@ -239,6 +239,8 @@ export interface LocalConfigState {
   mappingRandomizationEnabled: boolean;
   buttonRandomizationEnabled: boolean;
   touchProbeEnabled: boolean;
+  /** 全局屏幕性能监控（perf.jsonl）开关 */
+  perfEnabled: boolean;
   /** Move 事件距离阈值（mask 坐标系下像素），0 = 关闭。
    *  对同一 pointer_id 的连续 Move，若 dx² + dy² < threshold² 则直接丢弃。 */
   moveDistanceThreshold: number;
@@ -292,7 +294,8 @@ const initialState: LocalConfigState = {
   powerOffOnClose: false,
   mappingRandomizationEnabled: true,
   buttonRandomizationEnabled: true,
-  touchProbeEnabled: true,
+  touchProbeEnabled: false,
+  perfEnabled: false,
   moveDistanceThreshold: 0,
   moveAdaptiveEnabled: true,
   moveAdaptiveWindow: 8,
@@ -359,6 +362,7 @@ const localConfigSlice = createSlice({
     setMappingRandomizationEnabled: (state, action: PayloadAction<boolean>) => { state.mappingRandomizationEnabled = action.payload; updateLocalConfig("mapping_randomization_enabled", action.payload, 0); },
     setButtonRandomizationEnabled: (state, action: PayloadAction<boolean>) => { state.buttonRandomizationEnabled = action.payload; updateLocalConfig("button_randomization_enabled", action.payload, 0); },
     setTouchProbeEnabled: (state, action: PayloadAction<boolean>) => { state.touchProbeEnabled = action.payload; updateLocalConfig("touch_probe_enabled", action.payload, 0); },
+    setPerfEnabled: (state, action: PayloadAction<boolean>) => { state.perfEnabled = action.payload; updateLocalConfig("perf_enabled", action.payload, 0); },
     setMoveDistanceThreshold: (state, action: PayloadAction<number>) => {
       const v = Math.max(0, Math.min(64, Number.isFinite(action.payload) ? action.payload : 0));
       state.moveDistanceThreshold = v;
@@ -422,6 +426,7 @@ export const {
   setMappingRandomizationEnabled,
   setButtonRandomizationEnabled,
   setTouchProbeEnabled,
+  setPerfEnabled,
   setMoveDistanceThreshold,
   setMoveAdaptiveEnabled,
   setMoveAdaptiveWindow,

@@ -1,4 +1,4 @@
-{
+﻿{
   "404": {
     "title": "看来这个页面已经消失得无影无踪了",
     "back": "返回主页"
@@ -30,9 +30,9 @@
   "latencyCompare": {
     "title": "性能监测和延迟对比",
     "screenPerfTitle": "屏幕性能监控（perf.jsonl）",
-    "screenPerfDesc": "记录投屏链路各环节耗时（网络读取、视频解码、UI 渲染、音频解码等）与帧率/丢帧统计，每秒一行。用 perf_monitor/monitor.py 查看延迟曲线。",
+    "screenPerfDesc": "记录投屏链路各环节耗时（网络读取、视频解码、UI 渲染、音频解码等）与帧率/丢帧统计，每秒一行，写入 data/perf.jsonl。用 perf_monitor/monitor.py 查看延迟曲线。",
     "touchProbeEnabled": "映射性能探针（触摸事件）",
-    "touchProbeDesc": "把每次注入手机的触摸事件（时间戳、距上一条间隔、类型、指针、坐标）追加写入 data/touch_probe.jsonl。用于分析手机端卡顿是否由事件过密/抖动导致，用 perf_monitor/touch_monitor.py 查看。默认开启。",
+    "touchProbeDesc": "把每次注入手机的触摸事件（时间戳、距上一条间隔、类型、指针、坐标）追加写入 data/touch_probe.jsonl。用于分析手机端卡顿是否由事件过密/抖动导致，用 perf_monitor/touch_monitor.py 查看。默认关闭。",
     "touchProbeOn": "开",
     "touchProbeOff": "关",
     "moveThresholdTitle": "Move 事件距离阈值降噪",

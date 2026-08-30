@@ -546,6 +546,18 @@ async fn update_config(
                 "touch_probe_enabled must be a boolean",
             ));
         }
+        "perf_enabled" => {
+            if let Some(value) = payload.value.as_bool() {
+                LocalConfig::set_perf_enabled(value);
+                return Ok(JsonResponse::success(
+                    format!("perf enabled set to {value}"),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(
+                "perf_enabled must be a boolean",
+            ));
+        }
         "move_distance_threshold" => {
             if let Some(value) = payload.value.as_f64() {
                 if !value.is_finite() {

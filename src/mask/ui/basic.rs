@@ -70,7 +70,7 @@ pub struct BasicPlugin;
 
 impl Plugin for BasicPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(ClearColor(Color::NONE))
+        app.insert_resource(ClearColor(Color::srgb(0.0, 0.0, 0.0)))
             .insert_resource(WinitSettings {
                 focused_mode: UpdateMode::Continuous,
                 // 投屏场景下鼠标移出窗口仍希望画面保持流畅，禁用失焦低功耗降帧
@@ -116,13 +116,11 @@ fn setup_ui(
 
     commands.spawn(Camera2d::default());
 
-    let titlebar_bg = Color::srgba(0.05, 0.05, 0.05, 0.85);
-    let border_color = Color::srgba_u8(183, 42, 32, 255);
+    let titlebar_bg = Color::srgb(0.06, 0.06, 0.08);
+    let border_color = Color::srgb(0.15, 0.15, 0.18);
     let video_material = create_initial_yuv_material(&mut images, &mut yuv_materials);
 
-    let minimize_icon: Handle<Image> = asset_server.load("icons/minus.png");
     let pushpin_icon: Handle<Image> = asset_server.load("icons/pushpin.png");
-    let close_icon: Handle<Image> = asset_server.load("icons/close.png");
     let screen_off_icon: Handle<Image> = asset_server.load("icons/bulb.png");
     let screen_on_icon: Handle<Image> = asset_server.load("icons/bulb-fill.png");
     let volume_up_icon: Handle<Image> = asset_server.load("icons/up.png");
@@ -219,7 +217,7 @@ fn setup_ui(
             ..default()
         });
 
-        // Right group: display/volume | navigation
+        // Right group: display/volume | navigation | window controls
         titlebar
             .spawn(Node {
                 flex_direction: FlexDirection::Row,
@@ -228,7 +226,7 @@ fn setup_ui(
                 ..default()
             })
             .with_children(|right| {
-                // Display & volume buttons
+                // Display & volume buttons (first)
                 for action in [
                     DeviceAction::ScreenOff,
                     DeviceAction::ScreenOn,
@@ -275,7 +273,7 @@ fn setup_ui(
                     })
                     .insert(BackgroundColor(Color::srgba(0.4, 0.4, 0.4, 0.5)));
 
-                // Navigation buttons
+                // Navigation buttons (second)
                 for action in [
                     DeviceAction::Back,
                     DeviceAction::Home,
@@ -310,7 +308,7 @@ fn setup_ui(
                         ));
                 }
 
-                // Separator before Windows-style window controls
+                // Separator before window controls
                 right
                     .spawn(Node {
                         width: Val::Px(1.),
@@ -320,7 +318,8 @@ fn setup_ui(
                     })
                     .insert(BackgroundColor(Color::srgba(0.4, 0.4, 0.4, 0.5)));
 
-                // 普通最小化：保留任务栏行为
+                // Window controls - transparent bg, hover to reveal
+                // Minimize
                 right
                     .spawn((
                         Button,
@@ -331,19 +330,19 @@ fn setup_ui(
                             align_items: AlignItems::Center,
                             ..default()
                         },
-                        BackgroundColor(NORMAL_BG),
+                        BackgroundColor(Color::NONE),
                         MinimizeButton,
                     ))
                     .with_child((
                         Node {
                             width: Val::Px(10.),
-                            height: Val::Px(10.),
+                            height: Val::Px(1.5),
                             ..default()
                         },
-                        ImageNode::new(minimize_icon),
+                        BackgroundColor(Color::srgb(0.65, 0.65, 0.65)),
                     ));
 
-                // 普通最大化：Windowed + set_maximized(true)，不会覆盖 Windows 任务栏
+                // Maximize
                 right
                     .spawn((
                         Button,
@@ -354,35 +353,38 @@ fn setup_ui(
                             align_items: AlignItems::Center,
                             ..default()
                         },
-                        BackgroundColor(NORMAL_BG),
+                        BackgroundColor(Color::NONE),
                         MaximizeButton,
-                    ))
-                    .with_child((
-                        Text::new("□"),
-                        TextFont { font_size: FontSize::Px(14.), ..default() },
-                        TextColor(Color::WHITE),
-                    ));
-
-                right
-                    .spawn((
-                        Button,
-                        Node {
-                            width: Val::Px(30.),
-                            height: Val::Px(24.),
-                            justify_content: JustifyContent::Center,
-                            align_items: AlignItems::Center,
-                            ..default()
-                        },
-                        BackgroundColor(NORMAL_BG),
-                        CloseButton,
                     ))
                     .with_child((
                         Node {
                             width: Val::Px(10.),
                             height: Val::Px(10.),
+                            border: UiRect::all(Val::Px(1.5)),
                             ..default()
                         },
-                        ImageNode::new(close_icon.clone()),
+                        BackgroundColor(Color::NONE),
+                        BorderColor::all(Color::srgb(0.65, 0.65, 0.65)),
+                    ));
+
+                // Close
+                right
+                    .spawn((
+                        Button,
+                        Node {
+                            width: Val::Px(30.),
+                            height: Val::Px(24.),
+                            justify_content: JustifyContent::Center,
+                            align_items: AlignItems::Center,
+                            ..default()
+                        },
+                        BackgroundColor(Color::NONE),
+                        CloseButton,
+                    ))
+                    .with_child((
+                        Text::new("✕"),
+                        TextFont { font_size: FontSize::Px(12.), ..default() },
+                        TextColor(Color::srgb(0.85, 0.85, 0.85)),
                     ));
             });
     });
@@ -648,16 +650,16 @@ fn handle_device_buttons(
     }
 }
 
-const NORMAL_BG: Color = Color::srgba(0.25, 0.25, 0.25, 0.6);
-const HOVERED_BG: Color = Color::srgba(0.38, 0.38, 0.38, 0.7);
-const PRESSED_BG: Color = Color::srgba(0.15, 0.15, 0.15, 0.85);
+const NORMAL_BG: Color = Color::srgb(0.20, 0.20, 0.22);
+const HOVERED_BG: Color = Color::srgb(0.30, 0.30, 0.32);
+const PRESSED_BG: Color = Color::srgb(0.12, 0.12, 0.14);
 
-const MAC_CLOSE_BG: Color = Color::srgba(1.0, 0.373, 0.341, 1.0);
-const MAC_CLOSE_HOVER_BG: Color = Color::srgba(1.0, 0.52, 0.49, 1.0);
-const MAC_CLOSE_PRESSED_BG: Color = Color::srgba(0.85, 0.23, 0.20, 1.0);
-const MAC_MINIMIZE_BG: Color = Color::srgba(1.0, 0.737, 0.180, 1.0);
-const MAC_MINIMIZE_HOVER_BG: Color = Color::srgba(1.0, 0.82, 0.35, 1.0);
-const MAC_MINIMIZE_PRESSED_BG: Color = Color::srgba(0.85, 0.60, 0.10, 1.0);
+// Window control button colors (transparent bg, hover to reveal)
+const WC_HOVER_BG: Color = Color::srgba(0.5, 0.5, 0.5, 0.25);
+const WC_PRESSED_BG: Color = Color::srgba(0.5, 0.5, 0.5, 0.4);
+const WC_CLOSE_HOVER_BG: Color = Color::srgb(0.85, 0.18, 0.12);
+const WC_CLOSE_PRESSED_BG: Color = Color::srgb(0.70, 0.12, 0.08);
+
 const MAC_PIN_BG: Color = Color::srgba(0.157, 0.784, 0.251, 1.0);
 const MAC_PIN_HOVER_BG: Color = Color::srgba(0.28, 0.86, 0.35, 1.0);
 const MAC_PIN_PRESSED_BG: Color = Color::srgba(0.10, 0.65, 0.18, 1.0);
@@ -672,12 +674,13 @@ fn button_interaction(
     device_btn_query: Query<(Entity, &Interaction), (With<DeviceButton>, Changed<Interaction>)>,
     mut bg_query: Query<&mut BackgroundColor>,
 ) {
+    // Window controls: transparent bg, colored hover
     for (entity, interaction) in minimize_query.iter() {
         if let Ok(mut bg) = bg_query.get_mut(entity) {
             *bg = match *interaction {
-                Interaction::Pressed => MAC_MINIMIZE_PRESSED_BG,
-                Interaction::Hovered => MAC_MINIMIZE_HOVER_BG,
-                Interaction::None => MAC_MINIMIZE_BG,
+                Interaction::Pressed => WC_PRESSED_BG,
+                Interaction::Hovered => WC_HOVER_BG,
+                Interaction::None => Color::NONE,
             }
             .into();
         }
@@ -685,9 +688,9 @@ fn button_interaction(
     for (entity, interaction) in maximize_query.iter() {
         if let Ok(mut bg) = bg_query.get_mut(entity) {
             *bg = match *interaction {
-                Interaction::Pressed => PRESSED_BG,
-                Interaction::Hovered => HOVERED_BG,
-                Interaction::None => NORMAL_BG,
+                Interaction::Pressed => WC_PRESSED_BG,
+                Interaction::Hovered => WC_HOVER_BG,
+                Interaction::None => Color::NONE,
             }
             .into();
         }
@@ -711,12 +714,13 @@ fn button_interaction(
             .into();
         }
     }
+    // Close button: red hover, white text on hover
     for (entity, interaction) in close_query.iter() {
         if let Ok(mut bg) = bg_query.get_mut(entity) {
             *bg = match *interaction {
-                Interaction::Pressed => MAC_CLOSE_PRESSED_BG,
-                Interaction::Hovered => MAC_CLOSE_HOVER_BG,
-                Interaction::None => MAC_CLOSE_BG,
+                Interaction::Pressed => WC_CLOSE_PRESSED_BG,
+                Interaction::Hovered => WC_CLOSE_HOVER_BG,
+                Interaction::None => Color::NONE,
             }
             .into();
         }
