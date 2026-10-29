@@ -76,10 +76,10 @@ jobs:
           pnpm --dir frontend install --frozen-lockfile
           pnpm --dir frontend build
 
-      # MSYS2 runner 自带；确保有 make 供 FFmpeg configure/make 使用
-      - name: Ensure MSYS2 make
+      # MSYS2 runner 自带；确保 FFmpeg configure/make 所需工具齐全
+      - name: Ensure MSYS2 build tools
         shell: pwsh
-        run: C:\msys64\usr\bin\pacman.exe -S --needed --noconfirm make
+        run: C:\msys64\usr\bin\pacman.exe -S --needed --noconfirm make perl diffutils
 
       - name: Build FFmpeg static (MSVC)
         shell: pwsh
