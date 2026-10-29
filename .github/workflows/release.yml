@@ -1,0 +1,146 @@
+# 自动构建发布：推送 v* tag 触发构建并创建 GitHub Release；
+# 也可在 Actions 页面手动 dispatch（仅构建并上传 workflow artifact，不发 Release）。
+# 构建流程与 README「发布到 GitHub Release」章节一致：
+#   前端 pnpm build → FFmpeg 静态编译(MSYS2+MSVC) → 官方 platform-tools 打包 adb → cargo build --release → 压 zip
+name: Build & Release (Windows x64)
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  FFMPEG_VERSION: "7.1.2"
+
+jobs:
+  build-windows:
+    name: Build Windows x64 package
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Setup Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      # FFmpeg 静态库编译很慢，按编译脚本内容做缓存
+      - name: Cache FFmpeg static build
+        uses: actions/cache@v4
+        with:
+          path: ffmpeg-7.1.2/ffmpeg-windows-x64
+          key: ffmpeg-${{ env.FFMPEG_VERSION }}-windows-x64-${{ hashFiles('scripts/build-ffmpeg.sh') }}
+
+      - name: Determine package version
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.ref_type }}" -eq "tag") {
+            $v = "${{ github.ref_name }}"
+          } else {
+            $cargo = Get-Content Cargo.toml -Raw
+            if ($cargo -notmatch '(?m)^\[package\][\s\S]*?^version\s*=\s*"([^"]+)"') {
+              throw "cannot read version from Cargo.toml"
+            }
+            $v = "v" + $Matches[1]
+          }
+          "RELEASE_VERSION=$v" >> $env:GITHUB_ENV
+          Write-Host "Package version: $v"
+
+      # 前端构建产物输出到 assets/web，并把 perf_monitor 拷入 assets/perf_monitor
+      - name: Build frontend
+        shell: pwsh
+        run: |
+          pnpm --dir frontend install --frozen-lockfile
+          pnpm --dir frontend build
+
+      # MSYS2 runner 自带；确保有 make 供 FFmpeg configure/make 使用
+      - name: Ensure MSYS2 make
+        shell: pwsh
+        run: C:\msys64\usr\bin\pacman.exe -S --needed --noconfirm make
+
+      - name: Build FFmpeg static (MSVC)
+        shell: pwsh
+        env:
+          MSYS2_BASH: C:\msys64\usr\bin\bash.exe
+          SCRCPY_MASK_FFMPEG_TARGET: windows-x64
+        run: |
+          if (Test-Path "ffmpeg-$env:FFMPEG_VERSION\ffmpeg-windows-x64\lib\pkgconfig") {
+            Write-Host "FFmpeg restored from cache, skipping build."
+          } else {
+            ./scripts/build-ffmpeg.ps1
+          }
+
+      # 下载谷歌官方 platform-tools，脚本会把 adb.exe + AdbWinApi/AdbWinUsbApi.dll 打进 assets/platform-tools
+      - name: Download Android platform-tools
+        shell: pwsh
+        run: |
+          curl.exe -sSL -o platform-tools.zip https://dl.google.com/android/repository/platform-tools-latest-windows.zip
+          Expand-Archive platform-tools.zip -DestinationPath .
+          Remove-Item platform-tools.zip
+          "$((Resolve-Path .\platform-tools).Path)" >> $env:GITHUB_PATH
+
+      - name: Bundle adb into assets
+        shell: pwsh
+        run: ./scripts/package-windows.ps1
+
+      - name: Build Rust release
+        shell: pwsh
+        run: |
+          ./scripts/ffmpeg-env.ps1
+          cargo build --release
+
+      # 产物结构与 README 约定一致：exe + assets/（locales、shaders、icons、web、platform-tools 等）
+      - name: Assemble package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $version = $env:RELEASE_VERSION
+          $zipName = "scrcpy-mask-$version-windows-x64"
+          $pkgDir = Join-Path $env:TEMP $zipName
+          if (Test-Path $pkgDir) { Remove-Item $pkgDir -Recurse -Force }
+          New-Item -ItemType Directory $pkgDir | Out-Null
+          Copy-Item target\release\scrcpy-mask.exe $pkgDir\
+          Copy-Item assets $pkgDir\assets -Recurse
+          Compress-Archive -Path $pkgDir -DestinationPath "$zipName.zip" -Force
+          Write-Host "Packaged: $zipName.zip ($((Get-Item "$zipName.zip").Length / 1MB -as [int]) MB)"
+
+      - name: Upload workflow artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: scrcpy-mask-${{ env.RELEASE_VERSION }}-windows-x64
+          path: scrcpy-mask-*.zip
+          if-no-files-found: error
+
+      - name: Create GitHub Release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Scrcpy Mask Enhanced ${{ github.ref_name }}
+          files: scrcpy-mask-*.zip
+          generate_release_notes: true
+          make_latest: true

@@ -430,6 +430,13 @@ cargo build --release
 
 ## 发布到 GitHub Release
 
+**自动化发布（推荐）**：仓库已配置 GitHub Actions（`.github/workflows/release.yml`），在 GitHub 云端自动完成前端构建、FFmpeg 静态编译、adb 打包与 Release 编译。用法：
+
+- 发布新版本：更新版本号后打 tag 并推送即可（如 `git tag v1.0.1 && git push origin v1.0.1`），Actions 会自动构建并创建带 zip 附件的 Release；
+- 手动试构建：Actions 页面选择该工作流 → Run workflow，构建结果在 run 的 Artifacts 里（不发 Release）。
+
+以下为本地手动打包流程（与 CI 等效）：
+
 ```powershell
 # 1. 构建前端
 cd frontend
